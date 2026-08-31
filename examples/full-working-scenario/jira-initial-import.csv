@@ -1,0 +1,9 @@
+Issue key,Issue Type,Summary,Story Points,Remaining Story Points
+INIT-100,Initiative,Customer Portal Modernization,40,30
+EPIC-101,Epic,Identity and access foundation,13,8
+EPIC-102,Epic,Reporting MVP,8,8
+EPIC-103,Epic,Billing integration,20,15
+EPIC-105,Epic,Legacy data cleanup,3,3
+STORY-201,Story,Build login form,3,1
+TASK-301,Task,Set up test data,2,1
+BUG-401,Bug,Fix header alignment,1,0

@@ -1,0 +1,10 @@
+*.log
+*.mpp
+*.preview.csv
+*.sync-report.csv
+
+output/
+scenario-output/
+validation-output/
+examples/**/scenario-output/
+examples/**/validation-output/

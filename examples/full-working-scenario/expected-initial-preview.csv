@@ -1,0 +1,6 @@
+JiraKey,IssueType,Summary,StoryPoints,RemainingStoryPoints,PercentComplete,ValidationStatus
+INIT-100,Initiative,Customer Portal Modernization,40,30,25,OK
+EPIC-101,Epic,Identity and access foundation,13,8,38,OK
+EPIC-102,Epic,Reporting MVP,8,8,0,OK
+EPIC-103,Epic,Billing integration,20,15,25,OK
+EPIC-105,Epic,Legacy data cleanup,3,3,0,OK
