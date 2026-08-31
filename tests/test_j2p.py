@@ -7,12 +7,14 @@ from pathlib import Path
 from j2p.cli import main
 from j2p.config import load_config
 from j2p.core import (
+    J2PError,
     ProjectTaskSnapshot,
     build_run_plan,
     run_plan_to_state,
     snapshots_from_state,
     write_json,
 )
+from j2p.reports import write_reports
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -128,6 +130,52 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("CircularDependencySkipped", {item.category for item in plan.audit_items})
             edge_count = len(plan.epics["TEAM-1"].successors) + len(plan.epics["TEAM-2"].successors)
             self.assertEqual(edge_count, 1)
+
+    def test_missing_required_columns_fail_clearly(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue Type,Summary,Status",
+                "TEAM-1,Epic,Missing parent and points,To Do",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "missing-columns.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(EXAMPLES / "config.example.yaml")
+            with self.assertRaisesRegex(J2PError, "missing required mapped columns"):
+                build_run_plan(csv_path, config)
+
+    def test_story_without_epic_link_is_reported_and_not_counted(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,First epic,,PROD-1,,0,In Progress,,2026-01-01,2026-01-15,,",
+                "TEAM-11,4,Story,Orphan story,,,,3,Done,,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "orphan.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(EXAMPLES / "config.example.yaml")
+            plan = build_run_plan(csv_path, config)
+            self.assertEqual(plan.epics["TEAM-1"].total_story_points, 0)
+            categories = {item.category for item in plan.audit_items}
+            self.assertIn("StoryMissingEpicLink", categories)
+            self.assertIn("InPlanning", categories)
+
+    def test_manager_report_is_self_contained_and_field_mapping_includes_status(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+        plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config)
+        with tempfile.TemporaryDirectory() as temp:
+            run_dir = Path(temp)
+            paths = write_reports(plan, run_dir, config)
+            report = paths["manager_report"].read_text(encoding="utf-8")
+            self.assertNotIn("<script src=", report)
+            self.assertNotIn("<link rel=", report)
+            self.assertNotIn("https://", report)
+            field_mapping = paths["field_mapping"].read_text(encoding="utf-8")
+            self.assertIn("Jira Status", field_mapping)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
         config = load_config(EXAMPLES / "config.example.yaml")

@@ -1,0 +1,92 @@
+# Testing And Pre-Merge Checks
+
+This project intentionally does not use GitHub Actions right now. Run the checks below locally before merging or handing off a change.
+
+## Required Local Smoke Test
+
+From the repository root:
+
+```powershell
+py -3.14 .\scripts\smoke_tests.py
+```
+
+On macOS or Linux:
+
+```bash
+python3 scripts/smoke_tests.py
+```
+
+The smoke test verifies:
+
+- retired PowerShell files are not present
+- Next.js/React/web app files are not present
+- all unit tests pass
+- all Python files compile
+- initiative-mode validation produces a complete report bundle
+- follow-on validation against saved state reports expected manager-review categories
+- fixVersion-mode validation produces a complete report bundle
+- manager HTML reports are self-contained
+
+To keep generated smoke-test output for inspection:
+
+```powershell
+py -3.14 .\scripts\smoke_tests.py --keep-output
+```
+
+To write output to a specific folder:
+
+```powershell
+py -3.14 .\scripts\smoke_tests.py --output-dir .\review-output\smoke
+```
+
+## Individual Checks
+
+Run unit tests:
+
+```powershell
+py -3.14 -m unittest discover -s tests
+```
+
+Compile Python files:
+
+```powershell
+py -3.14 -m compileall j2p tests scripts
+```
+
+Run a documented validation example:
+
+```powershell
+py -3.14 -m j2p validate `
+  --jira-csv .\examples\project-wide-jira-update.csv `
+  --config .\examples\config.example.yaml `
+  --output-dir .\review-output `
+  --run-id local-check
+```
+
+## Windows Microsoft Project Smoke Test
+
+The cross-platform smoke test does not open Microsoft Project. Before a release that changes `j2p/project.py`, also run this on a Windows machine with Microsoft Project desktop and `pywin32` installed:
+
+```powershell
+py -3.14 -m pip install -e .[project]
+
+py -3.14 -m j2p update `
+  --jira-csv .\examples\project-wide-jira-update.csv `
+  --main-project .\path\to\sanitized-source-of-truth.mpp `
+  --config .\examples\config.example.yaml `
+  --output-dir .\review-output
+```
+
+Review the generated sandbox `.mpp` and confirm:
+
+- source-of-truth `.mpp` was not modified
+- sandbox `.mpp` was timestamped
+- Jira Key and other custom fields were created/renamed
+- epics are under the correct initiative/fixVersion summary tasks
+- predecessor links match Jira blocker relationships
+- changed cells are green
+- dependency review cells are blue
+- unmatched review cells are amber
+- critical-path root finish change is red when applicable
+- completed epics are inactive and have hidden Gantt bars when Project permits it
+- `Manager-Review-Report.html` and audit CSVs match visible sandbox changes

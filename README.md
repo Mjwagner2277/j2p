@@ -9,6 +9,7 @@ This repository contains a Python CLI for creating manager-reviewable Microsoft 
 - Quick start: `docs/quick-start.md`
 - Requirements and guardrails: `docs/requirements.md`
 - Manager review guide: `docs/manager-review-guide.md`
+- Testing and pre-merge checks: `docs/testing.md`
 - Complete worked example: `examples/test.md`
 - Example configuration: `examples/config.example.yaml`
 
@@ -57,3 +58,13 @@ py -3.14 -m j2p update `
 ```
 
 The main `.mpp` is never modified. The script copies it to a timestamped sandbox run folder, updates the sandbox, colors review cells, and writes a manager report plus audit CSVs.
+
+## Pre-Merge Checks
+
+Run the local smoke test before merging or handing off changes:
+
+```powershell
+py -3.14 .\scripts\smoke_tests.py
+```
+
+This runs unit tests, syntax compilation, example validations, report-bundle checks, and repository hygiene checks. See `docs/testing.md` for the full checklist.
