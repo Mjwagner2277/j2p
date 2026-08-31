@@ -1,4 +1,0 @@
-Key,Work Item Type,Name,Custom field (Story point estimate),Custom field (Remaining story points)
-OPS-101,Epic,Custom Jira export column example,13,8
-OPS-102,Initiative,Completed custom-column issue,2,0
-OPS-103,Story,Custom-column story excluded from IMS,5,2

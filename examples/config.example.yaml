@@ -1,0 +1,75 @@
+rollup_mode: initiative
+
+done_statuses:
+  - Done
+  - Closed
+  - Resolved
+
+resource_groups:
+  TEAM: Product Delivery
+  PLAT: Platform Engineering
+  DATA: Data Engineering
+
+columns:
+  jira_key:
+    - Issue key
+    - Key
+  issue_id:
+    - Issue id
+    - Issue ID
+  issue_type:
+    - Issue Type
+    - Work Item Type
+  summary:
+    - Summary
+    - Name
+  epic_link:
+    - Epic Link
+  parent:
+    - Parent
+    - Parent key
+  fix_versions:
+    - Fix versions
+    - Fix Version/s
+  story_points:
+    - Story Points
+    - Story point estimate
+  status:
+    - Status
+  resolution:
+    - Resolution
+  target_start:
+    - Target start
+  target_end:
+    - Target end
+  predecessors:
+    - Inward issue link (Blocks)
+    - Blocked by
+    - is blocked by
+  successors:
+    - Outward issue link (Blocks)
+    - Blocks
+
+behavior:
+  unknown_prefix: exclude
+  multiple_fix_versions: exclude
+  hide_completed_epics: true
+  write_state_on_validate: false
+
+project_fields:
+  jira_key: Text1
+  jira_issue_id: Text2
+  jira_issue_type: Text3
+  rollup_mode: Text4
+  rollup_key: Text5
+  resource_group: Text6
+  jira_key_prefix: Text7
+  dependency_review: Text8
+  jira_status: Text9
+  total_story_points: Number1
+  completed_story_points: Number2
+  in_planning: Flag1
+  unmatched_project_task: Flag2
+  dependency_review_needed: Flag3
+  jira_target_start: Date1
+  jira_target_end: Date2

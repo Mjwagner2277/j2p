@@ -1,0 +1,11 @@
+rollup_mode: fixVersion
+
+done_statuses:
+  - Done
+  - Closed
+  - Resolved
+
+resource_groups:
+  TEAM: Product Delivery
+  PLAT: Platform Engineering
+  DATA: Data Engineering

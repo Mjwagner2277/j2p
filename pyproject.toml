@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "j2p"
+version = "0.2.0"
+description = "Jira CSV to Microsoft Project sandbox schedule review tooling"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "j2p maintainers" }]
+dependencies = []
+
+[project.optional-dependencies]
+project = ["pywin32>=306; platform_system == 'Windows'"]
+
+[project.scripts]
+j2p = "j2p.cli:main"
+
+[tool.setuptools]
+packages = ["j2p"]

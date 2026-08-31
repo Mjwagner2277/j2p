@@ -1,9 +1,0 @@
-Issue key,Issue Type,Summary,Story Points,Remaining Story Points
-INIT-100,Initiative,Customer Portal Modernization,40,20
-EPIC-101,Epic,Identity and access foundation,13,0
-EPIC-102,Epic,Reporting MVP,8,4
-EPIC-103,Epic,Billing integration,20,10
-EPIC-104,Epic,Notification center,5,5
-STORY-201,Story,Build login form,3,0
-TASK-302,Task,Prepare release notes,2,0
-BUG-402,Bug,Resolve dashboard rendering issue,1,0

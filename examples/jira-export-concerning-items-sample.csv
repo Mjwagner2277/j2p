@@ -1,8 +1,0 @@
-Issue key,Issue Type,Summary,Story Points,Remaining Story Points
-DEMO-1,Initiative,Original Jira issue row,8,2
-DEMO-1,Epic,Duplicate Jira issue row that should be skipped,8,1
-,Task,Blank Jira key row that should be skipped,3,1
-DEMO-2,Epic,Remaining points exceed total points,4,6
-DEMO-3,Initiative,Negative remaining points example,5,-1
-DEMO-4,Epic,Missing story point values,,
-DEMO-5,Story,Task-level story excluded from IMS,3,1

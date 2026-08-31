@@ -2,9 +2,14 @@
 *.mpp
 *.preview.csv
 *.sync-report.csv
+*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
 
 output/
 scenario-output/
 validation-output/
 examples/**/scenario-output/
 examples/**/validation-output/
+review-output/

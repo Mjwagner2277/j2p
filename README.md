@@ -1,37 +1,59 @@
 # j2p
 
-Jira CSV to Microsoft Project IMS synchronization tooling.
+Jira CSV to Microsoft Project sandbox review tooling.
 
-This repository contains a PowerShell script and handoff materials for creating or updating a Microsoft Project schedule from Jira CSV exports. It is intentionally limited to the Jira-to-Project workflow and does not contain any web app, Next.js, or React assets.
+This repository contains a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It is intentionally limited to the Jira-to-Project workflow and does not contain any web app, Next.js, or React assets.
 
 ## Start Here
 
-- Quick start: `docs/Jira-to-IMS-Quick-Start.md`
-- Full handoff documentation: `docs/jira-csv-to-project-ims-handoff.md`
-- Complete worked example: `examples/full-working-scenario/test.md`
-- Main script: `scripts/Sync-JiraCsvToProject.ps1`
-- Validation tests: `scripts/Test-Sync-JiraCsvToProject.ps1`
+- Quick start: `docs/quick-start.md`
+- Requirements and guardrails: `docs/requirements.md`
+- Manager review guide: `docs/manager-review-guide.md`
+- Complete worked example: `examples/test.md`
+- Example configuration: `examples/config.example.yaml`
 
 ## Requirements
 
-- PowerShell 5.1 or newer
-- Windows with Microsoft Project installed for `.mpp` create/update operations
-- PowerShell only for validation-only examples and CSV/report generation
+- Python 3.14.2 for the target user environment
+- Windows with Microsoft Project desktop installed for `.mpp` create/update operations
+- `pywin32` for Microsoft Project automation
+- No React, Next.js, node runtime, browser app, or web server
+
+Validation/report generation does not require Microsoft Project and can run on any machine with Python.
+
+## Install
+
+From the repository root:
+
+```powershell
+py -3.14 -m pip install -e .[project]
+```
+
+If the machine does not need to write `.mpp` files, install without the Project automation extra:
+
+```powershell
+py -3.14 -m pip install -e .
+```
 
 ## Typical Usage
 
-Preview a Jira CSV import without opening Microsoft Project:
+Validate a Jira CSV and generate manager/audit reports without opening Microsoft Project:
 
 ```powershell
-pwsh -File .\scripts\Sync-JiraCsvToProject.ps1 `
-  -JiraCsv .\examples\jira-export-sample.csv `
-  -OutputFolder .\output `
-  -PreviewOnly
+py -3.14 -m j2p validate `
+  --jira-csv .\examples\project-wide-jira-update.csv `
+  --config .\examples\config.example.yaml `
+  --output-dir .\review-output
 ```
 
-Run the validation test suite:
+Create a timestamped sandbox from the source-of-truth Project file and apply Jira updates:
 
 ```powershell
-pwsh -File .\scripts\Test-Sync-JiraCsvToProject.ps1
+py -3.14 -m j2p update `
+  --jira-csv .\path\to\jira-export.csv `
+  --main-project .\path\to\Program-Source-Of-Truth.mpp `
+  --config .\examples\config.example.yaml `
+  --output-dir .\review-output
 ```
 
+The main `.mpp` is never modified. The script copies it to a timestamped sandbox run folder, updates the sandbox, colors review cells, and writes a manager report plus audit CSVs.
