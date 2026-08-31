@@ -11,6 +11,7 @@ This repository contains a Python CLI for creating manager-reviewable Microsoft 
 - Manager review guide: `docs/manager-review-guide.md`
 - Testing and pre-merge checks: `docs/testing.md`
 - Complete worked example: `examples/test.md`
+- Full manager report example: `examples/manager-report-example/j2p-run-follow-on-manager-review/Manager-Review-Report.html`
 - Example configuration: `examples/config.example.yaml`
 
 ## Requirements

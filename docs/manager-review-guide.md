@@ -25,6 +25,15 @@ Open `Manager-Review-Report.html` first. It is self-contained and can be emailed
 | `FIELD_MAPPING.md` | Project custom field mapping |
 | `j2p-state.after.json` | Snapshot of the run output |
 
+Each run also writes split CSVs by Jira project key prefix:
+
+- `by-project-key\<KEY>\audit-detail.csv`
+- `by-project-key\<KEY>\planned-epics.csv`
+- `by-project-key\<KEY>\summary-rollups.csv`
+- `by-project-key\<KEY>\dependency-review.csv`
+
+Use these when a manager only needs the rows for one Jira key prefix, such as `TEAM` or `PLAT`.
+
 ## Items That Need Manager Attention
 
 Changed names:

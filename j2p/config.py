@@ -16,6 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "rollup_mode": "initiative",
+    "rollup_modes": {},
     "done_statuses": ["Done"],
     "issue_types": {
         "initiative": ["Initiative"],
@@ -125,6 +126,15 @@ def read_yaml_file(path: Path) -> Dict[str, Any]:
 def normalize_config(config: Dict[str, Any]) -> None:
     if config.get("rollup_mode") not in {"initiative", "fixVersion"}:
         raise ConfigError("rollup_mode must be either 'initiative' or 'fixVersion'.")
+
+    rollup_modes = {}
+    for prefix, rollup_mode in config.get("rollup_modes", {}).items():
+        if rollup_mode not in {"initiative", "fixVersion"}:
+            raise ConfigError(
+                f"rollup_modes.{prefix} must be either 'initiative' or 'fixVersion'."
+            )
+        rollup_modes[str(prefix).upper()] = str(rollup_mode)
+    config["rollup_modes"] = rollup_modes
 
     for key, value in list(config.get("columns", {}).items()):
         config["columns"][key] = ensure_list(value)

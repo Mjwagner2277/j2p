@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .core import AuditItem, PlanEpic, RunPlan, ProjectTaskSnapshot
+from .core import AuditItem, PlanEpic, RunPlan, ProjectTaskSnapshot, summary_id
 
 
 class ProjectAutomationError(RuntimeError):
@@ -182,12 +182,13 @@ class MicrosoftProjectSession:
         task_by_key = self.index_tasks_by_key(config)
 
         for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key)):
+            parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
             task = task_by_key.get(epic.key)
             if task is None:
-                task = self.add_epic_under_summary(epic, summary_tasks[epic.rollup_key])
+                task = self.add_epic_under_summary(epic, summary_tasks[parent_summary_id])
                 task_by_key[epic.key] = task
             else:
-                task = self.ensure_epic_under_summary(task, epic, summary_tasks[epic.rollup_key], config, plan)
+                task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
                 task_by_key[epic.key] = task
             self.update_epic_task(task, epic, config)
 
@@ -232,32 +233,35 @@ class MicrosoftProjectSession:
         fields = config.get("project_fields", {})
         summary_tasks: Dict[str, Any] = {}
         for summary in sorted(plan.summaries.values(), key=lambda item: item.key):
-            task = task_by_key.get(summary.key) if plan.rollup_mode == "initiative" else None
+            task = task_by_key.get(summary.key) if summary.rollup_mode == "initiative" else None
             if task is None:
-                task = self.find_rollup_summary(summary.key, config)
+                task = self.find_rollup_summary(summary.rollup_mode, summary.key, config)
             if task is None:
                 task = self.project.Tasks.Add(summary.name)
             try:
                 task.Manual = False
             except Exception:
                 pass
-            if plan.rollup_mode == "initiative":
+            if summary.rollup_mode == "initiative":
                 setattr(task, fields.get("jira_key", "Text1"), summary.key)
                 setattr(task, fields.get("jira_issue_type", "Text3"), "Initiative")
             else:
                 setattr(task, fields.get("jira_issue_type", "Text3"), "FixVersion")
-            setattr(task, fields.get("rollup_mode", "Text4"), plan.rollup_mode)
+            setattr(task, fields.get("rollup_mode", "Text4"), summary.rollup_mode)
             setattr(task, fields.get("rollup_key", "Text5"), summary.key)
             setattr(task, fields.get("total_story_points", "Number1"), summary.total_story_points)
             setattr(task, fields.get("completed_story_points", "Number2"), summary.completed_story_points)
             task.PercentComplete = summary.percent_complete
-            summary_tasks[summary.key] = task
+            summary_tasks[summary.summary_id] = task
         return summary_tasks
 
-    def find_rollup_summary(self, rollup_key: str, config: Dict[str, Any]) -> Optional[Any]:
+    def find_rollup_summary(self, rollup_mode: str, rollup_key: str, config: Dict[str, Any]) -> Optional[Any]:
+        mode_field = config.get("project_fields", {}).get("rollup_mode", "Text4")
         rollup_field = config.get("project_fields", {}).get("rollup_key", "Text5")
         for task in self.iter_tasks():
-            if str(safe_get(task, rollup_field)).upper() == rollup_key.upper():
+            same_mode = str(safe_get(task, mode_field)) == rollup_mode
+            same_key = str(safe_get(task, rollup_field)).upper() == rollup_key.upper()
+            if same_mode and same_key:
                 return task
         return None
 
@@ -395,7 +399,11 @@ class MicrosoftProjectSession:
         task_by_key: Dict[str, Any],
     ) -> None:
         flag_field = config.get("project_fields", {}).get("unmatched_project_task", "Flag2")
-        planned_keys = set(plan.epics) | set(plan.summaries)
+        planned_keys = (
+            set(plan.epics)
+            | set(plan.summaries)
+            | {summary.key.upper() for summary in plan.summaries.values()}
+        )
         for key, task in task_by_key.items():
             if key in planned_keys:
                 try:

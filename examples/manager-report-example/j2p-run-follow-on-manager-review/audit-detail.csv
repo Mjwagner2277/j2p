@@ -1,0 +1,35 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,ExcludedMissingRollup,TEAM-105,TEAM,Epic,Unplanned marketplace experiment,Rollup,,,review_needed,Epic has no initiative parent key.,"Add the required initiative parent or fixVersion in Jira, then rerun.",9
+Warning,ExcludedUnknownPrefix,UNK-106,UNK,Epic,Unknown team epic,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,10
+Review,InPlanning,TEAM-107,TEAM,Epic,Dependency target outside scope,In Planning,,Yes,in_planning,Epic has no pointed child stories/tasks and is marked In Planning.,Confirm this epic is intentionally unestimated or add pointed child work.,11
+Warning,MissingDependencyTarget,TEAM-107,TEAM,Epic,Dependency target outside scope,Dependency Review,,EXT-999,dependency_review,Dependency target 'EXT-999' is not an included epic.,Confirm the target epic is in the Jira export and meets rollup/resource rules.,
+Review,ChangedName,TEAM-101,TEAM,Epic,Identity and access foundation v2,Name,Identity and access foundation,Identity and access foundation v2,changed_cell,Name changed from 'Identity and access foundation' to 'Identity and access foundation v2'.,Review the changed sandbox cell.,4
+Info,ChangedField,TEAM-101,TEAM,Epic,Identity and access foundation v2,% Complete,38,100,changed_cell,% Complete changed from '38' to '100'.,Review the changed sandbox cell.,4
+Info,ChangedField,TEAM-101,TEAM,Epic,Identity and access foundation v2,Completed Story Points,5,13,changed_cell,Completed Story Points changed from '5' to '13'.,Review the changed sandbox cell.,4
+Info,ChangedField,TEAM-101,TEAM,Epic,Identity and access foundation v2,Jira Target End,2026-09-30,2026-10-05,changed_cell,Jira Target End changed from '2026-09-30' to '2026-10-05'.,Review the changed sandbox cell.,4
+Info,CompletedSinceLastUpdate,TEAM-101,TEAM,Epic,Identity and access foundation v2,Status,In Progress,Done,changed_cell,Epic is now marked done in Jira.,Confirm completed epic can remain inactive/hidden in the sandbox.,4
+Info,ChangedField,TEAM-102,TEAM,Epic,Reporting MVP,% Complete,0,38,changed_cell,% Complete changed from '0' to '38'.,Review the changed sandbox cell.,5
+Info,ChangedField,TEAM-102,TEAM,Epic,Reporting MVP,Completed Story Points,0,3,changed_cell,Completed Story Points changed from '0' to '3'.,Review the changed sandbox cell.,5
+Info,ChangedField,TEAM-102,TEAM,Epic,Reporting MVP,Jira Target Start,2026-10-01,2026-10-06,changed_cell,Jira Target Start changed from '2026-10-01' to '2026-10-06'.,Review the changed sandbox cell.,5
+Info,ChangedField,TEAM-102,TEAM,Epic,Reporting MVP,Jira Target End,2026-10-31,2026-11-06,changed_cell,Jira Target End changed from '2026-10-31' to '2026-11-06'.,Review the changed sandbox cell.,5
+Review,RollupMove,TEAM-103,TEAM,Epic,Billing integration,Rollup Key,PROD-100,PLAT-100,changed_cell,Rollup Key changed from 'PROD-100' to 'PLAT-100'.,Review the changed sandbox cell.,7
+Info,ChangedField,TEAM-103,TEAM,Epic,Billing integration,Jira Target Start,2026-11-01,2026-11-07,changed_cell,Jira Target Start changed from '2026-11-01' to '2026-11-07'.,Review the changed sandbox cell.,7
+Info,ChangedField,TEAM-103,TEAM,Epic,Billing integration,Jira Target End,2026-11-30,2026-12-04,changed_cell,Jira Target End changed from '2026-11-30' to '2026-12-04'.,Review the changed sandbox cell.,7
+Info,DependencyChange,TEAM-103,TEAM,Epic,Billing integration,Predecessors,,TEAM-102,changed_cell,Predecessors changed from '' to 'TEAM-102'.,Review the changed sandbox cell.,7
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Name,,Mobile shell,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Rollup Key,,PROD-100,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Resource Group,,Product Delivery,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,% Complete,,0,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Total Story Points,,5,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Completed Story Points,,0,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Jira Target Start,,2026-11-15,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-104,TEAM,Epic,Mobile shell,Jira Target End,,2026-12-15,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,8
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Name,,Dependency target outside scope,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Rollup Key,,PROD-100,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Resource Group,,Product Delivery,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,% Complete,,0,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Total Story Points,,0,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Completed Story Points,,0,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Jira Target Start,,2026-12-01,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Jira Target End,,2026-12-20,changed_cell,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Dependency Review,,Missing dependency target EXT-999.,dependency_review,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11

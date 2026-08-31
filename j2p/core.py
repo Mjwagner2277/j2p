@@ -82,9 +82,11 @@ class PlanEpic:
 
 @dataclass
 class PlanSummary:
+    summary_id: str
     key: str
     name: str
     rollup_mode: str
+    project_key: str
     total_story_points: float
     completed_story_points: float
     percent_complete: int
@@ -176,8 +178,11 @@ def build_run_plan(
     audit: List[AuditItem] = []
     baseline = baseline or {}
     required = ["jira_key", "issue_type", "summary", "epic_link", "story_points", "status"]
-    rollup_mode = str(config["rollup_mode"])
-    required.append("parent" if rollup_mode == "initiative" else "fix_versions")
+    configured_rollup_modes = {str(config["rollup_mode"])} | set(config.get("rollup_modes", {}).values())
+    if "initiative" in configured_rollup_modes:
+        required.append("parent")
+    if "fixVersion" in configured_rollup_modes:
+        required.append("fix_versions")
     missing = [name for name in required if not table.has_any(logical_columns(config, name))]
     if missing:
         details = ", ".join(f"{name}: {logical_columns(config, name)}" for name in missing)
@@ -265,6 +270,7 @@ def build_run_plan(
             )
             continue
 
+        rollup_mode = rollup_mode_for_prefix(config, prefix)
         rollup_key, rollup_name, rollup_error = resolve_rollup(epic, rollup_mode, initiatives, config)
         if rollup_error:
             excluded_count += 1
@@ -329,7 +335,7 @@ def build_run_plan(
         )
 
     apply_dependencies(planned_epics, epics, audit)
-    summaries = build_summaries(planned_epics, rollup_mode)
+    summaries = build_summaries(planned_epics)
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
 
     stats = {
@@ -342,11 +348,13 @@ def build_run_plan(
         "epics_excluded": excluded_count,
         "summary_rows": len(summaries),
         "audit_items": len(audit),
+        "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
+        "rollup_modes_by_prefix": config.get("rollup_modes", {}),
     }
     return RunPlan(
         generated_at=datetime.now().isoformat(timespec="seconds"),
         jira_csv=str(jira_csv),
-        rollup_mode=rollup_mode,
+        rollup_mode=describe_rollup_modes(planned_epics, config),
         column_map=column_map,
         stats=stats,
         summaries=summaries,
@@ -521,18 +529,21 @@ def apply_dependencies(
         planned_epics[predecessor_key].successors.append(successor_key)
 
 
-def build_summaries(epics: Dict[str, PlanEpic], rollup_mode: str) -> Dict[str, PlanSummary]:
+def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
     buckets: Dict[str, List[PlanEpic]] = {}
     for epic in epics.values():
-        buckets.setdefault(epic.rollup_key, []).append(epic)
+        buckets.setdefault(summary_id(epic.rollup_mode, epic.rollup_key), []).append(epic)
     summaries: Dict[str, PlanSummary] = {}
-    for rollup_key, children in sorted(buckets.items()):
+    for bucket_id, children in sorted(buckets.items()):
         total = round(sum(child.total_story_points for child in children), 2)
         completed = round(sum(child.completed_story_points for child in children), 2)
-        summaries[rollup_key] = PlanSummary(
-            key=rollup_key,
+        project_keys = sorted({child.key_prefix for child in children})
+        summaries[bucket_id] = PlanSummary(
+            summary_id=bucket_id,
+            key=children[0].rollup_key,
             name=children[0].rollup_name,
-            rollup_mode=rollup_mode,
+            rollup_mode=children[0].rollup_mode,
+            project_key=project_keys[0] if len(project_keys) == 1 else "MULTIPLE",
             total_story_points=total,
             completed_story_points=completed,
             percent_complete=calculate_percent(completed, total),
@@ -617,7 +628,7 @@ def compare_with_baseline(
             )
 
     planned_keys = set(epics)
-    summary_keys = set(summaries)
+    summary_keys = {summary.key for summary in summaries.values()} | set(summaries)
     for key, existing in sorted(baseline.items()):
         if key in planned_keys or key in summary_keys:
             continue
@@ -795,6 +806,23 @@ def normalize_header(value: str) -> str:
 
 def jira_key_prefix(key: str) -> str:
     return key.split("-", 1)[0].upper() if "-" in key else key.upper()
+
+
+def rollup_mode_for_prefix(config: Dict[str, Any], prefix: str) -> str:
+    return str(config.get("rollup_modes", {}).get(prefix.upper(), config.get("rollup_mode", "initiative")))
+
+
+def summary_id(rollup_mode: str, rollup_key: str) -> str:
+    return f"{rollup_mode}:{rollup_key}"
+
+
+def describe_rollup_modes(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> str:
+    modes = sorted({epic.rollup_mode for epic in epics.values()})
+    if len(modes) == 1:
+        return modes[0]
+    if len(modes) > 1:
+        return "mixed"
+    return str(config.get("rollup_mode", "initiative"))
 
 
 def format_number(value: Any) -> str:

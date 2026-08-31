@@ -32,9 +32,16 @@ py -3.14 -m j2p validate `
 
 Expected:
 
-- `TEAM-101`, `TEAM-102`, `TEAM-103`, and `PLAT-201` are included as epics.
-- `PROD-100` and `PLAT-100` are rollup summary rows.
+- `TEAM-101`, `TEAM-102`, and `TEAM-103` use initiative rollup.
+- `PLAT-201` uses fixVersion rollup because `PLAT` is configured that way.
+- `PROD-100`, `PLAT-100`, and `Portal 2026` are rollup summary rows.
 - Story/task rows are used for percent complete and are not Project work rows.
+
+Per-project-key CSVs are written under:
+
+```text
+review-output\j2p-run-initial-demo\by-project-key\
+```
 
 Open:
 
@@ -77,6 +84,13 @@ Expected manager-review cases:
 | Missing rollup | `TEAM-105` excluded |
 | Unknown prefix | `UNK-106` excluded |
 | Missing dependency target | `TEAM-107` references `EXT-999` |
+
+Open the split CSVs for a single Jira key prefix:
+
+```text
+review-output\j2p-run-follow-on-demo\by-project-key\TEAM\planned-epics.csv
+review-output\j2p-run-follow-on-demo\by-project-key\PLAT\planned-epics.csv
+```
 
 ## Step 3: Run fixVersion Mode
 

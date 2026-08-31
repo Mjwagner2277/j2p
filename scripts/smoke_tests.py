@@ -111,6 +111,7 @@ def run_smoke(output_dir: Path) -> int:
         [
             "Reviewer Action Needed",
             "Color Key",
+            "Project Key Rollup Mapping",
             "Changed Names",
             "Completed Since Last Update",
             "Dependency Review",
@@ -179,6 +180,8 @@ def check_repo_hygiene() -> None:
 
 def assert_report_bundle(run_dir: Path) -> None:
     missing = [name for name in REQUIRED_REPORT_FILES if not (run_dir / name).exists()]
+    if not (run_dir / "by-project-key" / "index.csv").exists():
+        missing.append("by-project-key/index.csv")
     if missing:
         raise AssertionError(f"Missing report files in {run_dir}: {', '.join(missing)}")
 

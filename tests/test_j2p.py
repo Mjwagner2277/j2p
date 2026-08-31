@@ -57,11 +57,13 @@ class J2PPlanningTests(unittest.TestCase):
         }
         plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config, baseline)
 
-        self.assertEqual(plan.rollup_mode, "initiative")
+        self.assertEqual(plan.rollup_mode, "mixed")
         self.assertIn("TEAM-101", plan.epics)
         self.assertEqual(plan.epics["TEAM-101"].percent_complete, 100)
         self.assertEqual(plan.epics["TEAM-102"].percent_complete, 38)
         self.assertEqual(plan.epics["TEAM-103"].rollup_key, "PLAT-100")
+        self.assertEqual(plan.epics["PLAT-201"].rollup_mode, "fixVersion")
+        self.assertEqual(plan.epics["PLAT-201"].rollup_key, "Portal 2026")
         self.assertEqual(plan.epics["TEAM-102"].predecessors, ["TEAM-101"])
         self.assertIn("TEAM-103", plan.epics["TEAM-102"].successors)
         self.assertNotIn("TEAM-105", plan.epics)
@@ -82,7 +84,7 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertEqual(plan.rollup_mode, "fixVersion")
         self.assertEqual(plan.epics["TEAM-501"].rollup_key, "Portal 2026")
-        self.assertIn("Portal 2026", plan.summaries)
+        self.assertIn("fixVersion:Portal 2026", plan.summaries)
         self.assertNotIn("TEAM-503", plan.epics)
         self.assertIn("ExcludedMissingRollup", {item.category for item in plan.audit_items})
 
@@ -106,10 +108,17 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertTrue((run_dir / "Manager-Review-Report.html").exists())
             self.assertTrue((run_dir / "audit-detail.csv").exists())
             self.assertTrue((run_dir / "planned-epics.csv").exists())
+            self.assertTrue((run_dir / "by-project-key" / "TEAM" / "audit-detail.csv").exists())
+            self.assertTrue((run_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
+            self.assertTrue((run_dir / "by-project-key" / "PLAT" / "summary-rollups.csv").exists())
+            self.assertTrue((run_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
             report = (run_dir / "Manager-Review-Report.html").read_text(encoding="utf-8")
             self.assertIn("Reviewer Action Needed", report)
             self.assertIn("Color Key", report)
+            self.assertIn("Project Key Rollup Mapping", report)
             self.assertIn("Unknown team epic", report)
+            audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
+            self.assertIn("project_key", audit_header)
 
     def test_circular_dependencies_are_skipped_and_reported(self) -> None:
         csv_text = "\n".join(

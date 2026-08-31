@@ -1,0 +1,4 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,MissingDependencyTarget,TEAM-107,TEAM,Epic,Dependency target outside scope,Dependency Review,,EXT-999,dependency_review,Dependency target 'EXT-999' is not an included epic.,Confirm the target epic is in the Jira export and meets rollup/resource rules.,
+Info,DependencyChange,TEAM-103,TEAM,Epic,Billing integration,Predecessors,,TEAM-102,changed_cell,Predecessors changed from '' to 'TEAM-102'.,Review the changed sandbox cell.,7
+Info,AddedEpic,TEAM-107,TEAM,Epic,Dependency target outside scope,Dependency Review,,Missing dependency target EXT-999.,dependency_review,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,11

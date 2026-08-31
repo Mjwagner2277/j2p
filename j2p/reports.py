@@ -7,13 +7,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from .core import AuditItem, RunPlan, html_escape
+from .core import AuditItem, RunPlan, calculate_percent, html_escape, summary_id
 
 
 AUDIT_COLUMNS = [
     "severity",
     "category",
     "jira_key",
+    "project_key",
     "issue_type",
     "summary",
     "field",
@@ -23,6 +24,39 @@ AUDIT_COLUMNS = [
     "message",
     "reviewer_action",
     "source_row",
+]
+
+PLANNED_EPIC_COLUMNS = [
+    "jira_key",
+    "project_key",
+    "summary",
+    "status",
+    "rollup_mode",
+    "rollup_key",
+    "rollup_name",
+    "resource_group",
+    "key_prefix",
+    "total_story_points",
+    "completed_story_points",
+    "percent_complete",
+    "in_planning",
+    "completed",
+    "target_start",
+    "target_end",
+    "predecessors",
+    "successors",
+    "dependency_review",
+]
+
+SUMMARY_ROLLUP_COLUMNS = [
+    "rollup_key",
+    "project_key",
+    "name",
+    "rollup_mode",
+    "child_epic_count",
+    "total_story_points",
+    "completed_story_points",
+    "percent_complete",
 ]
 
 
@@ -48,67 +82,30 @@ def write_reports(
     write_summary_rollups(paths["summary_rollups"], plan)
     write_dependency_review(paths["dependency_review"], plan.audit_items)
     write_field_mapping(paths["field_mapping"], config)
+    write_per_project_key_csvs(run_dir / "by-project-key", plan)
     write_manager_html(paths["manager_report"], plan, config, sandbox_path, state_path)
+    paths["by_project_key"] = run_dir / "by-project-key"
     return paths
 
 
 def write_audit_csv(path: Path, audit_items: Sequence[AuditItem]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=AUDIT_COLUMNS)
+        writer = csv.DictWriter(handle, fieldnames=AUDIT_COLUMNS, lineterminator="\n")
         writer.writeheader()
         for item in audit_items:
-            writer.writerow(asdict(item))
+            row = asdict(item)
+            row["project_key"] = project_key_from_jira_key(item.jira_key)
+            writer.writerow({key: row.get(key, "") for key in AUDIT_COLUMNS})
 
 
 def write_planned_epics(path: Path, plan: RunPlan) -> None:
-    columns = [
-        "jira_key",
-        "summary",
-        "status",
-        "rollup_mode",
-        "rollup_key",
-        "rollup_name",
-        "resource_group",
-        "key_prefix",
-        "total_story_points",
-        "completed_story_points",
-        "percent_complete",
-        "in_planning",
-        "completed",
-        "target_start",
-        "target_end",
-        "predecessors",
-        "successors",
-        "dependency_review",
-    ]
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns)
-        writer.writeheader()
-        for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key)):
-            row = asdict(epic)
-            row["jira_key"] = row.pop("key")
-            row["predecessors"] = ",".join(epic.predecessors)
-            row["successors"] = ",".join(epic.successors)
-            writer.writerow({key: row.get(key, "") for key in columns})
+    rows = planned_epic_rows(plan)
+    write_rows(path, PLANNED_EPIC_COLUMNS, rows)
 
 
 def write_summary_rollups(path: Path, plan: RunPlan) -> None:
-    columns = [
-        "rollup_key",
-        "name",
-        "rollup_mode",
-        "child_epic_count",
-        "total_story_points",
-        "completed_story_points",
-        "percent_complete",
-    ]
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns)
-        writer.writeheader()
-        for summary in sorted(plan.summaries.values(), key=lambda item: item.key):
-            row = asdict(summary)
-            row["rollup_key"] = row.pop("key")
-            writer.writerow({key: row.get(key, "") for key in columns})
+    rows = summary_rollup_rows(plan)
+    write_rows(path, SUMMARY_ROLLUP_COLUMNS, rows)
 
 
 def write_dependency_review(path: Path, audit_items: Sequence[AuditItem]) -> None:
@@ -118,6 +115,120 @@ def write_dependency_review(path: Path, audit_items: Sequence[AuditItem]) -> Non
         if "Dependency" in item.category or item.field in {"Predecessors", "Successors", "Dependency Review"}
     ]
     write_audit_csv(path, dependency_items)
+
+
+def write_per_project_key_csvs(base_dir: Path, plan: RunPlan) -> None:
+    project_keys = sorted(
+        {
+            epic.key_prefix
+            for epic in plan.epics.values()
+            if epic.key_prefix
+        }
+        | {
+            project_key_from_jira_key(item.jira_key)
+            for item in plan.audit_items
+            if project_key_from_jira_key(item.jira_key)
+        }
+    )
+    if not project_keys:
+        return
+
+    base_dir.mkdir(parents=True, exist_ok=True)
+    index_rows = []
+    for project_key in project_keys:
+        project_dir = base_dir / safe_filename(project_key)
+        project_dir.mkdir(parents=True, exist_ok=True)
+
+        audit_items = [
+            item for item in plan.audit_items if project_key_from_jira_key(item.jira_key) == project_key
+        ]
+        dependency_items = [
+            item
+            for item in audit_items
+            if "Dependency" in item.category
+            or item.field in {"Predecessors", "Successors", "Dependency Review"}
+        ]
+        epic_rows = [
+            row for row in planned_epic_rows(plan) if row.get("project_key") == project_key
+        ]
+        summary_rows = summary_rollup_rows_for_project_key(plan, project_key)
+
+        write_audit_csv(project_dir / "audit-detail.csv", audit_items)
+        write_rows(project_dir / "planned-epics.csv", PLANNED_EPIC_COLUMNS, epic_rows)
+        write_rows(project_dir / "summary-rollups.csv", SUMMARY_ROLLUP_COLUMNS, summary_rows)
+        write_audit_csv(project_dir / "dependency-review.csv", dependency_items)
+
+        index_rows.append(
+            {
+                "project_key": project_key,
+                "audit_detail": str(project_dir / "audit-detail.csv"),
+                "planned_epics": str(project_dir / "planned-epics.csv"),
+                "summary_rollups": str(project_dir / "summary-rollups.csv"),
+                "dependency_review": str(project_dir / "dependency-review.csv"),
+            }
+        )
+
+    write_rows(
+        base_dir / "index.csv",
+        ["project_key", "audit_detail", "planned_epics", "summary_rollups", "dependency_review"],
+        index_rows,
+    )
+
+
+def planned_epic_rows(plan: RunPlan) -> List[Dict[str, Any]]:
+    rows = []
+    for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_mode, item.rollup_key, item.key)):
+        row = asdict(epic)
+        row["jira_key"] = row.pop("key")
+        row["project_key"] = epic.key_prefix
+        row["predecessors"] = ",".join(epic.predecessors)
+        row["successors"] = ",".join(epic.successors)
+        rows.append({key: row.get(key, "") for key in PLANNED_EPIC_COLUMNS})
+    return rows
+
+
+def summary_rollup_rows(plan: RunPlan) -> List[Dict[str, Any]]:
+    rows = []
+    for summary in sorted(plan.summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
+        row = asdict(summary)
+        row["rollup_key"] = row.pop("key")
+        rows.append({key: row.get(key, "") for key in SUMMARY_ROLLUP_COLUMNS})
+    return rows
+
+
+def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List[Dict[str, Any]]:
+    buckets: Dict[str, List[Any]] = {}
+    for epic in plan.epics.values():
+        if epic.key_prefix != project_key:
+            continue
+        buckets.setdefault(summary_id(epic.rollup_mode, epic.rollup_key), []).append(epic)
+
+    rows = []
+    for _bucket_id, epics in sorted(buckets.items()):
+        total = round(sum(epic.total_story_points for epic in epics), 2)
+        completed = round(sum(epic.completed_story_points for epic in epics), 2)
+        first = epics[0]
+        rows.append(
+            {
+                "rollup_key": first.rollup_key,
+                "project_key": project_key,
+                "name": first.rollup_name,
+                "rollup_mode": first.rollup_mode,
+                "child_epic_count": len(epics),
+                "total_story_points": total,
+                "completed_story_points": completed,
+                "percent_complete": calculate_percent(completed, total),
+            }
+        )
+    return rows
+
+
+def write_rows(path: Path, columns: Sequence[str], rows: Sequence[Dict[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(columns), lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({key: row.get(key, "") for key in columns})
 
 
 def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
@@ -311,10 +422,12 @@ def write_manager_html(
     <p>Rollup mode: {html_escape(plan.rollup_mode)}</p>
     <p>Sandbox Project file: {html_escape(str(sandbox_path) if sandbox_path else "not created in validate mode")}</p>
     <p>State file: {html_escape(str(state_path) if state_path else "not written")}</p>
+    <p>Per-project-key CSVs: {html_escape(str(path.parent / "by-project-key"))}</p>
   </header>
   <main>
     {summary_grid(plan)}
     {color_key()}
+    {render_prefix_rollup_map(plan, config)}
     {render_planned_epics(plan)}
     {render_sections(sections)}
     {render_column_map(plan)}
@@ -331,6 +444,7 @@ def summary_grid(plan: RunPlan) -> str:
         ("Epics Included", plan.stats.get("epics_included", 0)),
         ("Epics Excluded", plan.stats.get("epics_excluded", 0)),
         ("Rollup Rows", plan.stats.get("summary_rows", 0)),
+        ("Project Keys", len(plan.stats.get("project_keys", []))),
         ("Review Items", len([i for i in plan.audit_items if i.severity in {"Error", "Warning", "Review"}])),
     ]
     cards = "\n".join(
@@ -359,7 +473,9 @@ def render_planned_epics(plan: RunPlan) -> str:
         rows.append(
             [
                 epic.key,
+                epic.key_prefix,
                 epic.summary,
+                epic.rollup_mode,
                 epic.rollup_key,
                 epic.resource_group,
                 epic.percent_complete,
@@ -375,7 +491,9 @@ def render_planned_epics(plan: RunPlan) -> str:
         "Planned Epic Rows",
         [
             "Jira Key",
+            "Project Key",
             "Summary",
+            "Rollup Mode",
             "Rollup",
             "Resource Group",
             "% Complete",
@@ -386,6 +504,26 @@ def render_planned_epics(plan: RunPlan) -> str:
             "Predecessors",
             "Dependency Review",
         ],
+        rows,
+    )
+
+
+def render_prefix_rollup_map(plan: RunPlan, config: Dict[str, Any]) -> str:
+    rows = []
+    configured_modes = config.get("rollup_modes", {})
+    resource_groups = config.get("resource_groups", {})
+    prefixes = sorted(set(resource_groups) | set(configured_modes) | set(plan.stats.get("project_keys", [])))
+    for prefix in prefixes:
+        rows.append(
+            [
+                prefix,
+                resource_groups.get(prefix, ""),
+                configured_modes.get(prefix, config.get("rollup_mode", "initiative")),
+            ]
+        )
+    return render_table(
+        "Project Key Rollup Mapping",
+        ["Project Key", "Resource Group", "Rollup Mode"],
         rows,
     )
 
@@ -447,3 +585,19 @@ def render_table(title: str, headers: Sequence[str], rows: Sequence[Sequence[Any
 
 def by_category(items: Iterable[AuditItem], category: str) -> List[AuditItem]:
     return [item for item in items if item.category == category]
+
+
+def project_key_from_jira_key(jira_key: str) -> str:
+    if not jira_key:
+        return "UNASSIGNED"
+    return jira_key.split("-", 1)[0].upper() if "-" in jira_key else jira_key.upper()
+
+
+def safe_filename(value: str) -> str:
+    safe = []
+    for character in value:
+        if character.isalnum() or character in {"-", "_", "."}:
+            safe.append(character)
+        else:
+            safe.append("_")
+    return "".join(safe) or "UNASSIGNED"

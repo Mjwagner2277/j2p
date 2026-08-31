@@ -1,0 +1,2 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Info,AddedEpic,TEAM-102,TEAM,Epic,Reporting MVP,Predecessors,,TEAM-101,changed_cell,Epic is included in the planned sandbox and was not found in the comparison baseline.,Review the added epic in the sandbox Project file.,5

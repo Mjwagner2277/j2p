@@ -219,6 +219,7 @@ def print_run_result(
     print(f"Audit detail CSV: {paths['audit_detail']}")
     print(f"Planned epics CSV: {paths['planned_epics']}")
     print(f"Dependency review CSV: {paths['dependency_review']}")
+    print(f"Per-project-key CSVs: {paths['by_project_key']}")
     print(f"Field mapping: {paths['field_mapping']}")
 
 

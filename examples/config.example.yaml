@@ -1,5 +1,10 @@
 rollup_mode: initiative
 
+rollup_modes:
+  TEAM: initiative
+  PLAT: fixVersion
+  DATA: initiative
+
 done_statuses:
   - Done
   - Closed

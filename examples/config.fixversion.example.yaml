@@ -1,5 +1,10 @@
 rollup_mode: fixVersion
 
+rollup_modes:
+  TEAM: fixVersion
+  PLAT: fixVersion
+  DATA: fixVersion
+
 done_statuses:
   - Done
   - Closed

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>j2p Manager Review Report</title>
+  <style>
+    :root {
+      --changed: #C6EFCE;
+      --cascade: #FFC7CE;
+      --review: #FFEB9C;
+      --dependency: #BDD7EE;
+      --planning: #D9EAD3;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --bg: #ffffff;
+      --section: #f6f8fa;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.4;
+    }
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      background: #f6f8fa;
+    }
+    main {
+      padding: 24px 32px 40px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    h2 {
+      margin: 28px 0 10px;
+      font-size: 20px;
+    }
+    p {
+      margin: 6px 0;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      background: white;
+    }
+    .metric strong {
+      display: block;
+      font-size: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 18px;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--section);
+    }
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+      margin: 8px 0 18px;
+    }
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .swatch {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #8c959f;
+      margin-right: 6px;
+      vertical-align: -2px;
+    }
+    .changed { background: var(--changed); }
+    .cascade { background: var(--cascade); }
+    .review { background: var(--review); }
+    .dependency { background: var(--dependency); }
+    .planning { background: var(--planning); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>j2p Manager Review Report</h1>
+    <p class="muted">Generated 2026-08-31T19:49:13</p>
+    <p>Jira CSV: examples/project-wide-jira-update.csv</p>
+    <p>Rollup mode: mixed</p>
+    <p>Sandbox Project file: not created in validate mode</p>
+    <p>State file: examples/manager-report-example/j2p-state.json</p>
+    <p>Per-project-key CSVs: examples/manager-report-example/j2p-run-follow-on-manager-review/by-project-key</p>
+  </header>
+  <main>
+    <section><h2>Executive Summary</h2><div class="summary-grid"><div class="metric"><span>CSV Rows</span><strong>17</strong></div>
+<div class="metric"><span>Epics Included</span><strong>6</strong></div>
+<div class="metric"><span>Epics Excluded</span><strong>2</strong></div>
+<div class="metric"><span>Rollup Rows</span><strong>3</strong></div>
+<div class="metric"><span>Project Keys</span><strong>2</strong></div>
+<div class="metric"><span>Review Items</span><strong>6</strong></div></div></section>
+    <section>
+  <h2>Color Key</h2>
+  <div class="swatches">
+    <div class="swatch"><span class="dot changed"></span>Green: changed cell</div>
+    <div class="swatch"><span class="dot cascade"></span>Red: first/root critical-path end-date driver; overrides green</div>
+    <div class="swatch"><span class="dot review"></span>Yellow/amber: unmatched or manager review needed</div>
+    <div class="swatch"><span class="dot dependency"></span>Blue: dependency review marker</div>
+    <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
+  </div>
+</section>
+    <section><h2>Project Key Rollup Mapping</h2><table><thead><tr><th>Project Key</th><th>Resource Group</th><th>Rollup Mode</th></tr></thead><tbody><tr><td>DATA</td><td>Data Engineering</td><td>initiative</td></tr><tr><td>PLAT</td><td>Platform Engineering</td><td>fixVersion</td></tr><tr><td>TEAM</td><td>Product Delivery</td><td>initiative</td></tr></tbody></table></section>
+    <section><h2>Planned Epic Rows</h2><table><thead><tr><th>Jira Key</th><th>Project Key</th><th>Summary</th><th>Rollup Mode</th><th>Rollup</th><th>Resource Group</th><th>% Complete</th><th>In Planning</th><th>Done</th><th>Target Start</th><th>Target End</th><th>Predecessors</th><th>Dependency Review</th></tr></thead><tbody><tr><td>TEAM-103</td><td>TEAM</td><td>Billing integration</td><td>initiative</td><td>PLAT-100</td><td>Product Delivery</td><td>0</td><td>No</td><td>No</td><td>2026-11-07</td><td>2026-12-04</td><td>TEAM-102</td><td></td></tr><tr><td>TEAM-101</td><td>TEAM</td><td>Identity and access foundation v2</td><td>initiative</td><td>PROD-100</td><td>Product Delivery</td><td>100</td><td>No</td><td>Yes</td><td>2026-09-01</td><td>2026-10-05</td><td></td><td></td></tr><tr><td>TEAM-102</td><td>TEAM</td><td>Reporting MVP</td><td>initiative</td><td>PROD-100</td><td>Product Delivery</td><td>38</td><td>No</td><td>No</td><td>2026-10-06</td><td>2026-11-06</td><td>TEAM-101</td><td></td></tr><tr><td>TEAM-104</td><td>TEAM</td><td>Mobile shell</td><td>initiative</td><td>PROD-100</td><td>Product Delivery</td><td>0</td><td>No</td><td>No</td><td>2026-11-15</td><td>2026-12-15</td><td></td><td></td></tr><tr><td>TEAM-107</td><td>TEAM</td><td>Dependency target outside scope</td><td>initiative</td><td>PROD-100</td><td>Product Delivery</td><td>0</td><td>Yes</td><td>No</td><td>2026-12-01</td><td>2026-12-20</td><td></td><td>Missing dependency target EXT-999.</td></tr><tr><td>PLAT-201</td><td>PLAT</td><td>Shared deployment pipeline</td><td>fixVersion</td><td>Portal 2026</td><td>Platform Engineering</td><td>100</td><td>No</td><td>Yes</td><td>2026-09-01</td><td>2026-09-20</td><td></td><td></td></tr></tbody></table></section>
+    <section><h2>Reviewer Action Needed</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>ExcludedMissingRollup</td><td>TEAM-105</td><td>Unplanned marketplace experiment</td><td>Rollup</td><td></td><td></td><td>Epic has no initiative parent key.</td><td>Add the required initiative parent or fixVersion in Jira, then rerun.</td></tr><tr><td>Warning</td><td>ExcludedUnknownPrefix</td><td>UNK-106</td><td>Unknown team epic</td><td>Resource Group</td><td>UNK</td><td></td><td>Epic key prefix &#x27;UNK&#x27; is not mapped to a resource group.</td><td>Add the prefix to resource_groups or confirm the epic should be excluded.</td></tr><tr><td>Review</td><td>InPlanning</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>In Planning</td><td></td><td>Yes</td><td>Epic has no pointed child stories/tasks and is marked In Planning.</td><td>Confirm this epic is intentionally unestimated or add pointed child work.</td></tr><tr><td>Warning</td><td>MissingDependencyTarget</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Dependency Review</td><td></td><td>EXT-999</td><td>Dependency target &#x27;EXT-999&#x27; is not an included epic.</td><td>Confirm the target epic is in the Jira export and meets rollup/resource rules.</td></tr><tr><td>Review</td><td>ChangedName</td><td>TEAM-101</td><td>Identity and access foundation v2</td><td>Name</td><td>Identity and access foundation</td><td>Identity and access foundation v2</td><td>Name changed from &#x27;Identity and access foundation&#x27; to &#x27;Identity and access foundation v2&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Review</td><td>RollupMove</td><td>TEAM-103</td><td>Billing integration</td><td>Rollup Key</td><td>PROD-100</td><td>PLAT-100</td><td>Rollup Key changed from &#x27;PROD-100&#x27; to &#x27;PLAT-100&#x27;.</td><td>Review the changed sandbox cell.</td></tr></tbody></table></section>
+<section><h2>Changed Names</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Review</td><td>ChangedName</td><td>TEAM-101</td><td>Identity and access foundation v2</td><td>Name</td><td>Identity and access foundation</td><td>Identity and access foundation v2</td><td>Name changed from &#x27;Identity and access foundation&#x27; to &#x27;Identity and access foundation v2&#x27;.</td><td>Review the changed sandbox cell.</td></tr></tbody></table></section>
+<section><h2>Added Epics</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Name</td><td></td><td>Mobile shell</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Rollup Key</td><td></td><td>PROD-100</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Resource Group</td><td></td><td>Product Delivery</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>% Complete</td><td></td><td>0</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Total Story Points</td><td></td><td>5</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Completed Story Points</td><td></td><td>0</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Jira Target Start</td><td></td><td>2026-11-15</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Jira Target End</td><td></td><td>2026-12-15</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Name</td><td></td><td>Dependency target outside scope</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Rollup Key</td><td></td><td>PROD-100</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Resource Group</td><td></td><td>Product Delivery</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>% Complete</td><td></td><td>0</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Total Story Points</td><td></td><td>0</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Completed Story Points</td><td></td><td>0</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Jira Target Start</td><td></td><td>2026-12-01</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Jira Target End</td><td></td><td>2026-12-20</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Dependency Review</td><td></td><td>Missing dependency target EXT-999.</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr></tbody></table></section>
+<section><h2>Parent Or Rollup Moves</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Review</td><td>RollupMove</td><td>TEAM-103</td><td>Billing integration</td><td>Rollup Key</td><td>PROD-100</td><td>PLAT-100</td><td>Rollup Key changed from &#x27;PROD-100&#x27; to &#x27;PLAT-100&#x27;.</td><td>Review the changed sandbox cell.</td></tr></tbody></table></section>
+<section><h2>Completed Since Last Update</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Info</td><td>CompletedSinceLastUpdate</td><td>TEAM-101</td><td>Identity and access foundation v2</td><td>Status</td><td>In Progress</td><td>Done</td><td>Epic is now marked done in Jira.</td><td>Confirm completed epic can remain inactive/hidden in the sandbox.</td></tr></tbody></table></section>
+<section><h2>In Planning</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Review</td><td>InPlanning</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>In Planning</td><td></td><td>Yes</td><td>Epic has no pointed child stories/tasks and is marked In Planning.</td><td>Confirm this epic is intentionally unestimated or add pointed child work.</td></tr></tbody></table></section>
+<section><h2>Dependency Review</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>MissingDependencyTarget</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Dependency Review</td><td></td><td>EXT-999</td><td>Dependency target &#x27;EXT-999&#x27; is not an included epic.</td><td>Confirm the target epic is in the Jira export and meets rollup/resource rules.</td></tr><tr><td>Info</td><td>DependencyChange</td><td>TEAM-103</td><td>Billing integration</td><td>Predecessors</td><td></td><td>TEAM-102</td><td>Predecessors changed from &#x27;&#x27; to &#x27;TEAM-102&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Dependency Review</td><td></td><td>Missing dependency target EXT-999.</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr></tbody></table></section>
+<section><h2>Date Review</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Info</td><td>ChangedField</td><td>TEAM-101</td><td>Identity and access foundation v2</td><td>Jira Target End</td><td>2026-09-30</td><td>2026-10-05</td><td>Jira Target End changed from &#x27;2026-09-30&#x27; to &#x27;2026-10-05&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>ChangedField</td><td>TEAM-102</td><td>Reporting MVP</td><td>Jira Target Start</td><td>2026-10-01</td><td>2026-10-06</td><td>Jira Target Start changed from &#x27;2026-10-01&#x27; to &#x27;2026-10-06&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>ChangedField</td><td>TEAM-102</td><td>Reporting MVP</td><td>Jira Target End</td><td>2026-10-31</td><td>2026-11-06</td><td>Jira Target End changed from &#x27;2026-10-31&#x27; to &#x27;2026-11-06&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>ChangedField</td><td>TEAM-103</td><td>Billing integration</td><td>Jira Target Start</td><td>2026-11-01</td><td>2026-11-07</td><td>Jira Target Start changed from &#x27;2026-11-01&#x27; to &#x27;2026-11-07&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>ChangedField</td><td>TEAM-103</td><td>Billing integration</td><td>Jira Target End</td><td>2026-11-30</td><td>2026-12-04</td><td>Jira Target End changed from &#x27;2026-11-30&#x27; to &#x27;2026-12-04&#x27;.</td><td>Review the changed sandbox cell.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Jira Target Start</td><td></td><td>2026-11-15</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-104</td><td>Mobile shell</td><td>Jira Target End</td><td></td><td>2026-12-15</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Jira Target Start</td><td></td><td>2026-12-01</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr><tr><td>Info</td><td>AddedEpic</td><td>TEAM-107</td><td>Dependency target outside scope</td><td>Jira Target End</td><td></td><td>2026-12-20</td><td>Epic is new relative to the comparison baseline.</td><td>Review the added epic in the sandbox Project file.</td></tr></tbody></table></section>
+<section><h2>Unmatched Project Tasks</h2><p class="empty">No items.</p></section>
+<section><h2>Excluded Items</h2><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>ExcludedMissingRollup</td><td>TEAM-105</td><td>Unplanned marketplace experiment</td><td>Rollup</td><td></td><td></td><td>Epic has no initiative parent key.</td><td>Add the required initiative parent or fixVersion in Jira, then rerun.</td></tr><tr><td>Warning</td><td>ExcludedUnknownPrefix</td><td>UNK-106</td><td>Unknown team epic</td><td>Resource Group</td><td>UNK</td><td></td><td>Epic key prefix &#x27;UNK&#x27; is not mapped to a resource group.</td><td>Add the prefix to resource_groups or confirm the epic should be excluded.</td></tr></tbody></table></section>
+    <section><h2>CSV Column Mapping Used</h2><table><thead><tr><th>Logical Field</th><th>CSV Header</th></tr></thead><tbody><tr><td>epic_link</td><td>Epic Link</td></tr><tr><td>fix_versions</td><td>Fix versions</td></tr><tr><td>issue_id</td><td>Issue id</td></tr><tr><td>issue_type</td><td>Issue Type</td></tr><tr><td>jira_key</td><td>Issue key</td></tr><tr><td>parent</td><td>Parent</td></tr><tr><td>predecessors</td><td>Inward issue link (Blocks)</td></tr><tr><td>resolution</td><td>Resolution</td></tr><tr><td>status</td><td>Status</td></tr><tr><td>story_points</td><td>Story Points</td></tr><tr><td>successors</td><td>Outward issue link (Blocks)</td></tr><tr><td>summary</td><td>Summary</td></tr><tr><td>target_end</td><td>Target end</td></tr><tr><td>target_start</td><td>Target start</td></tr></tbody></table></section>
+  </main>
+</body>
+</html>

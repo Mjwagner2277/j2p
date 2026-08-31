@@ -25,6 +25,7 @@ The smoke test verifies:
 - initiative-mode validation produces a complete report bundle
 - follow-on validation against saved state reports expected manager-review categories
 - fixVersion-mode validation produces a complete report bundle
+- per-project-key split CSVs are written
 - manager HTML reports are self-contained
 
 To keep generated smoke-test output for inspection:
@@ -90,3 +91,4 @@ Review the generated sandbox `.mpp` and confirm:
 - critical-path root finish change is red when applicable
 - completed epics are inactive and have hidden Gantt bars when Project permits it
 - `Manager-Review-Report.html` and audit CSVs match visible sandbox changes
+- `by-project-key\<KEY>\*.csv` files are present for each Jira key prefix

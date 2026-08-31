@@ -27,7 +27,18 @@ Used as summary rollup parents in initiative mode:
 
 ## Rollup Modes
 
-Only one rollup mode is used per run.
+j2p supports a default rollup mode and optional per-prefix overrides. This lets one project-wide Jira CSV include teams that use initiative rollups and teams that use fixVersion rollups.
+
+Example:
+
+```yaml
+rollup_mode: initiative
+
+rollup_modes:
+  TEAM: initiative
+  PLAT: fixVersion
+  DATA: initiative
+```
 
 Initiative mode:
 
@@ -43,9 +54,9 @@ FixVersion summary task
   Epic task
 ```
 
-In initiative mode, each epic must have a parent initiative key and that initiative must appear in the Jira CSV.
+For a prefix using initiative mode, each epic must have a parent initiative key and that initiative must appear in the Jira CSV.
 
-In fixVersion mode, each epic must have exactly one fixVersion by default. Missing or multiple fixVersions are excluded and reported unless configuration is changed later.
+For a prefix using fixVersion mode, each epic must have exactly one fixVersion by default. Missing or multiple fixVersions are excluded and reported unless configuration is changed later.
 
 ## Epic Identity
 

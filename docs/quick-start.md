@@ -12,7 +12,7 @@ j2p reads a project-wide Jira CSV, calculates epic completion from child story/t
 - Epics with unmapped Jira key prefixes are excluded and reported.
 - Standard Jira blocker links are mapped to Finish-to-Start predecessor links.
 - Circular dependencies are skipped and reported.
-- Manager review output is an HTML report plus CSV audit files.
+- Manager review output is an HTML report plus CSV audit files, including per-project-key split CSVs.
 
 ## Install
 
@@ -59,6 +59,12 @@ review-output\j2p-run-YYYYMMDD-HHMMSS\
   planned-epics.csv
   summary-rollups.csv
   dependency-review.csv
+  by-project-key\
+    TEAM\
+      audit-detail.csv
+      planned-epics.csv
+      summary-rollups.csv
+      dependency-review.csv
   FIELD_MAPPING.md
   j2p-state.after.json
 ```
@@ -85,7 +91,18 @@ py -3.14 -m j2p update `
 
 ## Rollup Modes
 
-Initiative mode:
+Set the default mode with `rollup_mode`, then override individual Jira key prefixes with `rollup_modes`.
+
+```yaml
+rollup_mode: initiative
+
+rollup_modes:
+  TEAM: initiative
+  PLAT: fixVersion
+  DATA: initiative
+```
+
+Initiative mode command:
 
 ```powershell
 py -3.14 -m j2p validate `

@@ -4,12 +4,13 @@ Use these files to validate the j2p workflow before using a live Jira export.
 
 | File | Purpose |
 | --- | --- |
-| `config.example.yaml` | Default initiative-mode YAML config |
+| `config.example.yaml` | Mixed per-prefix YAML config: `TEAM` uses initiative, `PLAT` uses fixVersion |
 | `config.fixversion.example.yaml` | Minimal fixVersion-mode YAML config |
 | `project-wide-jira-initial.csv` | Initial project-wide Jira export |
 | `project-wide-jira-update.csv` | Follow-on export with changed names, moved epics, new epics, exclusions, and dependency review cases |
 | `project-wide-jira-fixversion.csv` | fixVersion-mode example |
 | `test.md` | Complete hands-on scenario |
+| `manager-report-example/` | Generated example of the full manager review report bundle |
 
 Run the initiative-mode validation example:
 
