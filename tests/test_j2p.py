@@ -26,6 +26,7 @@ from j2p.project import (
     MicrosoftProjectSession,
     ProjectAutomationError,
     append_resource_name,
+    cascade_branch_driver_keys,
     project_column_for_audit_field,
     project_column_aliases,
     project_date_for_com,
@@ -484,8 +485,33 @@ class J2PPlanningTests(unittest.TestCase):
         colors = {item.color for item in follow_on.audit_items if item.color}
         self.assertTrue({"changed_cell", "review_needed", "dependency_review", "in_planning"}.issubset(colors))
 
-    def test_schedule_review_marks_cascade_root_red(self) -> None:
+    def test_schedule_review_marks_every_changed_branch_driver_red(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
+
+        def epic(key: str, summary: str, successors: list[str] | None = None) -> PlanEpic:
+            return PlanEpic(
+                key=key,
+                issue_id=key,
+                summary=summary,
+                status="In Progress",
+                rollup_mode="initiative",
+                rollup_key="PROD-100",
+                rollup_name="Program",
+                resource_group="Product Delivery",
+                key_prefix="TEAM",
+                total_story_points=8,
+                completed_story_points=0,
+                logged_hours=0,
+                completed_logged_hours=0,
+                story_point_ratio=0,
+                percent_complete=0,
+                in_planning=False,
+                completed=False,
+                target_start="2026-01-01",
+                target_end="2026-01-31",
+                successors=successors or [],
+            )
+
         plan = RunPlan(
             generated_at="2026-01-01T00:00:00",
             jira_csv="unit.csv",
@@ -494,70 +520,40 @@ class J2PPlanningTests(unittest.TestCase):
             stats={},
             summaries={},
             epics={
-                "TEAM-RED": PlanEpic(
-                    key="TEAM-RED",
-                    issue_id="1",
-                    summary="Critical path root",
-                    status="In Progress",
-                    rollup_mode="initiative",
-                    rollup_key="PROD-100",
-                    rollup_name="Program",
-                    resource_group="Product Delivery",
-                    key_prefix="TEAM",
-                    total_story_points=8,
-                    completed_story_points=0,
-                    logged_hours=0,
-                    completed_logged_hours=0,
-                    story_point_ratio=0,
-                    percent_complete=0,
-                    in_planning=False,
-                    completed=False,
-                    target_start="2026-01-01",
-                    target_end="2026-01-31",
-                ),
-                "TEAM-CASCADE": PlanEpic(
-                    key="TEAM-CASCADE",
-                    issue_id="2",
-                    summary="Downstream item",
-                    status="In Progress",
-                    rollup_mode="initiative",
-                    rollup_key="PROD-100",
-                    rollup_name="Program",
-                    resource_group="Product Delivery",
-                    key_prefix="TEAM",
-                    total_story_points=8,
-                    completed_story_points=0,
-                    logged_hours=0,
-                    completed_logged_hours=0,
-                    story_point_ratio=0,
-                    percent_complete=0,
-                    in_planning=False,
-                    completed=False,
-                    target_start="2026-02-01",
-                    target_end="2026-02-28",
-                ),
+                "TEAM-A": epic("TEAM-A", "Branch driver", ["TEAM-B", "TEAM-C"]),
+                "TEAM-B": epic("TEAM-B", "Nested branch driver", ["TEAM-D"]),
+                "TEAM-C": epic("TEAM-C", "Downstream leaf"),
+                "TEAM-D": epic("TEAM-D", "Nested downstream leaf"),
+                "TEAM-E": epic("TEAM-E", "Independent changed item"),
             },
             audit_items=[],
         )
         before = {
-            "TEAM-RED": ProjectTaskSnapshot(key="TEAM-RED", finish="2026-01-31"),
-            "TEAM-CASCADE": ProjectTaskSnapshot(key="TEAM-CASCADE", finish="2026-02-28"),
+            key: ProjectTaskSnapshot(key=key, finish=f"2026-01-{index:02d}")
+            for index, key in enumerate(plan.epics, start=1)
         }
         after = {
-            "TEAM-RED": ProjectTaskSnapshot(key="TEAM-RED", finish="2026-02-07"),
-            "TEAM-CASCADE": ProjectTaskSnapshot(key="TEAM-CASCADE", finish="2026-03-07"),
+            key: ProjectTaskSnapshot(key=key, finish=f"2026-02-{index:02d}")
+            for index, key in enumerate(plan.epics, start=1)
         }
         session = object.__new__(MicrosoftProjectSession)
         session.snapshot_tasks = lambda _config: after
-        session.task_is_critical = lambda key, _config: key == "TEAM-RED"
 
         MicrosoftProjectSession.add_schedule_review_items(session, plan, before, config)
 
-        root = next(item for item in plan.audit_items if item.category == "CriticalPathCascadeRoot")
-        downstream = next(item for item in plan.audit_items if item.category == "CascadingDateChange")
-        self.assertEqual(root.jira_key, "TEAM-RED")
-        self.assertEqual(root.color, "cascade_root")
-        self.assertEqual(downstream.color, "changed_cell")
+        self.assertEqual(cascade_branch_driver_keys(plan, set(after)), {"TEAM-A", "TEAM-B"})
+        red_keys = {
+            item.jira_key
+            for item in plan.audit_items
+            if item.category == "CascadeBranchDriver" and item.color == "cascade_root"
+        }
+        green_keys = {
+            item.jira_key
+            for item in plan.audit_items
+            if item.category == "CascadingDateChange" and item.color == "changed_cell"
+        }
+        self.assertEqual(red_keys, {"TEAM-A", "TEAM-B"})
+        self.assertEqual(green_keys, {"TEAM-C", "TEAM-D", "TEAM-E"})
 
     def test_resource_group_uses_project_resource_assignment(self) -> None:
         session = object.__new__(MicrosoftProjectSession)

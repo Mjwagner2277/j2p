@@ -52,6 +52,17 @@ class ProjectAutomationError(RuntimeError):
     """Raised when Microsoft Project automation is unavailable or fails."""
 
 
+def cascade_branch_driver_keys(plan: RunPlan, changed_keys: set[str]) -> set[str]:
+    drivers: set[str] = set()
+    for key in changed_keys:
+        epic = plan.epics.get(key)
+        if not epic:
+            continue
+        if any(successor_key in changed_keys for successor_key in epic.successors):
+            drivers.add(key)
+    return drivers
+
+
 def prepare_sandbox_copy(main_project: Path, run_dir: Path, run_id: str) -> Path:
     main_project = main_project.expanduser().resolve()
     run_dir = run_dir.expanduser().resolve()
@@ -1215,7 +1226,7 @@ class MicrosoftProjectSession:
     ) -> None:
         project_progress("Reading post-update Project task state")
         after = self.snapshot_tasks(config)
-        changed_finishes = []
+        changed_finishes: Dict[str, Tuple[str, str]] = {}
         project_progress("Comparing Project finish dates for schedule review")
         for key, epic in plan.epics.items():
             if not epic.drives_schedule:
@@ -1223,13 +1234,14 @@ class MicrosoftProjectSession:
             before_finish = before.get(key).finish if key in before else ""
             after_finish = after.get(key).finish if key in after else ""
             if before_finish and after_finish and before_finish != after_finish:
-                changed_finishes.append((key, before_finish, after_finish, self.task_is_critical(key, config)))
+                changed_finishes[key] = (before_finish, after_finish)
             if epic.target_end and after_finish and after_finish != epic.target_end:
                 plan.audit_items.append(
                     AuditItem(
                         "Review",
                         "ScheduledDateMismatch",
-                        jira_key=key,
+                        jira_key=epic.jira_key or key,
+                        schedule_key=key,
                         issue_type="Epic",
                         summary=epic.summary,
                         field="Finish",
@@ -1244,51 +1256,42 @@ class MicrosoftProjectSession:
         if not changed_finishes:
             project_progress("Schedule review found no Project finish-date shifts")
             return
-        changed_finishes.sort(key=lambda item: (not item[3], item[2], item[0]))
         project_progress(f"Schedule review found {len(changed_finishes)} Project finish-date shift(s)")
-        root_key, old_finish, new_finish, _critical = changed_finishes[0]
-        root_epic = plan.epics.get(root_key)
-        plan.audit_items.append(
-            AuditItem(
-                "Review",
-                "CriticalPathCascadeRoot",
-                jira_key=root_key,
-                issue_type="Epic",
-                summary=root_epic.summary if root_epic else "",
-                field="Finish",
-                old_value=old_finish,
-                new_value=new_finish,
-                color="cascade_root",
-                message="First detected critical-path end-date shift after auto-scheduling.",
-                reviewer_action="Review this red finish date as the likely root schedule driver.",
+        cascade_driver_keys = cascade_branch_driver_keys(plan, set(changed_finishes))
+        if cascade_driver_keys:
+            project_progress(
+                f"Schedule review found {len(cascade_driver_keys)} branch driver finish-date shift(s)"
             )
-        )
-        for key, old_finish, new_finish, _critical in changed_finishes[1:]:
+        for key, (old_finish, new_finish) in sorted(
+            changed_finishes.items(),
+            key=lambda item: (item[0] not in cascade_driver_keys, item[1][1], item[0]),
+        ):
             epic = plan.epics.get(key)
+            is_driver = key in cascade_driver_keys
             plan.audit_items.append(
                 AuditItem(
-                    "Info",
-                    "CascadingDateChange",
-                    jira_key=key,
+                    "Review" if is_driver else "Info",
+                    "CascadeBranchDriver" if is_driver else "CascadingDateChange",
+                    jira_key=epic.jira_key if epic and epic.jira_key else key,
+                    schedule_key=key,
                     issue_type="Epic",
                     summary=epic.summary if epic else "",
                     field="Finish",
                     old_value=old_finish,
                     new_value=new_finish,
-                    color="changed_cell",
-                    message="Finish date changed after auto-scheduling.",
-                    reviewer_action="Review as a downstream schedule change.",
+                    color="cascade_root" if is_driver else "changed_cell",
+                    message=(
+                        "Finish date changed and at least one downstream successor also shifted after auto-scheduling."
+                        if is_driver
+                        else "Finish date changed after auto-scheduling."
+                    ),
+                    reviewer_action=(
+                        "Review this red finish date as a schedule branch driver before downstream changes."
+                        if is_driver
+                        else "Review as a downstream or independent schedule change."
+                    ),
                 )
             )
-
-    def task_is_critical(self, key: str, config: Dict[str, Any]) -> bool:
-        task = self.index_tasks_by_key(config).get(key)
-        if task is None:
-            return False
-        try:
-            return bool(task.Critical)
-        except Exception:
-            return False
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         project_progress("Indexing Project tasks for review formatting")

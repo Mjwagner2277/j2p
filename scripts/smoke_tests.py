@@ -259,7 +259,7 @@ def assert_predecessor_coverage(path: Path, minimum_ratio: float) -> None:
 
 
 def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path: Path) -> None:
-    project_only = {"CriticalPathCascadeRoot", "CascadingDateChange"}
+    project_only = {"CascadeBranchDriver", "CascadingDateChange"}
     with case_path.open("r", encoding="utf-8", newline="") as handle:
         cases = list(csv.DictReader(handle))
     if len(cases) < 15:

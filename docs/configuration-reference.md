@@ -532,7 +532,7 @@ Default meanings:
 | Color Key | Meaning |
 | --- | --- |
 | `changed_cell` | Green changed cells. |
-| `cascade_root` | Red critical-path root finish-date driver. |
+| `cascade_root` | Red cascade branch driver finish-date cells. |
 | `review_needed` | Yellow/amber review cells. |
 | `dependency_review` | Blue dependency review cells. |
 | `in_planning` | Gray/green-gray in-planning cells. |

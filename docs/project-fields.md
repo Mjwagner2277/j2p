@@ -27,7 +27,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
 | `% Complete` / `PercentComplete` | Yes | Yes | Epic and summary percent complete. Used for baseline comparison, active-work Story Point Ratio filtering, and manager rollup status. |
 | `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Used with `Date1` to show Jira target start and with Project scheduling for review. |
-| `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison, green cascading changes, and red critical-path root finish changes. |
+| `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison, green changed finish dates, and red cascade branch driver finish dates. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
 | `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the task so Project's native `Resource Group` field is populated. |
@@ -100,7 +100,7 @@ Review coloring:
 - `project_column_for_audit_field()` maps audit fields to the Project column that should be colored.
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
 - `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and reported in HTML/CSV, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
-- Red `cascade_root` coloring applies to native `Finish` after Project scheduling analysis.
+- Red `cascade_root` coloring applies to native `Finish` when a changed finish has changed downstream successors after Project scheduling analysis.
 - Green changed-cell coloring applies to the changed native/custom field.
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.
 - Blue dependency coloring commonly applies to `dependency_review`.

@@ -4,8 +4,8 @@ Green,Percent and Jira target date changes,CORE-1001,18,18,ChangedField,Date Rev
 Green,Logged hours and Story Point Ratio changed,CORE-1001,18,18,ChangedField,Changed Fields,Child story worklog hours roll up to the epic and changed logged-hour and Story Point Ratio cells are highlighted.
 Green,New included epic,CORE-1980,,25,AddedEpic,Added Epics,A new valid epic is added to the sandbox and listed for review.
 Green,Valid dependency change,CORE-1007,24,24,DependencyChange,Dependency Review,A new valid predecessor is written as a changed predecessor cell.
-Red,Project auto-schedule cascade root,CORE-1004,21,21,CriticalPathCascadeRoot,Date Review,Red appears only during Windows Microsoft Project update when this finish-date shift is selected as the root driver.
-Green,Downstream cascade item,CORE-1005,22,22,CascadingDateChange,Date Review,Downstream auto-scheduled finish-date changes remain green after the red root is selected.
+Red,Project auto-schedule cascade branch driver,CORE-1004,21,21,CascadeBranchDriver,Date Review,Red appears only during Windows Microsoft Project update when this changed finish has changed downstream successors.
+Green,Downstream cascade item,CORE-1005,22,22,CascadingDateChange,Date Review,Downstream auto-scheduled finish-date changes remain green when they have no changed downstream successor.
 Yellow/amber,Unknown Jira key prefix,UNK-9000,35,35,ExcludedUnknownPrefix,Excluded Items,Unknown prefixes are excluded until the configuration maps them to a resource group.
 Yellow/amber,Missing initiative parent,CORE-1049,26,26,ExcludedMissingRollup,Excluded Items,Initiative-mode teams must provide a parent initiative.
 Yellow/amber,Missing fixVersion,PLAT-4029,33,33,ExcludedMissingRollup,Excluded Items,fixVersion-mode teams still need at least one fixVersion.

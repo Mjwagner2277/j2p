@@ -310,7 +310,7 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
             "Color key:",
             "",
             "- Green: changed cell",
-            "- Red: first/root critical-path end-date driver; red overrides green",
+            "- Red: cascade branch driver finish date; red overrides green",
             "- Yellow/amber: unmatched or manager review needed",
             "- Blue: dependency review marker",
             "- Gray/green-gray: in planning",
@@ -909,7 +909,7 @@ def color_key() -> str:
   <h2>Color Key</h2>
   <div class="swatches">
     <div class="swatch"><span class="dot changed"></span>Green: changed cell</div>
-    <div class="swatch"><span class="dot cascade"></span>Red: first/root critical-path end-date driver; overrides green</div>
+    <div class="swatch"><span class="dot cascade"></span>Red: cascade branch driver finish date; overrides green</div>
     <div class="swatch"><span class="dot review"></span>Yellow/amber: unmatched or manager review needed</div>
     <div class="swatch"><span class="dot dependency"></span>Blue: dependency review marker</div>
     <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
@@ -928,8 +928,8 @@ def render_color_examples(plan: RunPlan) -> str:
         (
             "cascade_root",
             "Red",
-            "Critical-path root finish change",
-            "Project update only. Appears after Microsoft Project auto-scheduling identifies the first/root finish-date driver.",
+            "Cascade branch driver finish change",
+            "Project update only. Appears when a changed Project finish also has changed downstream successors.",
         ),
         (
             "review_needed",
@@ -966,7 +966,7 @@ def render_color_examples(plan: RunPlan) -> str:
             example = (
                 "Validate mode does not choose the red cell. This kind of Jira target-end change "
                 "becomes a red example only after Microsoft Project auto-scheduling identifies it "
-                "as the first/root finish-date driver."
+                "as a changed finish date with changed downstream successors."
             )
         else:
             jira_key = ""

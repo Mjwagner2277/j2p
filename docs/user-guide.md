@@ -218,7 +218,7 @@ The manager report intentionally keeps project-wide Story Point Ratio, rollup st
 | Color | Meaning | Typical Reviewer Decision |
 | --- | --- | --- |
 | Green | Changed cell. | Confirm the Jira value should update the sandbox schedule. |
-| Red | First/root critical-path finish-date driver. Red overrides green. | Review first because this is the likely source of cascading schedule movement. |
+| Red | Cascade branch driver finish date. Red overrides green. | Review first because this changed item has changed downstream successors. |
 | Yellow/amber | Unmatched item, excluded item, or manager review needed. | Decide whether Jira/configuration/source Project data should be corrected. |
 | Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning when that column is exposed. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
@@ -428,8 +428,8 @@ Jira target dates are stored in Project custom fields:
 The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `update` run:
 
 - Changed Jira target-date cells are colored green.
-- If Project auto-scheduling shifts finish dates, the first/root detected finish-date driver is colored red.
-- Downstream cascading finish-date shifts remain green.
+- If Project auto-scheduling shifts finish dates, every changed finish with changed downstream successors is colored red.
+- Changed finish dates with no changed downstream successor remain green.
 - If a Project scheduled finish does not match Jira `Target end`, the mismatch is reported.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.

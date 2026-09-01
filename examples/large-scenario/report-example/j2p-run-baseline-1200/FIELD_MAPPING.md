@@ -43,7 +43,7 @@ Review table visibility:
 Color key:
 
 - Green: changed cell
-- Red: first/root critical-path end-date driver; red overrides green
+- Red: cascade branch driver finish date; red overrides green
 - Yellow/amber: unmatched or manager review needed
 - Blue: dependency review marker
 - Gray/green-gray: in planning

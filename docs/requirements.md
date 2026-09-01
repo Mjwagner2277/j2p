@@ -125,8 +125,8 @@ Jira `Target start` and `Target end` map into Project custom date fields and are
 
 The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
 
-- the first/root detected critical-path finish shift is colored red
-- downstream shifted finish dates are colored green
+- every changed finish with changed downstream successors is colored red
+- changed finish dates with no changed downstream successor are colored green
 - any Project scheduled finish that does not match Jira `Target end` is reported
 
 ## Review Colors
@@ -134,7 +134,7 @@ The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
 | Color | Meaning |
 | --- | --- |
 | Green | Changed cell |
-| Red | First/root critical-path end-date driver; overrides green |
+| Red | Cascade branch driver finish date; overrides green |
 | Yellow/amber | Unmatched or manager review needed |
 | Blue | Dependency review marker |
 | Gray/green-gray | In planning |

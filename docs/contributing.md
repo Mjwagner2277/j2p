@@ -128,7 +128,7 @@ Manually confirm:
 - the sandbox `.mpp` is timestamped
 - custom fields are named correctly
 - changed cells are green
-- critical-path root finish-date cells are red when applicable
+- cascade branch driver finish-date cells are red when applicable
 - dependency review cells are blue
 - unmatched/excluded cells are amber
 - in-planning cells are marked

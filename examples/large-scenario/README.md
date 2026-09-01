@@ -310,7 +310,7 @@ examples\large-scenario\expected-review-cases.csv
 | Green | Logged hours and Story Point Ratio changed | updated row 18, `CORE-1001` | Child story worklog hours roll up to the epic and changed logged-hour and Story Point Ratio cells are highlighted |
 | Green | New epic | updated row 25, `CORE-1980` | A new valid epic is added to the sandbox and appears in `Added Epics` |
 | Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
-| Red | Critical-path root finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
+| Red | Cascade branch driver finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling branch driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
 | Green | Downstream cascade item | updated row 22, `CORE-1005` | This is the intended downstream dependency item after `CORE-1004` |
 | Yellow/amber | Unknown prefix | updated row 35, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
 | Yellow/amber | Missing initiative parent | updated row 26, `CORE-1049` | `CORE` uses initiative rollup, so a missing parent excludes the epic |
@@ -367,13 +367,13 @@ Each folder contains:
 
 ## Step 8: Understand The Red Case
 
-The red cascade-root color cannot be selected in `validate` mode because no Microsoft Project schedule engine is running. It is selected during a Windows `update` run, such as the sandbox update command in Step 5.
+The red cascade-branch-driver color cannot be selected in `validate` mode because no Microsoft Project schedule engine is running. It is selected during a Windows `update` run, such as the sandbox update command in Step 5.
 
 For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 
 - `CORE-1004` has a target-end date change and blocks `CORE-1005`.
 - `CORE-1005` is the downstream dependent epic.
-- In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports the first/root finish-date driver as red and downstream finish-date changes as green.
+- In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports every changed finish with changed downstream successors as red. Changed finish dates with no changed downstream successor remain green.
 
 ## Step 9: Manager Decisions
 
