@@ -1,0 +1,3 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Review,InPlanning,WEB-2010,WEB,Epic,Web experience green-gray in planning,In Planning,,Yes,in_planning,Epic has no pointed child stories/tasks and is marked In Planning.,Confirm this epic is intentionally unestimated or add pointed child work.,77
+Warning,SelfDependencySkipped,WEB-2008,WEB,Epic,Web experience blue self dependency,Dependency Review,,,dependency_review,Skipped self-dependency WEB-2008 -> WEB-2008.,Correct the Jira blocker link.,75

@@ -427,6 +427,7 @@ def write_manager_html(
   <main>
     {summary_grid(plan)}
     {color_key()}
+    {render_color_examples(plan)}
     {render_prefix_rollup_map(plan, config)}
     {render_planned_epics(plan)}
     {render_sections(sections)}
@@ -465,6 +466,106 @@ def color_key() -> str:
     <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
   </div>
 </section>"""
+
+
+def render_color_examples(plan: RunPlan) -> str:
+    cases = [
+        (
+            "changed_cell",
+            "Green",
+            "Changed cell",
+            "A Jira value changed, a dependency changed, or a new epic was added.",
+        ),
+        (
+            "cascade_root",
+            "Red",
+            "Critical-path root finish change",
+            "Project update only. Appears after Microsoft Project auto-scheduling identifies the first/root finish-date driver.",
+        ),
+        (
+            "review_needed",
+            "Yellow/amber",
+            "Reviewer attention",
+            "The item is unmatched, excluded, or otherwise needs manager review.",
+        ),
+        (
+            "dependency_review",
+            "Blue",
+            "Dependency review",
+            "A dependency was changed, skipped, circular, self-referencing, or points outside the included epic set.",
+        ),
+        (
+            "in_planning",
+            "Gray/green-gray",
+            "In planning",
+            "The epic has no pointed child stories/tasks and is included as planning work.",
+        ),
+    ]
+    rows = []
+    for color_key_name, display_color, meaning, fallback in cases:
+        item = next((audit for audit in plan.audit_items if audit.color == color_key_name), None)
+        if item:
+            jira_key = item.jira_key
+            category = item.category
+            field = item.field
+            example = item.message
+        elif color_key_name == "cascade_root":
+            candidate = schedule_driver_candidate(plan)
+            jira_key = candidate.jira_key if candidate else ""
+            category = "Project update only"
+            field = "Finish"
+            example = (
+                "Validate mode does not choose the red cell. This kind of Jira target-end change "
+                "becomes a red example only after Microsoft Project auto-scheduling identifies it "
+                "as the first/root finish-date driver."
+            )
+        else:
+            jira_key = ""
+            category = "Not present in this run"
+            field = ""
+            example = fallback
+        rows.append(
+            "<tr>"
+            f"<td><span class=\"dot {html_escape(color_class(color_key_name))}\"></span>{html_escape(display_color)}</td>"
+            f"<td>{html_escape(meaning)}</td>"
+            f"<td>{html_escape(jira_key)}</td>"
+            f"<td>{html_escape(category)}</td>"
+            f"<td>{html_escape(field)}</td>"
+            f"<td>{html_escape(example)}</td>"
+            "</tr>"
+        )
+    return (
+        "<section><h2>Color Case Examples</h2>"
+        "<table><thead><tr>"
+        "<th>Color</th><th>Meaning</th><th>Example Jira Key</th><th>Category</th><th>Field</th><th>Example</th>"
+        "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table></section>"
+    )
+
+
+def color_class(color_key_name: str) -> str:
+    return {
+        "changed_cell": "changed",
+        "cascade_root": "cascade",
+        "review_needed": "review",
+        "dependency_review": "dependency",
+        "in_planning": "planning",
+    }.get(color_key_name, "")
+
+
+def schedule_driver_candidate(plan: RunPlan) -> Optional[AuditItem]:
+    date_changes = [
+        item
+        for item in plan.audit_items
+        if item.category == "ChangedField" and item.field == "Jira Target End"
+    ]
+    preferred = [
+        item
+        for item in date_changes
+        if "red" in item.summary.lower() or "cascade" in item.summary.lower()
+    ]
+    return (preferred or date_changes or [None])[0]
 
 
 def render_planned_epics(plan: RunPlan) -> str:

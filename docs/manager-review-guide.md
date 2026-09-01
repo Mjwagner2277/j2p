@@ -5,7 +5,7 @@ Open `Manager-Review-Report.html` first. It is self-contained and can be emailed
 ## Review Order
 
 1. Review `Reviewer Action Needed`.
-2. Check the color key.
+2. Check `Color Key` and `Color Case Examples`.
 3. Open the sandbox `.mpp`.
 4. Review changed green cells.
 5. Review red finish-date cells first.

@@ -1,0 +1,3 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,MissingDependencyTarget,CORE-1006,CORE,Epic,Core platform blue missing dependency target,Dependency Review,,EXT-999,dependency_review,Dependency target 'EXT-999' is not an included epic.,Confirm the target epic is in the Jira export and meets rollup/resource rules.,
+Info,DependencyChange,CORE-1007,CORE,Epic,Core platform green dependency change,Predecessors,,CORE-1001,changed_cell,Predecessors changed from '' to 'CORE-1001'.,Review the changed sandbox cell.,24

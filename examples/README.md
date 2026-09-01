@@ -11,6 +11,7 @@ Use these files to validate the j2p workflow before using a live Jira export.
 | `project-wide-jira-fixversion.csv` | fixVersion-mode example |
 | `test.md` | Complete hands-on scenario |
 | `manager-report-example/` | Generated example of the full manager review report bundle |
+| `large-scenario/` | 1,200-line baseline/update CSV scenario with manager walkthrough and generated report bundle |
 
 Run the initiative-mode validation example:
 

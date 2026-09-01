@@ -1,0 +1,4 @@
+rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
+Platform Q1,PLAT,Platform Q1,fixVersion,10,209.0,63.0,30
+Platform Q2,PLAT,Platform Q2,fixVersion,10,203.0,68.0,33
+Shared Services 2026,PLAT,Shared Services 2026,fixVersion,10,215.0,78.0,36

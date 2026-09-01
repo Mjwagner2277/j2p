@@ -8,12 +8,15 @@ from j2p.cli import main
 from j2p.config import load_config
 from j2p.core import (
     J2PError,
+    PlanEpic,
+    RunPlan,
     ProjectTaskSnapshot,
     build_run_plan,
     run_plan_to_state,
     snapshots_from_state,
     write_json,
 )
+from j2p.project import MicrosoftProjectSession
 from j2p.reports import write_reports
 
 
@@ -115,6 +118,7 @@ class J2PPlanningTests(unittest.TestCase):
             report = (run_dir / "Manager-Review-Report.html").read_text(encoding="utf-8")
             self.assertIn("Reviewer Action Needed", report)
             self.assertIn("Color Key", report)
+            self.assertIn("Color Case Examples", report)
             self.assertIn("Project Key Rollup Mapping", report)
             self.assertIn("Unknown team epic", report)
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
@@ -197,6 +201,121 @@ class J2PPlanningTests(unittest.TestCase):
             categories = {item.category for item in follow_on.audit_items}
             self.assertIn("ChangedName", categories)
             self.assertIn("CompletedSinceLastUpdate", categories)
+
+    def test_large_1200_line_scenario_covers_manager_review_cases(self) -> None:
+        baseline_csv = EXAMPLES / "large-scenario" / "project-wide-jira-baseline-1200.csv"
+        updated_csv = EXAMPLES / "large-scenario" / "project-wide-jira-updated-1200.csv"
+        with baseline_csv.open("r", encoding="utf-8") as handle:
+            self.assertEqual(sum(1 for _line in handle), 1200)
+        with updated_csv.open("r", encoding="utf-8") as handle:
+            self.assertEqual(sum(1 for _line in handle), 1200)
+
+        config = load_config(EXAMPLES / "large-scenario" / "config.large-example.yaml")
+        baseline = build_run_plan(baseline_csv, config)
+        with tempfile.TemporaryDirectory() as temp:
+            state_path = Path(temp) / "j2p-state.json"
+            write_json(state_path, run_plan_to_state(baseline))
+            follow_on = build_run_plan(updated_csv, config, snapshots_from_state(state_path))
+
+        self.assertEqual(follow_on.rollup_mode, "mixed")
+        self.assertIn("CORE-1980", follow_on.epics)
+        self.assertIn("WEB-2010", follow_on.epics)
+        self.assertNotIn("CORE-1049", follow_on.epics)
+        self.assertEqual(follow_on.epics["WEB-2010"].in_planning, True)
+        self.assertEqual(follow_on.epics["PLAT-4000"].rollup_mode, "fixVersion")
+
+        categories = {item.category for item in follow_on.audit_items}
+        self.assertTrue(
+            {
+                "AddedEpic",
+                "ChangedField",
+                "ChangedName",
+                "CircularDependencySkipped",
+                "CompletedSinceLastUpdate",
+                "CsvRowMissingJiraKey",
+                "DependencyChange",
+                "ExcludedMissingRollup",
+                "ExcludedUnknownPrefix",
+                "InPlanning",
+                "MissingDependencyTarget",
+                "RollupMove",
+                "SelfDependencySkipped",
+                "StoryMissingEpicLink",
+                "UnmatchedProjectTask",
+                "UnparsedDate",
+            }.issubset(categories)
+        )
+        colors = {item.color for item in follow_on.audit_items if item.color}
+        self.assertTrue({"changed_cell", "review_needed", "dependency_review", "in_planning"}.issubset(colors))
+
+    def test_schedule_review_marks_cascade_root_red(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+        plan = RunPlan(
+            generated_at="2026-01-01T00:00:00",
+            jira_csv="unit.csv",
+            rollup_mode="initiative",
+            column_map={},
+            stats={},
+            summaries={},
+            epics={
+                "TEAM-RED": PlanEpic(
+                    key="TEAM-RED",
+                    issue_id="1",
+                    summary="Critical path root",
+                    status="In Progress",
+                    rollup_mode="initiative",
+                    rollup_key="PROD-100",
+                    rollup_name="Program",
+                    resource_group="Product Delivery",
+                    key_prefix="TEAM",
+                    total_story_points=8,
+                    completed_story_points=0,
+                    percent_complete=0,
+                    in_planning=False,
+                    completed=False,
+                    target_start="2026-01-01",
+                    target_end="2026-01-31",
+                ),
+                "TEAM-CASCADE": PlanEpic(
+                    key="TEAM-CASCADE",
+                    issue_id="2",
+                    summary="Downstream item",
+                    status="In Progress",
+                    rollup_mode="initiative",
+                    rollup_key="PROD-100",
+                    rollup_name="Program",
+                    resource_group="Product Delivery",
+                    key_prefix="TEAM",
+                    total_story_points=8,
+                    completed_story_points=0,
+                    percent_complete=0,
+                    in_planning=False,
+                    completed=False,
+                    target_start="2026-02-01",
+                    target_end="2026-02-28",
+                ),
+            },
+            audit_items=[],
+        )
+        before = {
+            "TEAM-RED": ProjectTaskSnapshot(key="TEAM-RED", finish="2026-01-31"),
+            "TEAM-CASCADE": ProjectTaskSnapshot(key="TEAM-CASCADE", finish="2026-02-28"),
+        }
+        after = {
+            "TEAM-RED": ProjectTaskSnapshot(key="TEAM-RED", finish="2026-02-07"),
+            "TEAM-CASCADE": ProjectTaskSnapshot(key="TEAM-CASCADE", finish="2026-03-07"),
+        }
+        session = object.__new__(MicrosoftProjectSession)
+        session.snapshot_tasks = lambda _config: after
+        session.task_is_critical = lambda key, _config: key == "TEAM-RED"
+
+        MicrosoftProjectSession.add_schedule_review_items(session, plan, before, config)
+
+        root = next(item for item in plan.audit_items if item.category == "CriticalPathCascadeRoot")
+        downstream = next(item for item in plan.audit_items if item.category == "CascadingDateChange")
+        self.assertEqual(root.jira_key, "TEAM-RED")
+        self.assertEqual(root.color, "cascade_root")
+        self.assertEqual(downstream.color, "changed_cell")
 
 
 if __name__ == "__main__":

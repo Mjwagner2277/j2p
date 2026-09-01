@@ -1,0 +1,6 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,CircularDependencySkipped,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,121
+Warning,MissingDependencyTarget,CORE-1006,CORE,Epic,Core platform blue missing dependency target,Dependency Review,,EXT-999,dependency_review,Dependency target 'EXT-999' is not an included epic.,Confirm the target epic is in the Jira export and meets rollup/resource rules.,
+Warning,SelfDependencySkipped,WEB-2008,WEB,Epic,Web experience blue self dependency,Dependency Review,,,dependency_review,Skipped self-dependency WEB-2008 -> WEB-2008.,Correct the Jira blocker link.,75
+Info,DependencyChange,CORE-1007,CORE,Epic,Core platform green dependency change,Predecessors,,CORE-1001,changed_cell,Predecessors changed from '' to 'CORE-1001'.,Review the changed sandbox cell.,24
+Info,DependencyChange,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,121

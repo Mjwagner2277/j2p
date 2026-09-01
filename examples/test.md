@@ -2,6 +2,9 @@
 
 This scenario validates the Python j2p workflow using the included sample Jira exports.
 
+For a larger training scenario with 1,200-line baseline and updated Jira CSVs, use
+`examples\large-scenario\README.md`.
+
 ## Prerequisites
 
 For validation only:

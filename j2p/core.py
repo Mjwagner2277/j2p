@@ -474,10 +474,13 @@ def apply_dependencies(
                     "Warning",
                     "SelfDependencySkipped",
                     jira_key=source_key,
+                    issue_type="Epic" if source_epic else "",
+                    summary=source_epic.summary if source_epic else "",
                     field="Dependency Review",
                     color="dependency_review",
                     message=f"Skipped self-dependency {predecessor_key} -> {successor_key}.",
                     reviewer_action="Correct the Jira blocker link.",
+                    source_row=source_epic.source_row if source_epic else None,
                 )
             )
             continue
@@ -514,10 +517,13 @@ def apply_dependencies(
                     "Warning",
                     "CircularDependencySkipped",
                     jira_key=source_key,
+                    issue_type="Epic" if source_epic else "",
+                    summary=source_epic.summary if source_epic else "",
                     field="Dependency Review",
                     color="dependency_review",
                     message=f"Skipped circular dependency {predecessor_key} -> {successor_key}.",
                     reviewer_action="Resolve the circular Jira blocker relationship.",
+                    source_row=source_epic.source_row if source_epic else None,
                 )
             )
             continue

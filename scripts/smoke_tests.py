@@ -76,6 +76,7 @@ def run_smoke(output_dir: Path) -> int:
     compile_env = os.environ.copy()
     compile_env["PYTHONPYCACHEPREFIX"] = str(output_dir / "pycache")
     run([sys.executable, "-m", "compileall", "j2p", "tests", "scripts"], env=compile_env)
+    run([sys.executable, "scripts/generate_large_examples.py", "--check"])
 
     initial_dir = run_validate(
         output_dir,
@@ -129,6 +130,71 @@ def run_smoke(output_dir: Path) -> int:
     )
     assert_report_bundle(fixversion_dir)
     assert_audit_categories(fixversion_dir / "audit-detail.csv", {"ExcludedMissingRollup"})
+
+    assert_line_count(ROOT / "examples" / "large-scenario" / "project-wide-jira-baseline-1200.csv", 1200)
+    assert_line_count(ROOT / "examples" / "large-scenario" / "project-wide-jira-updated-1200.csv", 1200)
+    large_baseline_dir = run_validate(
+        output_dir,
+        "large-baseline-1200",
+        "large-scenario/project-wide-jira-baseline-1200.csv",
+        "large-scenario/config.large-example.yaml",
+        ["--write-state"],
+    )
+    assert_report_bundle(large_baseline_dir)
+    large_updated_dir = run_validate(
+        output_dir,
+        "large-updated-1200",
+        "large-scenario/project-wide-jira-updated-1200.csv",
+        "large-scenario/config.large-example.yaml",
+        ["--compare-state"],
+    )
+    assert_report_bundle(large_updated_dir)
+    assert_project_key_outputs(
+        large_updated_dir,
+        {"CORE", "DATA", "OPS", "PLAT", "UNASSIGNED", "UNK", "WEB"},
+    )
+    assert_audit_categories(
+        large_updated_dir / "audit-detail.csv",
+        {
+            "AddedEpic",
+            "ChangedField",
+            "ChangedName",
+            "CircularDependencySkipped",
+            "CompletedSinceLastUpdate",
+            "CsvRowMissingJiraKey",
+            "DependencyChange",
+            "ExcludedMissingRollup",
+            "ExcludedUnknownPrefix",
+            "InPlanning",
+            "MissingDependencyTarget",
+            "RollupMove",
+            "SelfDependencySkipped",
+            "StoryMissingEpicLink",
+            "UnmatchedProjectTask",
+            "UnparsedDate",
+        },
+    )
+    assert_audit_colors(
+        large_updated_dir / "audit-detail.csv",
+        {"changed_cell", "review_needed", "dependency_review", "in_planning"},
+    )
+    assert_report_contains(
+        large_updated_dir / "Manager-Review-Report.html",
+        [
+            "Color Case Examples",
+            "Project update only",
+            "CORE-1000",
+            "CORE-1004",
+            "CORE-1980",
+            "WEB-2010",
+            "DATA-3009",
+        ],
+    )
+    assert_expected_review_cases(
+        ROOT / "examples" / "large-scenario" / "expected-review-cases.csv",
+        large_updated_dir / "audit-detail.csv",
+        large_updated_dir / "Manager-Review-Report.html",
+    )
 
     print("Smoke tests passed.", flush=True)
     return 0
@@ -192,6 +258,55 @@ def assert_audit_categories(path: Path, expected: Iterable[str]) -> None:
     missing = set(expected) - categories
     if missing:
         raise AssertionError(f"{path} is missing audit categories: {', '.join(sorted(missing))}")
+
+
+def assert_audit_colors(path: Path, expected: Iterable[str]) -> None:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        colors = {row["color"] for row in csv.DictReader(handle) if row.get("color")}
+    missing = set(expected) - colors
+    if missing:
+        raise AssertionError(f"{path} is missing audit colors: {', '.join(sorted(missing))}")
+
+
+def assert_project_key_outputs(run_dir: Path, expected_project_keys: Iterable[str]) -> None:
+    index_path = run_dir / "by-project-key" / "index.csv"
+    with index_path.open("r", encoding="utf-8", newline="") as handle:
+        project_keys = {row["project_key"] for row in csv.DictReader(handle)}
+    missing = set(expected_project_keys) - project_keys
+    if missing:
+        raise AssertionError(f"{index_path} is missing project keys: {', '.join(sorted(missing))}")
+
+
+def assert_line_count(path: Path, expected_count: int) -> None:
+    with path.open("r", encoding="utf-8") as handle:
+        actual_count = sum(1 for _line in handle)
+    if actual_count != expected_count:
+        raise AssertionError(f"{path} has {actual_count} lines; expected {expected_count}.")
+
+
+def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path: Path) -> None:
+    project_only = {"CriticalPathCascadeRoot", "CascadingDateChange"}
+    with case_path.open("r", encoding="utf-8", newline="") as handle:
+        cases = list(csv.DictReader(handle))
+    if len(cases) < 15:
+        raise AssertionError(f"{case_path} should document at least 15 teaching cases.")
+
+    with audit_path.open("r", encoding="utf-8", newline="") as handle:
+        audit_rows = list(csv.DictReader(handle))
+    report_text = report_path.read_text(encoding="utf-8")
+
+    missing = []
+    for case in cases:
+        jira_key = case["jira_key"]
+        category = case["expected_category"]
+        if category in project_only:
+            if jira_key not in report_text:
+                missing.append(f"{jira_key}/{category} should be described in the report")
+            continue
+        if not any(row["jira_key"] == jira_key and row["category"] == category for row in audit_rows):
+            missing.append(f"{jira_key}/{category}")
+    if missing:
+        raise AssertionError(f"Large scenario is missing expected review cases: {', '.join(missing)}")
 
 
 def assert_report_contains(path: Path, expected: Iterable[str]) -> None:

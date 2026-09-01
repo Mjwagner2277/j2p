@@ -1,0 +1,15 @@
+rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
+Operations Q1,OPS,Operations Q1,fixVersion,10,209.0,72.0,34
+Operations Q2,OPS,Operations Q2,fixVersion,10,209.0,76.0,36
+Platform Q1,PLAT,Platform Q1,fixVersion,10,209.0,63.0,30
+Platform Q2,PLAT,Platform Q2,fixVersion,10,203.0,68.0,33
+Shared Services 2026,PLAT,Shared Services 2026,fixVersion,10,215.0,78.0,36
+INIT-100,MULTIPLE,Customer Identity And Access,initiative,29,589.0,200.0,34
+INIT-1200,WEB,Search And Discovery,initiative,15,313.0,99.0,32
+INIT-1500,DATA,Forecasting Program,initiative,11,229.0,85.0,37
+INIT-200,CORE,Revenue And Billing Modernization,initiative,13,324.0,104.0,32
+INIT-300,DATA,Data Foundations,initiative,12,253.0,85.0,34
+INIT-500,WEB,Web Experience Refresh,initiative,15,312.0,95.0,30
+INIT-600,DATA,Program Reporting,initiative,12,249.0,77.0,31
+INIT-700,CORE,Security Hardening,initiative,12,233.0,84.0,36
+INIT-800,CORE,Integrations Roadmap,initiative,11,243.0,91.0,37

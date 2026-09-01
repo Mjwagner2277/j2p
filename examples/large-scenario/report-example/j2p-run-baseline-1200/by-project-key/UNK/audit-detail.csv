@@ -1,0 +1,5 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,ExcludedUnknownPrefix,UNK-9000,UNK,Epic,Unknown prefix yellow unknown Jira key prefix,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,197
+Warning,ExcludedUnknownPrefix,UNK-9001,UNK,Epic,Unknown prefix epic 02,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,198
+Warning,ExcludedUnknownPrefix,UNK-9002,UNK,Epic,Unknown prefix epic 03,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,199
+Warning,ExcludedUnknownPrefix,UNK-9003,UNK,Epic,Unknown prefix epic 04,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,200

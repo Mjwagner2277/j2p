@@ -1,0 +1,16 @@
+color,case,jira_key,expected_category,expected_report_section,reviewer_lesson
+Green,Changed Jira summary,CORE-1000,ChangedName,Changed Names,The sandbox task name follows Jira and the changed cell is highlighted.
+Green,Percent and Jira target date changes,CORE-1001,ChangedField,Date Review,Child story completion changes percent complete and target dates are logged.
+Green,New included epic,CORE-1980,AddedEpic,Added Epics,A new valid epic is added to the sandbox and listed for review.
+Green,Valid dependency change,CORE-1007,DependencyChange,Dependency Review,A new valid predecessor is written as a changed predecessor cell.
+Red,Project auto-schedule cascade root,CORE-1004,CriticalPathCascadeRoot,Date Review,Red appears only during Windows Microsoft Project update when this finish-date shift is selected as the root driver.
+Green,Downstream cascade item,CORE-1005,CascadingDateChange,Date Review,Downstream auto-scheduled finish-date changes remain green after the red root is selected.
+Yellow/amber,Unknown Jira key prefix,UNK-9000,ExcludedUnknownPrefix,Excluded Items,Unknown prefixes are excluded until the configuration maps them to a resource group.
+Yellow/amber,Missing initiative parent,CORE-1049,ExcludedMissingRollup,Excluded Items,Initiative-mode teams must provide a parent initiative.
+Yellow/amber,Missing fixVersion,PLAT-4029,ExcludedMissingRollup,Excluded Items,fixVersion-mode teams must provide exactly one fixVersion by default.
+Yellow/amber,Multiple fixVersions,OPS-5019,ExcludedMissingRollup,Excluded Items,Multiple fixVersions are ambiguous and excluded by default.
+Yellow/amber,Baseline-only unmatched item,CORE-1048,UnmatchedProjectTask,Unmatched Project Tasks,Items present in the baseline but missing from the updated plan are flagged for manager decision.
+Blue,Missing dependency target,CORE-1006,MissingDependencyTarget,Dependency Review,Dependency targets must be included epics or they are skipped and reported.
+Blue,Self dependency,WEB-2008,SelfDependencySkipped,Dependency Review,An epic cannot block itself.
+Blue,Circular dependency,DATA-3009,CircularDependencySkipped,Dependency Review,Circular blocker links are skipped to prevent invalid Project scheduling.
+Gray/green-gray,In planning epic,WEB-2010,InPlanning,In Planning,An included epic with no pointed child work is marked In Planning with 0 percent complete.

@@ -39,6 +39,8 @@ py -3.14 -m j2p validate `
 
 Open the generated `Manager-Review-Report.html` first. Use `audit-detail.csv` when you need row-level evidence.
 
+For end-user training, run the larger walkthrough in `examples\large-scenario\README.md`. It uses 1,200-line baseline and updated Jira CSVs and shows the expected review cases.
+
 ## Update A Sandbox From The Main Project
 
 ```powershell

@@ -1,0 +1,4 @@
+rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
+INIT-1500,DATA,Forecasting Program,initiative,11,229.0,85.0,37
+INIT-300,DATA,Data Foundations,initiative,12,253.0,85.0,34
+INIT-600,DATA,Program Reporting,initiative,12,249.0,77.0,31

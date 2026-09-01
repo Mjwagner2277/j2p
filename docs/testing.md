@@ -26,6 +26,8 @@ The smoke test verifies:
 - follow-on validation against saved state reports expected manager-review categories
 - fixVersion-mode validation produces a complete report bundle
 - per-project-key split CSVs are written
+- large 1,200-line baseline/update CSV fixtures have not drifted
+- large scenario reports expected manager-review categories and per-project-key CSVs
 - manager HTML reports are self-contained
 
 To keep generated smoke-test output for inspection:

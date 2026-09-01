@@ -1,0 +1,5 @@
+severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,UnparsedDate,DATA-3034,DATA,,,,not-a-date,,,Could not parse date 'not-a-date' on CSV row 146.,Use YYYY-MM-DD or configure a supported export date format.,146
+Warning,CircularDependencySkipped,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,121
+Info,DependencyChange,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,121
+Info,ChangedField,DATA-3034,DATA,Epic,Data platform unparsed date warning,Jira Target End,2026-10-19,not-a-date,changed_cell,Jira Target End changed from '2026-10-19' to 'not-a-date'.,Review the changed sandbox cell.,146
