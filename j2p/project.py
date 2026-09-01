@@ -1299,7 +1299,7 @@ class MicrosoftProjectSession:
             if not column:
                 continue
             color = config.get("colors", {}).get(item.color, item.color)
-            column_aliases = project_column_aliases(column, config)
+            column_aliases = self.project_selection_aliases(column, config)
             formatting_items.append((item, task, column, color, column_aliases))
 
         project_progress(f"Preparing to color {len(formatting_items)} Project review cell(s)")
@@ -1326,6 +1326,7 @@ class MicrosoftProjectSession:
                 )
             )
 
+        column_positions = self.project_table_column_positions(J2P_REVIEW_TABLE_NAME, config)
         failed_columns: Dict[str, int] = {}
         failed_examples: List[str] = []
         total = len(formatting_items)
@@ -1334,7 +1335,8 @@ class MicrosoftProjectSession:
         for index, (item, task, column, color, column_aliases) in enumerate(formatting_items, start=1):
             if index == 1 or index % 50 == 0 or index == total:
                 project_progress(f"Project cell coloring progress: {index}/{total} cell(s)")
-            error = self.color_project_cell_error(task, column, color, column_aliases)
+            column_position = first_project_column_position(column_positions, column_aliases)
+            error = self.color_project_cell_error(task, column, color, column_aliases, column_position)
             if not error:
                 continue
             failed_columns[column] = failed_columns.get(column, 0) + 1
@@ -1435,62 +1437,134 @@ class MicrosoftProjectSession:
     ) -> List[str]:
         errors: List[str] = []
         existing = {normalize_project_column_name(column) for column in existing_columns}
-        columns_to_add = [column for column in columns if normalize_project_column_name(column) not in existing]
+        columns_to_add = [
+            column
+            for column in columns
+            if not any(
+                normalize_project_column_name(alias) in existing
+                for alias in self.project_selection_aliases(column, config)
+            )
+        ]
         for position, column in enumerate(columns_to_add, start=2):
             title = project_column_title(column, config)
-            try:
-                result = self.app.TableEditEx(
-                    Name=table_name,
-                    TaskTable=True,
-                    FieldName="",
-                    NewFieldName=column,
-                    Title=title,
-                    Width=18,
-                    ColumnPosition=position,
-                    ShowInMenu=True,
-                    HeaderTextWrap=True,
-                    WrapText=True,
-                    ShowAddNewColumn=True,
-                )
-                if project_call_failed(result):
-                    errors.append(f"TableEditEx returned False while adding {column} to {table_name}.")
-            except Exception as exc:
-                if project_table_column_already_present_error(exc):
-                    continue
-                errors.append(f"TableEditEx add {column} to {table_name} failed: {exc}")
+            candidate_field_names = self.project_selection_aliases(column, config)
+            added = False
+            candidate_errors: List[str] = []
+            for field_name in candidate_field_names:
+                try:
+                    result = self.app.TableEditEx(
+                        Name=table_name,
+                        TaskTable=True,
+                        FieldName="",
+                        NewFieldName=field_name,
+                        Title=title,
+                        Width=18,
+                        ColumnPosition=position,
+                        ShowInMenu=True,
+                        HeaderTextWrap=True,
+                        WrapText=True,
+                        ShowAddNewColumn=True,
+                    )
+                    if project_call_failed(result):
+                        candidate_errors.append(
+                            f"TableEditEx returned False while adding {field_name} to {table_name}."
+                        )
+                        continue
+                    added = True
+                    existing.update(
+                        normalize_project_column_name(alias)
+                        for alias in self.project_selection_aliases(column, config)
+                    )
+                    break
+                except Exception as exc:
+                    if project_table_column_already_present_error(exc):
+                        added = True
+                        existing.update(
+                            normalize_project_column_name(alias)
+                            for alias in self.project_selection_aliases(column, config)
+                        )
+                        break
+                    candidate_errors.append(f"TableEditEx add {field_name} to {table_name} failed: {exc}")
+            if added:
+                continue
+            if candidate_errors:
+                errors.append(" | ".join(candidate_errors))
+            else:
+                errors.append(f"No Project field name candidate was available for {column}.")
         return errors
 
-    def project_table_field_names(self, table_name: str) -> List[str]:
+    def project_selection_aliases(self, column: str, config: Dict[str, Any]) -> List[str]:
+        aliases = project_column_aliases(column, config)
+        friendly_name = project_column_title(column, config)
+        if friendly_name:
+            aliases.append(friendly_name)
+        for alias in list(aliases):
+            aliases.extend(self.project_resolved_field_aliases(alias))
+        aliases.extend(project_native_field_aliases(column))
+        return unique_columns(aliases)
+
+    def project_resolved_field_aliases(self, field_name: str) -> List[str]:
+        aliases: List[str] = []
+        if not field_name:
+            return aliases
+        try:
+            field_id = self.app.FieldNameToFieldConstant(field_name)
+        except Exception:
+            return aliases
+        try:
+            resolved = str(self.app.FieldConstantToFieldName(field_id))
+            if resolved:
+                aliases.append(resolved)
+        except Exception:
+            pass
+        return aliases
+
+    def project_table_column_positions(self, table_name: str, config: Dict[str, Any]) -> Dict[str, int]:
         table = self.project_task_table(table_name)
         if table is None:
-            return []
+            return {}
         table_fields = safe_get(table, "TableFields")
         if not table_fields:
-            return []
-        names: List[str] = []
+            return {}
+        positions: Dict[str, int] = {}
         try:
             count = int(table_fields.Count)
         except Exception:
-            return names
+            return positions
         for index in range(1, count + 1):
             try:
                 table_field = table_fields(index)
             except Exception:
                 continue
-            title = str(safe_get(table_field, "Title") or "").strip()
-            if title:
-                names.append(title)
-            field_value = safe_get(table_field, "Field")
-            if field_value in ("", None):
-                continue
+            for name in self.project_table_field_aliases(table_field, config):
+                normalized = normalize_project_column_name(name)
+                if normalized and normalized not in positions:
+                    positions[normalized] = index
+        return positions
+
+    def project_table_field_aliases(self, table_field: Any, config: Dict[str, Any]) -> List[str]:
+        aliases: List[str] = []
+        title = str(safe_get(table_field, "Title") or "").strip()
+        if title:
+            aliases.append(title)
+        field_value = safe_get(table_field, "Field")
+        if field_value not in ("", None):
             if isinstance(field_value, str):
-                names.append(field_value)
-                continue
-            try:
-                names.append(str(self.app.FieldConstantToFieldName(field_value)))
-            except Exception:
-                names.append(str(field_value))
-        return unique_columns(names)
+                aliases.append(field_value)
+            else:
+                try:
+                    aliases.append(str(self.app.FieldConstantToFieldName(field_value)))
+                except Exception:
+                    aliases.append(str(field_value))
+        for alias in list(aliases):
+            aliases.extend(project_column_aliases(alias, config))
+            aliases.extend(project_native_field_aliases(alias))
+            aliases.extend(self.project_resolved_field_aliases(alias))
+        return unique_columns(aliases)
+
+    def project_table_field_names(self, table_name: str) -> List[str]:
+        positions = self.project_table_column_positions(table_name, {})
+        return unique_columns(list(positions))
 
     def project_task_table(self, table_name: str) -> Any:
         project = getattr(self, "project", None) or safe_get(self.app, "ActiveProject")
@@ -1521,14 +1595,20 @@ class MicrosoftProjectSession:
         column: str,
         hex_color: str,
         column_aliases: Optional[List[str]] = None,
+        column_position: Optional[int] = None,
     ) -> str:
         color = project_color(hex_color)
-        selected, selection_error = self.select_project_cell(task, column_aliases or [column])
+        selected, selection_error = self.select_project_cell(task, column_aliases or [column], column_position)
         if not selected:
             return selection_error
         return self.color_active_cell(color)
 
-    def select_project_cell(self, task: Any, columns: Any) -> Tuple[bool, str]:
+    def select_project_cell(
+        self,
+        task: Any,
+        columns: Any,
+        column_position: Optional[int] = None,
+    ) -> Tuple[bool, str]:
         row = int(safe_get(task, "ID") or 0)
         if row <= 0:
             return False, "Task has no positive Project row ID."
@@ -1537,22 +1617,60 @@ class MicrosoftProjectSession:
         else:
             candidate_columns = [str(column) for column in columns if str(column or "").strip()]
         errors: List[str] = []
+        if column_position and column_position > 0:
+            try:
+                result = self.app.SelectCell(Row=row, Column=column_position, RowRelative=False)
+                if project_call_failed(result):
+                    errors.append(f"SelectCell returned False for column position {column_position}.")
+                else:
+                    selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
+                    if not selected_field_error:
+                        return True, ""
+                    errors.append(
+                        f"SelectCell selected column position {column_position}, but {selected_field_error}"
+                    )
+            except Exception as exc:
+                errors.append(f"SelectCell failed for column position {column_position}: {exc}")
         for column in unique_columns(candidate_columns):
-            try:
-                result = self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
-                if not project_call_failed(result):
-                    return True, ""
-                errors.append(f"SelectTaskCell returned False for {column}.")
-            except Exception as exc:
-                errors.append(f"SelectTaskCell failed for {column}: {exc}")
-            try:
-                result = self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
-                if not project_call_failed(result):
-                    return True, ""
-                errors.append(f"SelectTaskField returned False for {column}.")
-            except Exception as exc:
-                errors.append(f"SelectTaskField failed for {column}: {exc}")
+            for method_name, selector in (
+                (
+                    "SelectTaskCell",
+                    lambda value=column: self.app.SelectTaskCell(Row=row, Column=value, RowRelative=False),
+                ),
+                (
+                    "SelectTaskField",
+                    lambda value=column: self.app.SelectTaskField(Row=row, Column=value, RowRelative=False),
+                ),
+            ):
+                try:
+                    result = selector()
+                    if project_call_failed(result):
+                        errors.append(f"{method_name} returned False for {column}.")
+                        continue
+                    selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
+                    if not selected_field_error:
+                        return True, ""
+                    errors.append(f"{method_name} selected {column}, but {selected_field_error}")
+                except Exception as exc:
+                    errors.append(f"{method_name} failed for {column}: {exc}")
         return False, " ".join(errors)
+
+    def selected_cell_field_mismatch(self, candidate_columns: List[str]) -> str:
+        expected = {
+            normalize_project_column_name(alias)
+            for column in candidate_columns
+            for alias in project_native_field_aliases(column) + [column]
+        }
+        try:
+            active_cell = self.app.ActiveCell
+        except Exception:
+            return ""
+        field_name = str(safe_get(active_cell, "FieldName") or "").strip()
+        if not field_name:
+            return ""
+        if normalize_project_column_name(field_name) in expected:
+            return ""
+        return f"ActiveCell.FieldName was '{field_name}' instead of one of {sorted(expected)}."
 
     def color_active_cell(self, color: int) -> str:
         try:
@@ -1672,6 +1790,29 @@ def project_column_title(column: str, config: Dict[str, Any]) -> str:
 def project_column_aliases(column: str, config: Dict[str, Any]) -> List[str]:
     title = project_column_title(column, config)
     return unique_columns([column, title])
+
+
+def project_native_field_aliases(column: str) -> List[str]:
+    aliases = {
+        "% complete": ["% Complete", "Percent Complete"],
+        "percent complete": ["% Complete", "Percent Complete"],
+        "resource group": ["Resource Group", "Resource Names"],
+        "resource names": ["Resource Names", "Resource Group"],
+        "start": ["Start"],
+        "finish": ["Finish"],
+        "name": ["Name"],
+        "predecessors": ["Predecessors"],
+        "successors": ["Successors"],
+    }
+    return aliases.get(normalize_project_column_name(column), [])
+
+
+def first_project_column_position(column_positions: Dict[str, int], candidate_columns: List[str]) -> Optional[int]:
+    for column in candidate_columns:
+        position = column_positions.get(normalize_project_column_name(column))
+        if position:
+            return position
+    return None
 
 
 def normalize_project_column_name(column: str) -> str:

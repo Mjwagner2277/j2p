@@ -747,6 +747,42 @@ class J2PPlanningTests(unittest.TestCase):
             ],
         )
 
+    def test_select_project_cell_falls_back_to_numeric_column_position(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeSelectCellFallbackApp("Text9")
+        task = FakeTask()
+        task.ID = 11
+
+        selected, error = MicrosoftProjectSession.select_project_cell(
+            session,
+            task,
+            ["Text9", "Status"],
+            column_position=6,
+        )
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertEqual(session.app.select_cell_calls, [("cell", 11, 6, False)])
+        self.assertEqual(session.app.select_task_cell_calls, [])
+
+    def test_select_project_cell_recovers_from_wrong_numeric_column_position(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeSelectCellFallbackApp("Finish")
+        task = FakeTask()
+        task.ID = 12
+
+        selected, error = MicrosoftProjectSession.select_project_cell(
+            session,
+            task,
+            ["Text9", "Status"],
+            column_position=6,
+        )
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertEqual(session.app.select_cell_calls, [("cell", 12, 6, False)])
+        self.assertEqual(session.app.select_task_cell_calls[0], ("cell", 12, "Text9", False))
+
     def test_write_project_predecessors_uses_fs_ids_and_verifies_readback(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         task = FakeTask()
@@ -1090,6 +1126,12 @@ class FakeCell:
         self.Pattern = 0
 
 
+class FakeNamedCell(FakeCell):
+    def __init__(self, field_name: str) -> None:
+        super().__init__()
+        self.FieldName = field_name
+
+
 class FakeFormattingApp:
     def __init__(self) -> None:
         self.ActiveCell = FakeCell()
@@ -1124,6 +1166,28 @@ class FakeAliasSelectionApp(FakeFormattingApp):
     def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> bool:
         self.select_calls.append(("field", Row, Column, RowRelative))
         return Column == self.selectable_column
+
+
+class FakeSelectCellFallbackApp(FakeFormattingApp):
+    def __init__(self, selected_field_name: str) -> None:
+        super().__init__()
+        self.ActiveCell = FakeNamedCell(selected_field_name)
+        self.select_cell_calls = []
+        self.select_task_cell_calls = []
+
+    def SelectCell(self, Row: int, Column: int, RowRelative: bool) -> bool:
+        self.select_cell_calls.append(("cell", Row, Column, RowRelative))
+        return True
+
+    def SelectTaskCell(self, Row: int, Column: str, RowRelative: bool) -> bool:
+        self.select_task_cell_calls.append(("cell", Row, Column, RowRelative))
+        self.ActiveCell = FakeNamedCell(Column)
+        return True
+
+    def SelectTaskField(self, Row: int, Column: str, RowRelative: bool, *args: object) -> bool:
+        self.select_task_cell_calls.append(("field", Row, Column, RowRelative))
+        self.ActiveCell = FakeNamedCell(Column)
+        return True
 
 
 class FakeRejectingCell:

@@ -204,10 +204,11 @@ In Microsoft Project:
 
 1. Open `Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp`.
 2. Use the Gantt Chart view.
-3. If review columns are not visible, insert the columns listed in `FIELD_MAPPING.md`.
+3. Apply the `j2p Review` task table from Project's table menu if it is not already active.
 4. Start with these columns: `Jira Key`, `j2p Unique Key`, `j2p Row Role`, `Rollup Key`, `Resource Group`, `% Complete`, `Jira Target Start`, `Jira Target End`, `Dependency Review`, `In Planning`, and `Drives Schedule`.
-5. Use `Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key.
-6. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and in-planning rows.
+5. Look for colored cells in the left task grid. The colors are not shown on the right-side Gantt bars.
+6. Use `Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key.
+7. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and in-planning rows.
 
 Training keys to find in the sandbox:
 
