@@ -16,7 +16,7 @@ from j2p.core import (
     snapshots_from_state,
     write_json,
 )
-from j2p.project import MicrosoftProjectSession, append_resource_name
+from j2p.project import MicrosoftProjectSession, append_resource_name, project_date_for_com
 from j2p.reports import write_reports
 
 
@@ -418,6 +418,14 @@ class J2PPlanningTests(unittest.TestCase):
             append_resource_name("Jane Smith, Product Delivery", "Product Delivery"),
             "Jane Smith, Product Delivery",
         )
+
+    def test_project_date_for_com_converts_iso_dates(self) -> None:
+        self.assertIn("2026", str(project_date_for_com("2026-09-01", "Start")))
+        self.assertIn("2026", str(project_date_for_com("2026-09-01", "Finish")))
+
+    def test_project_date_for_com_rejects_project_out_of_range_dates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "outside the Microsoft Project supported range"):
+            project_date_for_com("1800-01-01", "Start")
 
 
 class FakeProjectApp:

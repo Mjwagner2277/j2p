@@ -369,6 +369,8 @@ The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `
 - Downstream cascading finish-date shifts remain green.
 - If a Project scheduled finish does not match Jira `Target end`, the mismatch is reported.
 
+Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
+
 Validate mode does not open Microsoft Project, so it cannot detect actual auto-schedule cascades. It can still report Jira date changes and likely review candidates.
 
 ## Manager Report Files

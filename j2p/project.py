@@ -222,7 +222,7 @@ class MicrosoftProjectSession:
             else:
                 task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
                 task_by_key[epic.key] = task
-            self.update_epic_task(task, epic, config)
+            self.update_epic_task(task, epic, config, plan)
 
         self.apply_dependencies(plan, task_by_key)
         self.mark_unmatched_tasks(plan, config, task_by_key)
@@ -357,7 +357,7 @@ class MicrosoftProjectSession:
             )
             return task
 
-    def update_epic_task(self, task: Any, epic: PlanEpic, config: Dict[str, Any]) -> None:
+    def update_epic_task(self, task: Any, epic: PlanEpic, config: Dict[str, Any], plan: RunPlan) -> None:
         fields = config.get("project_fields", {})
         try:
             task.Manual = False
@@ -383,18 +383,22 @@ class MicrosoftProjectSession:
         setattr(task, fields.get("in_planning", "Flag1"), bool(epic.in_planning))
         setattr(task, fields.get("dependency_review_needed", "Flag3"), bool(epic.dependency_review))
         setattr(task, fields.get("drives_schedule", "Flag4"), bool(epic.drives_schedule))
-        if epic.target_start:
-            setattr(task, fields.get("jira_target_start", "Date1"), epic.target_start)
-            try:
-                task.Start = epic.target_start
-            except Exception:
-                pass
-        if epic.target_end:
-            setattr(task, fields.get("jira_target_end", "Date2"), epic.target_end)
-            try:
-                task.Finish = epic.target_end
-            except Exception:
-                pass
+        self.write_project_date(
+            task,
+            epic,
+            plan,
+            fields.get("jira_target_start", "Date1"),
+            "Jira Target Start",
+            "Start",
+        )
+        self.write_project_date(
+            task,
+            epic,
+            plan,
+            fields.get("jira_target_end", "Date2"),
+            "Jira Target End",
+            "Finish",
+        )
         if epic.completed:
             try:
                 task.Active = False
@@ -418,6 +422,76 @@ class MicrosoftProjectSession:
                 task.HideBar = False
             except Exception:
                 pass
+
+    def write_project_date(
+        self,
+        task: Any,
+        epic: PlanEpic,
+        plan: RunPlan,
+        field_name: str,
+        audit_field: str,
+        schedule_attribute: str,
+    ) -> None:
+        date_text = epic.target_start if audit_field == "Jira Target Start" else epic.target_end
+        if not date_text:
+            return
+        try:
+            project_date = project_date_for_com(date_text, schedule_attribute)
+        except ValueError as exc:
+            plan.audit_items.append(
+                AuditItem(
+                    "Warning",
+                    "ProjectDateRejected",
+                    jira_key=epic.jira_key or epic.key,
+                    schedule_key=epic.key,
+                    issue_type="Epic",
+                    summary=epic.summary,
+                    field=audit_field,
+                    new_value=date_text,
+                    color="review_needed",
+                    message=str(exc),
+                    reviewer_action="Correct the Jira date or update the Project date manually in the sandbox.",
+                    source_row=epic.source_row,
+                )
+            )
+            return
+
+        if not safe_set(task, field_name, project_date):
+            plan.audit_items.append(
+                AuditItem(
+                    "Warning",
+                    "ProjectDateWriteFailed",
+                    jira_key=epic.jira_key or epic.key,
+                    schedule_key=epic.key,
+                    issue_type="Epic",
+                    summary=epic.summary,
+                    field=audit_field,
+                    new_value=date_text,
+                    color="review_needed",
+                    message=f"Microsoft Project rejected the {audit_field} value for custom field {field_name}.",
+                    reviewer_action="Review this Jira date and update the Project field manually if needed.",
+                    source_row=epic.source_row,
+                )
+            )
+
+        if safe_set(task, schedule_attribute, project_date):
+            return
+        plan.audit_items.append(
+            AuditItem(
+                "Warning",
+                "ProjectScheduleDateWriteFailed",
+                jira_key=epic.jira_key or epic.key,
+                schedule_key=epic.key,
+                issue_type="Epic",
+                summary=epic.summary,
+                field="Start" if schedule_attribute == "Start" else "Finish",
+                new_value=date_text,
+                color="review_needed",
+                message=f"Microsoft Project rejected the task {schedule_attribute} value.",
+                reviewer_action="Review schedule constraints, calendar settings, and the Jira date before accepting the sandbox.",
+                source_row=epic.source_row,
+            )
+        )
 
     def get_native_resource_group(self, task: Any) -> str:
         value = safe_get(task, "ResourceGroup")
@@ -739,6 +813,27 @@ def project_date_to_iso(value: Any) -> str:
         except ValueError:
             pass
     return text
+
+
+def project_date_for_com(value: str, schedule_attribute: str = "") -> Any:
+    try:
+        parsed = datetime.strptime(str(value), "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError(f"Date '{value}' must be a valid YYYY-MM-DD date before writing to Project.") from exc
+    if parsed.year < 1984 or parsed.year > 2149:
+        raise ValueError(
+            f"Date '{value}' is outside the Microsoft Project supported range of 1984-01-01 through 2149-12-31."
+        )
+    if schedule_attribute == "Finish":
+        parsed = parsed.replace(hour=17, minute=0, second=0)
+    else:
+        parsed = parsed.replace(hour=8, minute=0, second=0)
+    try:
+        import pywintypes  # type: ignore
+
+        return pywintypes.Time(parsed)
+    except Exception:
+        return parsed
 
 
 def parse_project_key_list(value: str) -> List[str]:
