@@ -16,7 +16,7 @@ from j2p.core import (
     snapshots_from_state,
     write_json,
 )
-from j2p.project import MicrosoftProjectSession
+from j2p.project import MicrosoftProjectSession, append_resource_name
 from j2p.reports import write_reports
 
 
@@ -389,6 +389,100 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(root.jira_key, "TEAM-RED")
         self.assertEqual(root.color, "cascade_root")
         self.assertEqual(downstream.color, "changed_cell")
+
+    def test_resource_group_uses_project_resource_assignment(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.project = FakeProject()
+        task = FakeTask()
+
+        MicrosoftProjectSession.set_native_resource_group(session, task, "Product Delivery")
+
+        self.assertEqual(session.project.Resources.items[0].Name, "Product Delivery")
+        self.assertEqual(session.project.Resources.items[0].Group, "Product Delivery")
+        self.assertEqual(task.Assignments.items[0].ResourceID, 1)
+
+    def test_close_project_uses_explicit_save_option(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeProjectApp()
+
+        MicrosoftProjectSession.close_project(session, save_changes=False)
+
+        self.assertEqual(session.app.close_ex_calls, [(0, True, False)])
+
+    def test_append_resource_name_preserves_existing_names(self) -> None:
+        self.assertEqual(
+            append_resource_name("Jane Smith, Product Delivery", "Platform Engineering"),
+            "Jane Smith, Product Delivery, Platform Engineering",
+        )
+        self.assertEqual(
+            append_resource_name("Jane Smith, Product Delivery", "Product Delivery"),
+            "Jane Smith, Product Delivery",
+        )
+
+
+class FakeProjectApp:
+    def __init__(self) -> None:
+        self.close_ex_calls = []
+
+    def FileCloseEx(self, Save: int, NoAuto: bool, CheckIn: bool) -> None:
+        self.close_ex_calls.append((Save, NoAuto, CheckIn))
+
+
+class FakeAssignment:
+    def __init__(self, resource_id: int) -> None:
+        self.ResourceID = resource_id
+
+
+class FakeAssignments:
+    def __init__(self) -> None:
+        self.items = []
+
+    @property
+    def Count(self) -> int:
+        return len(self.items)
+
+    def __call__(self, index: int) -> FakeAssignment:
+        return self.items[index - 1]
+
+    def Add(self, ResourceID: int) -> FakeAssignment:
+        assignment = FakeAssignment(ResourceID)
+        self.items.append(assignment)
+        return assignment
+
+
+class FakeResource:
+    def __init__(self, resource_id: int, name: str) -> None:
+        self.ID = resource_id
+        self.Name = name
+        self.Group = ""
+
+
+class FakeResources:
+    def __init__(self) -> None:
+        self.items = []
+
+    @property
+    def Count(self) -> int:
+        return len(self.items)
+
+    def __call__(self, index: int) -> FakeResource:
+        return self.items[index - 1]
+
+    def Add(self, name: str) -> FakeResource:
+        resource = FakeResource(len(self.items) + 1, name)
+        self.items.append(resource)
+        return resource
+
+
+class FakeProject:
+    def __init__(self) -> None:
+        self.Resources = FakeResources()
+
+
+class FakeTask:
+    def __init__(self) -> None:
+        self.Assignments = FakeAssignments()
+        self.ResourceNames = ""
 
 
 if __name__ == "__main__":

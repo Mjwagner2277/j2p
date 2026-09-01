@@ -271,7 +271,7 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
         "",
         "| j2p Value | Project Field | Purpose |",
         "| --- | --- | --- |",
-        "| Resource Group | Resource Group | Populated from the Jira key prefix mapping in `resource_groups`. |",
+        "| Resource Group | Resource Group | Populated by assigning a Project resource whose Group value comes from the Jira key prefix mapping in `resource_groups`. |",
         "",
         "Custom task fields used by j2p:",
         "",

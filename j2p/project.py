@@ -86,16 +86,21 @@ class MicrosoftProjectSession:
         self.visible = visible
         self.app: Any = None
         self.project: Any = None
+        self.saved_successfully = False
 
     def __enter__(self) -> "MicrosoftProjectSession":
         self.app = self.win32com.Dispatch("MSProject.Application")
         self.app.Visible = self.visible
+        try:
+            self.app.DisplayAlerts = False
+        except Exception:
+            pass
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         try:
             if self.project is not None:
-                self.app.FileClose()
+                self.close_project(save_changes=exc_type is None and self.saved_successfully)
         finally:
             if self.app is not None and not self.visible:
                 self.app.Quit()
@@ -112,10 +117,31 @@ class MicrosoftProjectSession:
 
     def save(self) -> None:
         self.app.FileSave()
+        self.saved_successfully = True
 
     def save_as(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.app.FileSaveAs(str(path))
+        self.saved_successfully = True
+
+    def close_project(self, save_changes: bool) -> None:
+        save_option = 1 if save_changes else 0
+        try:
+            self.app.FileCloseEx(Save=save_option, NoAuto=True, CheckIn=False)
+            return
+        except Exception:
+            pass
+        try:
+            self.app.FileCloseEx(save_option, True, False)
+            return
+        except Exception:
+            pass
+        try:
+            self.app.FileClose(Save=save_option)
+            return
+        except Exception:
+            pass
+        self.app.FileClose()
 
     def recalculate(self) -> None:
         try:
@@ -404,17 +430,82 @@ class MicrosoftProjectSession:
             return ""
 
     def set_native_resource_group(self, task: Any, resource_group: str) -> None:
-        if safe_set(task, "ResourceGroup", resource_group):
+        if not resource_group:
             return
+        resource = self.ensure_group_resource(resource_group)
+        if self.task_has_resource(task, resource):
+            return
+        if self.assign_resource_to_task(task, resource):
+            return
+        raise ProjectAutomationError(
+            "Could not populate the native Microsoft Project Resource Group field. "
+            "Project calculates that task field from assigned resources, and j2p could not assign "
+            f"the resource group placeholder '{resource_group}'."
+        )
+
+    def ensure_group_resource(self, resource_group: str) -> Any:
+        resource = self.find_resource(resource_group)
+        if resource is None:
+            try:
+                resource = self.project.Resources.Add(resource_group)
+            except Exception as exc:
+                raise ProjectAutomationError(
+                    f"Could not create Microsoft Project resource '{resource_group}' for Resource Group mapping."
+                ) from exc
         try:
-            field_id = self.app.FieldNameToFieldConstant("Resource Group")
-            task.SetField(field_id, str(resource_group))
-            return
+            resource.Group = resource_group
         except Exception as exc:
             raise ProjectAutomationError(
-                "Could not write the native Microsoft Project Resource Group field. "
-                "Confirm the Resource Group column is available in the task table and retry."
+                f"Could not set Microsoft Project resource group for resource '{resource_group}'."
             ) from exc
+        return resource
+
+    def find_resource(self, resource_name: str) -> Optional[Any]:
+        if self.project is None:
+            return None
+        try:
+            count = int(self.project.Resources.Count)
+        except Exception:
+            return None
+        for index in range(1, count + 1):
+            try:
+                resource = self.project.Resources(index)
+            except Exception:
+                continue
+            if resource is not None and str(safe_get(resource, "Name")) == resource_name:
+                return resource
+        return None
+
+    def task_has_resource(self, task: Any, resource: Any) -> bool:
+        try:
+            resource_id = int(resource.ID)
+            for index in range(1, int(task.Assignments.Count) + 1):
+                assignment = task.Assignments(index)
+                if int(safe_get(assignment, "ResourceID")) == resource_id:
+                    return True
+        except Exception:
+            pass
+        current_names = [name.strip() for name in str(safe_get(task, "ResourceNames")).split(",")]
+        return str(safe_get(resource, "Name")) in current_names
+
+    def assign_resource_to_task(self, task: Any, resource: Any) -> bool:
+        try:
+            task.Assignments.Add(ResourceID=int(resource.ID))
+            return True
+        except Exception:
+            pass
+        try:
+            self.project.Assignments.Add(TaskID=int(task.ID), ResourceID=int(resource.ID))
+            return True
+        except Exception:
+            pass
+        try:
+            resource_name = str(safe_get(resource, "Name"))
+            current = str(safe_get(task, "ResourceNames")).strip()
+            task.ResourceNames = append_resource_name(current, resource_name)
+            return True
+        except Exception:
+            return False
 
     def apply_dependencies(self, plan: RunPlan, task_by_key: Dict[str, Any]) -> None:
         for epic in plan.epics.values():
@@ -656,6 +747,13 @@ def parse_project_key_list(value: str) -> List[str]:
     import re
 
     return sorted(set(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", value.upper())))
+
+
+def append_resource_name(current: str, resource_name: str) -> str:
+    names = [name.strip() for name in current.split(",") if name.strip()]
+    if resource_name not in names:
+        names.append(resource_name)
+    return ", ".join(names)
 
 
 def project_color(hex_color: str) -> int:

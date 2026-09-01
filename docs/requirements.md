@@ -135,7 +135,7 @@ Completed epics remain in the sandbox and are reported. Microsoft Project does n
 
 ## Resource Groups
 
-Resource Group is mapped from the Jira key prefix and written to the native Microsoft Project `Resource Group` field. It does not use a j2p custom text field.
+Resource Group is mapped from the Jira key prefix and shown in the native Microsoft Project `Resource Group` field. It does not use a j2p custom text field. Because Project calculates the task-level `Resource Group` field from assigned resources, j2p creates or reuses a Project resource with the same name as the configured group, sets that resource's `Group` value, and assigns it to the epic task.
 
 Example:
 

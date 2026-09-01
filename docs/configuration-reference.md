@@ -206,7 +206,7 @@ Rules:
 
 - A Jira epic prefix must be present in `resource_groups` to be included.
 - Unknown prefixes are excluded and reported by default.
-- The mapped value is written to the native Microsoft Project `Resource Group` field.
+- The mapped value is shown in the native Microsoft Project `Resource Group` field by assigning a Project resource whose `Group` value matches this mapping.
 
 Use this section as the authoritative list of Jira project keys that j2p is allowed to schedule.
 
@@ -355,7 +355,7 @@ Current guardrail:
 
 Maps j2p values to Microsoft Project task custom fields.
 
-`Resource Group` is not listed here because it is a native Microsoft Project field. Use the top-level `resource_groups` section to map Jira key prefixes to the value j2p writes into the native `Resource Group` column.
+`Resource Group` is not listed here because it is a native Microsoft Project field. Use the top-level `resource_groups` section to map Jira key prefixes to the value j2p shows in the native `Resource Group` column through Project resource assignments.
 
 Most users should keep the defaults unless their Project template already uses these fields.
 
