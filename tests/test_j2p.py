@@ -736,6 +736,25 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(task.Predecessors, "3FS,4FS")
         self.assertEqual(project_predecessor_ids("3FS,4SS+2d"), ["3", "4"])
 
+    def test_write_project_predecessors_fast_skips_unchanged_links(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        predecessor = FakeLinkableTask(3)
+        task = FakeLinkableTask(7)
+        task._predecessors = "3FS"
+
+        error = MicrosoftProjectSession.write_project_predecessors(
+            session,
+            task,
+            "3",
+            ["3"],
+            [predecessor],
+        )
+
+        self.assertEqual(error, "")
+        self.assertEqual(task.text_writes, [])
+        self.assertEqual(task.link_calls, [])
+        self.assertEqual(task.Predecessors, "3FS")
+
     def test_write_project_predecessors_prefers_project_object_links(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         predecessor = FakeLinkableTask(3)
@@ -747,6 +766,7 @@ class J2PPlanningTests(unittest.TestCase):
             "3FS",
             ["3"],
             [predecessor],
+            "diagnostic",
         )
 
         self.assertEqual(error, "")
@@ -766,6 +786,7 @@ class J2PPlanningTests(unittest.TestCase):
             "3",
             ["3"],
             [predecessor],
+            "diagnostic",
         )
 
         self.assertEqual(error, "")
@@ -840,6 +861,7 @@ class J2PPlanningTests(unittest.TestCase):
                 "TEAM-1": predecessor,
                 "TEAM-2": task,
             },
+            "diagnostic",
         )
 
         self.assertEqual(plan.audit_items, [])

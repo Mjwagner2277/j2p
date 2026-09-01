@@ -90,6 +90,7 @@ Dependencies:
 
 - j2p writes dependencies through Project's native `Predecessors` field, but the automation path should prefer Project object-link APIs such as `TaskDependencies.Add()` and `Task.LinkPredecessors()`.
 - Direct text assignment such as `Task.Predecessors = "12"` or `Task.Predecessors = "12FS"` is kept only as a fallback because it depends on Project parsing a field string correctly.
+- The default dependency write mode is `fast`, which uses a bounded set of methods and skips rows that already match. The `diagnostic` mode intentionally tries more Project APIs and should be used only to capture detailed failure evidence.
 - `dependency_review` stores notes for skipped or concerning dependencies.
 - `dependency_review_needed` is a filterable flag for those notes.
 - Reference rows should not receive schedule-driving dependencies because `drives_schedule` is `False`.

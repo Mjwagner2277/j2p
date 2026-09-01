@@ -63,12 +63,13 @@ def apply_plan_to_sandbox(
     plan: RunPlan,
     config: Dict[str, Any],
     visible: bool = False,
+    dependency_write_mode: str = "fast",
 ) -> List[AuditItem]:
     with MicrosoftProjectSession(visible=visible) as session:
         session.open(sandbox_path)
         before = session.snapshot_tasks(config)
         session.configure_custom_fields(config)
-        session.apply_plan(plan, config)
+        session.apply_plan(plan, config, dependency_write_mode=dependency_write_mode)
         session.recalculate()
         session.add_schedule_review_items(plan, before, config)
         session.apply_review_formatting(plan, config)
@@ -81,6 +82,7 @@ def create_project_from_plan(
     plan: RunPlan,
     config: Dict[str, Any],
     visible: bool = False,
+    dependency_write_mode: str = "fast",
 ) -> List[AuditItem]:
     with MicrosoftProjectSession(visible=visible) as session:
         session.new()
@@ -88,7 +90,7 @@ def create_project_from_plan(
         session.apply_plan(plan, config, write_dependencies=False)
         session.recalculate()
         session.save_as(output_project)
-        session.apply_plan_dependencies(plan, config)
+        session.apply_plan_dependencies(plan, config, dependency_write_mode)
         session.recalculate()
         session.apply_review_formatting(plan, config)
         session.save()
@@ -349,7 +351,13 @@ class MicrosoftProjectSession:
             )
         return snapshots
 
-    def apply_plan(self, plan: RunPlan, config: Dict[str, Any], write_dependencies: bool = True) -> None:
+    def apply_plan(
+        self,
+        plan: RunPlan,
+        config: Dict[str, Any],
+        write_dependencies: bool = True,
+        dependency_write_mode: str = "fast",
+    ) -> None:
         self.set_auto_scheduled()
         task_by_key = self.index_tasks_by_key(config)
         summary_tasks = self.ensure_summaries(plan, config, task_by_key)
@@ -370,12 +378,17 @@ class MicrosoftProjectSession:
             task_by_key = self.index_tasks_by_key(config)
             self.mark_unmatched_tasks(plan, config, task_by_key)
             return
-        self.apply_plan_dependencies(plan, config)
+        self.apply_plan_dependencies(plan, config, dependency_write_mode)
 
-    def apply_plan_dependencies(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+    def apply_plan_dependencies(
+        self,
+        plan: RunPlan,
+        config: Dict[str, Any],
+        dependency_write_mode: str = "fast",
+    ) -> None:
         self.recalculate()
         task_by_key = self.index_tasks_by_key(config)
-        self.apply_dependencies(plan, task_by_key)
+        self.apply_dependencies(plan, task_by_key, dependency_write_mode)
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
     def set_auto_scheduled(self) -> None:
@@ -736,13 +749,37 @@ class MicrosoftProjectSession:
         except Exception:
             return False
 
-    def apply_dependencies(self, plan: RunPlan, task_by_key: Dict[str, Any]) -> None:
+    def apply_dependencies(
+        self,
+        plan: RunPlan,
+        task_by_key: Dict[str, Any],
+        dependency_write_mode: str = "fast",
+    ) -> None:
+        writable_items: List[Tuple[PlanEpic, Any]] = []
         for epic in plan.epics.values():
             if not epic.drives_schedule:
                 continue
             task = task_by_key.get(epic.key)
             if task is None:
                 continue
+            if epic.predecessors or project_task_has_predecessors(task):
+                writable_items.append((epic, task))
+        total = len(writable_items)
+        if total:
+            print(
+                f"[j2p] {datetime.now().strftime('%H:%M:%S')} Writing Project predecessor fields for "
+                f"{total} task(s) using {dependency_write_mode} mode...",
+                flush=True,
+            )
+        processed = 0
+        for epic, task in writable_items:
+            processed += 1
+            if processed == 1 or processed % 25 == 0 or processed == total:
+                print(
+                    f"[j2p] {datetime.now().strftime('%H:%M:%S')} Project predecessor write progress: "
+                    f"{processed}/{total} task(s)...",
+                    flush=True,
+                )
             predecessor_ids: List[str] = []
             predecessor_tasks: List[Any] = []
             missing_predecessors: List[str] = []
@@ -779,7 +816,13 @@ class MicrosoftProjectSession:
                 )
 
             desired = ",".join(predecessor_ids)
-            error = self.write_project_predecessors(task, desired, predecessor_ids, predecessor_tasks)
+            error = self.write_project_predecessors(
+                task,
+                desired,
+                predecessor_ids,
+                predecessor_tasks,
+                dependency_write_mode,
+            )
             if error:
                 plan.audit_items.append(
                     AuditItem(
@@ -799,6 +842,88 @@ class MicrosoftProjectSession:
                 )
 
     def write_project_predecessors(
+        self,
+        task: Any,
+        predecessor_text: str,
+        expected_ids: List[str],
+        predecessor_tasks: Optional[List[Any]] = None,
+        dependency_write_mode: str = "fast",
+    ) -> str:
+        if not verify_project_predecessors(task, expected_ids):
+            return ""
+        if dependency_write_mode == "diagnostic":
+            return self.write_project_predecessors_diagnostic(
+                task,
+                predecessor_text,
+                expected_ids,
+                predecessor_tasks,
+            )
+        return self.write_project_predecessors_fast(
+            task,
+            predecessor_text,
+            expected_ids,
+            predecessor_tasks,
+        )
+
+    def write_project_predecessors_fast(
+        self,
+        task: Any,
+        predecessor_text: str,
+        expected_ids: List[str],
+        predecessor_tasks: Optional[List[Any]] = None,
+    ) -> str:
+        predecessor_tasks = predecessor_tasks or []
+        clear_error = self.clear_project_predecessors(task) if project_task_has_predecessors(task) else ""
+        if not expected_ids:
+            if clear_error:
+                return f"fast clear failed: {clear_error}"
+            return verify_project_predecessors(task, expected_ids)
+
+        errors: List[str] = []
+        if clear_error:
+            errors.append(f"fast clear failed: {clear_error}")
+
+        predecessor_texts = unique_columns(
+            [
+                predecessor_text,
+                ",".join(expected_ids),
+                ",".join(f"{predecessor_id}FS" for predecessor_id in expected_ids),
+            ]
+        )
+        for text in predecessor_texts:
+            text_error = self.set_project_predecessor_text(task, text)
+            readback_error = verify_project_predecessors(task, expected_ids)
+            if not text_error and not readback_error:
+                return ""
+            details = []
+            if text_error:
+                details.append(text_error)
+            if readback_error:
+                details.append(readback_error)
+            errors.append(f"fast text '{text}': {' | '.join(details)}")
+
+        if predecessor_tasks:
+            clear_error = self.clear_project_predecessors(task)
+            if clear_error:
+                errors.append(f"fast object-link clear failed: {clear_error}")
+            link_error = self.link_project_predecessors(task, predecessor_tasks)
+            readback_error = verify_project_predecessors(task, expected_ids)
+            if not link_error and not readback_error:
+                return ""
+            details = []
+            if link_error:
+                details.append(link_error)
+            if readback_error:
+                details.append(readback_error)
+            errors.append(f"fast Task.LinkPredecessors: {' | '.join(details)}")
+
+        return (
+            "Fast predecessor write failed. "
+            + " ".join(errors)
+            + " Rerun with --dependency-write-mode diagnostic for the full Microsoft Project API fallback trace."
+        )
+
+    def write_project_predecessors_diagnostic(
         self,
         task: Any,
         predecessor_text: str,
@@ -1512,6 +1637,12 @@ def project_predecessor_ids(value: str) -> List[str]:
     import re
 
     return re.findall(r"\b(\d+)(?:[A-Z]{0,2})?(?:[+-]\d+[a-zA-Z]+)?\b", value)
+
+
+def project_task_has_predecessors(task: Any) -> bool:
+    if task is None:
+        return False
+    return bool(project_predecessor_ids(str(safe_get(task, "Predecessors"))) or current_predecessor_task_ids(task))
 
 
 def current_predecessor_tasks(task: Any) -> List[Any]:

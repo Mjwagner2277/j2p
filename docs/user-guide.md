@@ -157,10 +157,11 @@ Common arguments:
 | `--comparison-source` | No | Baseline for change reporting. Allowed values are `main`, `previous-sandbox`, and `state`. Default is `main`. |
 | `--previous-sandbox` | Required only with `--comparison-source previous-sandbox` | Prior sandbox `.mpp` used for iterative review comparison. |
 | `--debug-visible` | No | Debug only. Ask Microsoft Project to show its window while automation runs. Normal users should omit this. |
+| `--dependency-write-mode` | No | `fast` by default. Use `diagnostic` only when troubleshooting blank predecessor fields because it tries more Project APIs and can run much slower. |
 
 During normal runs, j2p prints timestamped progress messages in the terminal so users can see that the run is still moving through CSV parsing, Project automation, state writing, and report generation.
 
-For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. That warning includes the Project write methods attempted and the readback value Project returned.
+For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. Rerun with `--dependency-write-mode diagnostic` only when you need the full Project API fallback trace.
 
 ## Output Folder
 

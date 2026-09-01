@@ -86,6 +86,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Debug only: ask Microsoft Project to show its window while automation runs.",
     )
     update.add_argument(
+        "--dependency-write-mode",
+        choices=["fast", "diagnostic"],
+        default="fast",
+        help=(
+            "Microsoft Project predecessor write strategy. Default: fast. "
+            "Use diagnostic only when troubleshooting dependency write failures."
+        ),
+    )
+    update.add_argument(
         "--visible",
         action="store_true",
         help=argparse.SUPPRESS,
@@ -105,6 +114,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--debug-visible",
         action="store_true",
         help="Debug only: ask Microsoft Project to show its window while automation runs.",
+    )
+    create.add_argument(
+        "--dependency-write-mode",
+        choices=["fast", "diagnostic"],
+        default="fast",
+        help=(
+            "Microsoft Project predecessor write strategy. Default: fast. "
+            "Use diagnostic only when troubleshooting dependency write failures."
+        ),
     )
     create.add_argument(
         "--visible",
@@ -169,7 +187,13 @@ def run_update(args: argparse.Namespace) -> int:
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
     progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     progress("Opening sandbox MPP and applying Jira updates")
-    apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=debug_visible)
+    apply_plan_to_sandbox(
+        sandbox_path,
+        plan,
+        context["config"],
+        visible=debug_visible,
+        dependency_write_mode=args.dependency_write_mode,
+    )
     progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
     write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
@@ -188,7 +212,13 @@ def run_create(args: argparse.Namespace) -> int:
     progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     output_project = context["run_dir"] / args.output_project_name
     progress("Creating initial sandbox MPP")
-    create_project_from_plan(output_project, plan, context["config"], visible=debug_visible)
+    create_project_from_plan(
+        output_project,
+        plan,
+        context["config"],
+        visible=debug_visible,
+        dependency_write_mode=args.dependency_write_mode,
+    )
     progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
     write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
