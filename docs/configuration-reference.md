@@ -386,13 +386,33 @@ Default:
 
 ```yaml
 review_table:
+  exposed_columns:
+    - jira_key
+    - summary
+    - rollup_key
+    - resource_group
+    - dependency_review
+    - jira_status
+    - start
+    - finish
+    - percent_complete
+    - row_role
+    - fix_version
+    - predecessors
+  include_audit_columns: false
+```
+
+The default table is intentionally manager-friendly. It hides internal matching keys, rollup mode, Jira key prefix, Jira issue type, Jira target dates, story point detail fields, logged-hours detail fields, in-planning flags, and other flag-style review indicators. Those values are still written into the Project file and included in the HTML/CSV reports.
+
+Use `all` when an administrator wants every standard j2p field visible in Project:
+
+```yaml
+review_table:
   exposed_columns: all
   include_audit_columns: true
 ```
 
-Use `all` during trial runs and training. This exposes every standard j2p review column.
-
-To make the Project review table smaller, provide a list:
+To make the Project review table even smaller, provide a shorter list:
 
 ```yaml
 review_table:
@@ -402,18 +422,15 @@ review_table:
     - resource_group
     - dependency_review
     - finish
-    - jira_target_end
     - percent_complete
-    - logged_hours
-    - hours_accuracy_percent
     - predecessors
-  include_audit_columns: true
+  include_audit_columns: false
 ```
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| `exposed_columns` | `all` | Standard columns to show in the `j2p Review` table. Use `all` or a YAML list. |
-| `include_audit_columns` | `true` | Automatically adds changed/review fields for the run even if they were not listed in `exposed_columns`. |
+| `exposed_columns` | Manager-friendly list | Standard columns to show in the `j2p Review` table. Use `all` or a YAML list. |
+| `include_audit_columns` | `false` | When `true`, automatically adds changed/review fields for the run even if they were not listed in `exposed_columns`. Keep this `false` for manager-facing sandboxes. |
 
 Supported friendly names for `exposed_columns`:
 

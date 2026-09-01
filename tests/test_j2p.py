@@ -10,6 +10,7 @@ from typing import Dict, Tuple
 from j2p.cli import build_parser, main
 from j2p.config import ConfigError, load_config
 from j2p.core import (
+    AuditItem,
     J2PError,
     PlanEpic,
     RunPlan,
@@ -639,18 +640,42 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_aliases("Text1", config), ["Text1", "Jira Key"])
         self.assertEqual(project_column_aliases("Name", config), ["Name"])
 
-    def test_review_table_columns_include_required_coloring_fields(self) -> None:
+    def test_review_table_columns_use_manager_friendly_defaults(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
 
-        columns = review_table_columns(config, ["Text9", "Flag2", "Predecessors"])
+        columns = review_table_columns(config, ["Date2", "Number3", "Flag2"])
 
-        self.assertIn("Text1", columns)
-        self.assertIn("Text9", columns)
-        self.assertIn("Number3", columns)
-        self.assertIn("Number4", columns)
-        self.assertIn("Flag2", columns)
-        self.assertIn("Predecessors", columns)
-        self.assertIn("Resource Group", columns)
+        self.assertEqual(
+            columns,
+            [
+                "Name",
+                "Text1",
+                "Text5",
+                "Resource Group",
+                "Text8",
+                "Text9",
+                "Start",
+                "Finish",
+                "% Complete",
+                "Text11",
+                "Text12",
+                "Predecessors",
+            ],
+        )
+        self.assertNotIn("Text10", columns)
+        self.assertNotIn("Text4", columns)
+        self.assertNotIn("Text7", columns)
+        self.assertNotIn("Text3", columns)
+        self.assertNotIn("Date1", columns)
+        self.assertNotIn("Date2", columns)
+        self.assertNotIn("Number1", columns)
+        self.assertNotIn("Number2", columns)
+        self.assertNotIn("Number3", columns)
+        self.assertNotIn("Number4", columns)
+        self.assertNotIn("Flag1", columns)
+        self.assertNotIn("Flag2", columns)
+        self.assertNotIn("Flag3", columns)
+        self.assertNotIn("Flag4", columns)
 
     def test_review_table_columns_can_be_pruned_by_config(self) -> None:
         config = load_config(
@@ -664,7 +689,22 @@ class J2PPlanningTests(unittest.TestCase):
 
         columns = review_table_columns(config, ["Flag2"])
 
-        self.assertEqual(columns, ["Name", "Text1", "Finish", "Number3", "Flag2"])
+        self.assertEqual(columns, ["Name", "Text1", "Finish", "Number3"])
+
+    def test_review_table_columns_can_include_audit_columns_by_config(self) -> None:
+        config = load_config(
+            None,
+            {
+                "review_table": {
+                    "exposed_columns": ["jira_key", "finish"],
+                    "include_audit_columns": True,
+                }
+            },
+        )
+
+        columns = review_table_columns(config, ["Flag2", "Date2"])
+
+        self.assertEqual(columns, ["Name", "Text1", "Finish", "Flag2", "Date2"])
 
     def test_review_table_columns_can_hide_audit_columns(self) -> None:
         config = load_config(
@@ -698,6 +738,42 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Text1", added_columns)
         self.assertIn("Text9", added_columns)
         self.assertNotIn("Predecessors", added_columns)
+
+    def test_apply_review_formatting_skips_hidden_default_columns(self) -> None:
+        config = load_config(None)
+        task = FakeTask()
+        task.ID = 15
+        plan = RunPlan(
+            generated_at="now",
+            jira_csv="jira.csv",
+            rollup_mode="initiative",
+            column_map={},
+            stats={},
+            summaries={},
+            epics={},
+            audit_items=[
+                AuditItem("Info", "ChangedField", jira_key="CORE-1", field="Jira Target End", color="changed_cell"),
+                AuditItem("Info", "ChangedField", jira_key="CORE-1", field="Finish", color="changed_cell"),
+            ],
+        )
+        prepared_columns: List[str] = []
+        colored_columns: List[str] = []
+        session = object.__new__(MicrosoftProjectSession)
+        session.index_tasks_by_key = lambda _config: {"CORE-1": task}
+        session.project_selection_aliases = lambda column, _config: [column]
+        session.prepare_formatting_view = lambda columns, _config: prepared_columns.extend(columns) or []
+        session.project_table_column_positions = lambda _table, _config: {
+            column.lower(): index for index, column in enumerate(prepared_columns, start=1)
+        }
+        session.color_project_cell_error = lambda _task, column, _color, _aliases, _position: (
+            colored_columns.append(column) or ""
+        )
+
+        MicrosoftProjectSession.apply_review_formatting(session, plan, config)
+
+        self.assertNotIn("Date2", prepared_columns)
+        self.assertIn("Finish", prepared_columns)
+        self.assertEqual(colored_columns, ["Finish"])
 
     def test_prepare_formatting_view_updates_existing_review_table_on_name_conflict(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")

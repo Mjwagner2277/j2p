@@ -222,9 +222,9 @@ The manager report intentionally keeps project-wide accuracy, rollup status, and
 | Red | First/root critical-path finish-date driver. Red overrides green. | Review first because this is the likely source of cascading schedule movement. |
 | Yellow/amber | Unmatched item, excluded item, or manager review needed. | Decide whether Jira/configuration/source Project data should be corrected. |
 | Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
-| Gray/green-gray | In planning. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
+| Gray/green-gray | In planning when that column is exposed. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
-j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. By default, the table includes Jira key, rollup, status, dates, story points, logged hours, dependency review, predecessor, and review flag fields. Schedule owners can prune those visible columns with `review_table.exposed_columns` in YAML.
+j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. By default, the table shows manager-facing columns such as Jira key, summary, rollup key, resource group, dependency review, status, Project start/finish, percent complete, row role, fixVersion, and predecessors. Internal matching keys, story/hour detail fields, Jira target dates, and review flag fields are hidden unless a schedule owner exposes them with `review_table.exposed_columns` in YAML. Hidden fields are still written and reported, but they are not colored in the default Project review table.
 
 To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. The colors appear in the left task-sheet cells, not on the right-side Gantt bars and not inside the HTML manager report.
 

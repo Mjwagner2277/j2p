@@ -99,7 +99,7 @@ Review coloring:
 
 - `project_column_for_audit_field()` maps audit fields to the Project column that should be colored.
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
-- `review_table.exposed_columns` can prune the standard review table columns. Keep `include_audit_columns` enabled when reviewer-visible cell coloring is required for changed fields that are not part of the standard exposed list.
+- `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and reported in HTML/CSV, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
 - Red `cascade_root` coloring applies to native `Finish` after Project scheduling analysis.
 - Green changed-cell coloring applies to the changed native/custom field.
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.

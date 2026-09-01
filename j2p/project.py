@@ -1309,12 +1309,23 @@ class MicrosoftProjectSession:
             column_aliases = self.project_selection_aliases(column, config)
             formatting_items.append((item, task, column, color, column_aliases))
 
-        project_progress(f"Preparing to color {len(formatting_items)} Project review cell(s)")
-        project_progress("Preparing j2p Review table")
-        table_errors = self.prepare_formatting_view(
-            review_table_columns(config, [column for _item, _task, column, _color, _aliases in formatting_items]),
+        review_columns = review_table_columns(
             config,
+            [column for _item, _task, column, _color, _aliases in formatting_items],
         )
+        visible_formatting_items = [
+            formatting_item
+            for formatting_item in formatting_items
+            if self.project_column_is_visible_for_review(formatting_item[4], review_columns, config)
+        ]
+        hidden_formatting_count = len(formatting_items) - len(visible_formatting_items)
+        project_progress(f"Preparing to color {len(visible_formatting_items)} visible Project review cell(s)")
+        if hidden_formatting_count:
+            project_progress(
+                f"Skipping {hidden_formatting_count} color candidate(s) because their columns are hidden by review_table.exposed_columns"
+            )
+        project_progress("Preparing j2p Review table")
+        table_errors = self.prepare_formatting_view(review_columns, config)
         if table_errors:
             plan.audit_items.append(
                 AuditItem(
@@ -1336,12 +1347,12 @@ class MicrosoftProjectSession:
         column_positions = self.project_table_column_positions(J2P_REVIEW_TABLE_NAME, config)
         failed_columns: Dict[str, int] = {}
         failed_examples: List[str] = []
-        total = len(formatting_items)
-        if total:
+        visible_total = len(visible_formatting_items)
+        if visible_total:
             project_progress("Project cell coloring started")
-        for index, (item, task, column, color, column_aliases) in enumerate(formatting_items, start=1):
-            if index == 1 or index % 50 == 0 or index == total:
-                project_progress(f"Project cell coloring progress: {index}/{total} cell(s)")
+        for index, (item, task, column, color, column_aliases) in enumerate(visible_formatting_items, start=1):
+            if index == 1 or index % 50 == 0 or index == visible_total:
+                project_progress(f"Project cell coloring progress: {index}/{visible_total} cell(s)")
             column_position = first_project_column_position(column_positions, column_aliases)
             error = self.color_project_cell_error(task, column, color, column_aliases, column_position)
             if not error:
@@ -1350,7 +1361,7 @@ class MicrosoftProjectSession:
             if len(failed_examples) < 10:
                 failed_examples.append(f"{item.jira_key or item.schedule_key} {item.field}: {error}")
         if failed_columns:
-            total = sum(failed_columns.values())
+            failure_total = sum(failed_columns.values())
             columns = ", ".join(f"{column} ({count})" for column, count in sorted(failed_columns.items()))
             examples = " Examples: " + " | ".join(failed_examples) if failed_examples else ""
             plan.audit_items.append(
@@ -1360,7 +1371,7 @@ class MicrosoftProjectSession:
                     field="Project Cell Formatting",
                     color="review_needed",
                     message=(
-                        f"Could not color {total} Project cell(s). Failed Project columns: {columns}. "
+                        f"Could not color {failure_total} Project cell(s). Failed Project columns: {columns}. "
                         "The underlying task data was still written where Project accepted the field values."
                         f"{examples}"
                     ),
@@ -1371,8 +1382,21 @@ class MicrosoftProjectSession:
                     ),
                 )
             )
-        if total:
+        if visible_total:
             project_progress("Project cell coloring complete")
+
+    def project_column_is_visible_for_review(
+        self,
+        column_aliases: List[str],
+        review_columns: List[str],
+        config: Dict[str, Any],
+    ) -> bool:
+        visible_aliases = {
+            normalize_project_column_name(alias)
+            for column in review_columns
+            for alias in self.project_selection_aliases(column, config)
+        }
+        return any(normalize_project_column_name(alias) in visible_aliases for alias in column_aliases)
 
     def prepare_formatting_view(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
         errors: List[str] = []

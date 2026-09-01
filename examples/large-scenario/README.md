@@ -205,10 +205,12 @@ In Microsoft Project:
 1. Open `Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp`.
 2. Use the Gantt Chart view.
 3. Apply the `j2p Review` task table from Project's table menu if it is not already active.
-4. Start with these columns: `Jira Key`, `j2p Unique Key`, `j2p Row Role`, `Rollup Key`, `Resource Group`, `% Complete`, `Jira Target Start`, `Jira Target End`, `Dependency Review`, `In Planning`, and `Drives Schedule`.
+4. Start with the default manager-facing columns: `Jira Key`, `Name`, `Rollup Key`, `Resource Group`, `Dependency Review`, `Jira Status`, `Start`, `Finish`, `% Complete`, `j2p Row Role`, `Jira Fix Version`, and `Predecessors`.
 5. Look for colored cells in the left task grid. The colors are not shown on the right-side Gantt bars.
 6. Use `Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key.
-7. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and in-planning rows.
+7. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and the in-planning entries in the manager report.
+
+The default `j2p Review` table intentionally hides internal mapping keys, Jira target dates, story point fields, hours fields, in-planning fields, and flag-style review indicators. Those values are still available in `Manager-Review-Report.html`, the CSV files, and the hidden Project custom fields. Edit `review_table.exposed_columns` in YAML only when your review process needs those fields visible in Project.
 
 Training keys to find in the sandbox:
 
