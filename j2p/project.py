@@ -23,6 +23,13 @@ PROJECT_TASK_MANAGER_RESOLUTION = (
 
 J2P_REVIEW_TABLE_NAME = "j2p Review"
 PROJECT_SOLID_FILL_PATTERN = 1
+PJ_COLOR_RED = 1
+PJ_COLOR_YELLOW = 2
+PJ_COLOR_LIME = 3
+PJ_COLOR_AQUA = 4
+PJ_COLOR_BLUE = 5
+PJ_COLOR_GRAY = 14
+PJ_COLOR_SILVER = 15
 PROJECT_ENTRY_TABLE_COLUMNS = {
     "duration",
     "finish",
@@ -1731,7 +1738,7 @@ class MicrosoftProjectSession:
         selected, selection_error = self.select_project_cell(task, column_aliases or [column], column_position)
         if not selected:
             return selection_error
-        return self.color_active_cell(color)
+        return self.color_active_cell(color, hex_color)
 
     def select_project_cell(
         self,
@@ -1884,78 +1891,69 @@ class MicrosoftProjectSession:
             return ""
         return f"ActiveCell.FieldName was '{field_name}' instead of one of {sorted(expected)}."
 
-    def color_active_cell(self, color: int) -> str:
+    def color_active_cell(self, color: int, hex_color: str = "") -> str:
         try:
             active_cell = self.app.ActiveCell
         except Exception as exc:
             return f"ActiveCell was unavailable after selecting the Project cell: {exc}"
-        property_error = self.color_active_cell_with_property(active_cell, color)
-        if not property_error:
+        exact_color_error = self.color_active_cell_with_cell_color_ex(active_cell, color)
+        if not exact_color_error:
             return ""
-        fallback_error = self.color_selected_cells_with_font32ex(color)
-        if not fallback_error:
-            return ""
-        return f"{property_error} Font32Ex selected-cell fallback failed: {fallback_error}"
-
-    def color_active_cell_with_property(self, active_cell: Any, color: int) -> str:
+        palette_color = project_pj_color(hex_color, color)
         try:
-            active_cell.CellColorEx = color
-        except Exception as exc:
-            return f"ActiveCell.CellColorEx rejected the background color: {exc}"
-        try:
-            active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
+            active_cell = self.app.ActiveCell
         except Exception:
             pass
-        return self.active_cell_color_readback_error(color)
+        palette_error = self.color_active_cell_with_cell_color(active_cell, palette_color)
+        if not palette_error:
+            return ""
+        return f"{exact_color_error} ActiveCell.CellColor fallback failed: {palette_error}"
 
-    def color_selected_cells_with_font32ex(self, color: int) -> str:
-        missing = project_com_missing_value()
-        attempts = (
-            (
-                "Font32Ex positional",
-                lambda: self.app.Font32Ex(
-                    missing,
-                    missing,
-                    missing,
-                    missing,
-                    missing,
-                    missing,
-                    False,
-                    color,
-                    PROJECT_SOLID_FILL_PATTERN,
-                    missing,
-                ),
-            ),
-            (
-                "Font32Ex named",
-                lambda: self.app.Font32Ex(
-                    Name=missing,
-                    Size=missing,
-                    Bold=missing,
-                    Italic=missing,
-                    Underline=missing,
-                    Color=missing,
-                    Reset=False,
-                    CellColor=color,
-                    Pattern=PROJECT_SOLID_FILL_PATTERN,
-                    Strikethrough=missing,
-                ),
-            ),
-        )
+    def color_active_cell_with_cell_color_ex(self, active_cell: Any, color: int) -> str:
         errors: List[str] = []
-        for method_name, formatter in attempts:
+        for value in project_com_int_values(color):
             try:
-                result = formatter()
+                active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
+            except Exception:
+                pass
+            try:
+                active_cell.CellColorEx = value
             except Exception as exc:
-                errors.append(f"{method_name} failed: {exc}")
+                errors.append(f"ActiveCell.CellColorEx rejected {project_com_value_label(value)}: {exc}")
                 continue
-            if project_call_failed(result):
-                errors.append(f"{method_name} returned False.")
-                continue
-            return self.active_cell_color_readback_error(color)
-        return " ".join(errors) or "Application.Font32Ex was unavailable."
+            try:
+                active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
+            except Exception:
+                pass
+            readback_error = self.active_cell_color_ex_readback_error(color)
+            if not readback_error:
+                return ""
+            errors.append(readback_error)
+        return " ".join(errors) or "ActiveCell.CellColorEx was unavailable."
 
-    def active_cell_color_readback_error(self, color: int) -> str:
+    def color_active_cell_with_cell_color(self, active_cell: Any, color: int) -> str:
+        errors: List[str] = []
+        for value in project_com_int_values(color):
+            try:
+                active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
+            except Exception:
+                pass
+            try:
+                active_cell.CellColor = value
+            except Exception as exc:
+                errors.append(f"ActiveCell.CellColor rejected {project_com_value_label(value)}: {exc}")
+                continue
+            try:
+                active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
+            except Exception:
+                pass
+            readback_error = self.active_cell_color_readback_error(color)
+            if not readback_error:
+                return ""
+            errors.append(readback_error)
+        return " ".join(errors) or "ActiveCell.CellColor was unavailable."
+
+    def active_cell_color_ex_readback_error(self, color: int) -> str:
         try:
             active_cell = self.app.ActiveCell
         except Exception:
@@ -1964,6 +1962,19 @@ class MicrosoftProjectSession:
             readback = int(active_cell.CellColorEx)
             if readback != color:
                 return f"ActiveCell.CellColorEx read back {readback}, expected {color}."
+        except Exception:
+            pass
+        return ""
+
+    def active_cell_color_readback_error(self, color: int) -> str:
+        try:
+            active_cell = self.app.ActiveCell
+        except Exception:
+            return ""
+        try:
+            readback = int(active_cell.CellColor)
+            if readback != color:
+                return f"ActiveCell.CellColor read back {readback}, expected {color}."
         except Exception:
             pass
         return ""
@@ -2370,10 +2381,87 @@ def project_color(hex_color: str) -> int:
     return (blue << 16) + (green << 8) + red
 
 
-def project_com_missing_value() -> Any:
+def project_pj_color(hex_color: str, project_rgb_color: Optional[int] = None) -> int:
+    cleaned = str(hex_color or "").strip().lower()
+    default_color_map = {
+        "#c6efce": PJ_COLOR_LIME,
+        "c6efce": PJ_COLOR_LIME,
+        "#ffc7ce": PJ_COLOR_RED,
+        "ffc7ce": PJ_COLOR_RED,
+        "#ffeb9c": PJ_COLOR_YELLOW,
+        "ffeb9c": PJ_COLOR_YELLOW,
+        "#bdd7ee": PJ_COLOR_BLUE,
+        "bdd7ee": PJ_COLOR_BLUE,
+        "#d9ead3": PJ_COLOR_SILVER,
+        "d9ead3": PJ_COLOR_SILVER,
+    }
+    if cleaned in default_color_map:
+        return default_color_map[cleaned]
+    red, green, blue = color_components(hex_color, project_rgb_color)
+    hue, saturation, lightness = rgb_to_hsl(red, green, blue)
+    if saturation < 0.12:
+        return PJ_COLOR_SILVER if lightness > 0.55 else PJ_COLOR_GRAY
+    if hue < 20 or hue >= 340:
+        return PJ_COLOR_RED
+    if hue < 70:
+        return PJ_COLOR_YELLOW
+    if hue < 160:
+        return PJ_COLOR_LIME
+    if hue < 200:
+        return PJ_COLOR_AQUA
+    if hue < 260:
+        return PJ_COLOR_BLUE
+    return PJ_COLOR_RED if hue >= 330 else PJ_COLOR_BLUE
+
+
+def color_components(hex_color: str, project_rgb_color: Optional[int] = None) -> Tuple[int, int, int]:
+    cleaned = str(hex_color or "").strip().lstrip("#")
+    if len(cleaned) == 6:
+        try:
+            return int(cleaned[0:2], 16), int(cleaned[2:4], 16), int(cleaned[4:6], 16)
+        except ValueError:
+            pass
+    value = int(project_rgb_color or 0)
+    red = value & 0xFF
+    green = (value >> 8) & 0xFF
+    blue = (value >> 16) & 0xFF
+    return red, green, blue
+
+
+def rgb_to_hsl(red: int, green: int, blue: int) -> Tuple[float, float, float]:
+    red_f = red / 255.0
+    green_f = green / 255.0
+    blue_f = blue / 255.0
+    max_value = max(red_f, green_f, blue_f)
+    min_value = min(red_f, green_f, blue_f)
+    lightness = (max_value + min_value) / 2.0
+    if max_value == min_value:
+        return 0.0, 0.0, lightness
+    delta = max_value - min_value
+    saturation = delta / (2.0 - max_value - min_value) if lightness > 0.5 else delta / (max_value + min_value)
+    if max_value == red_f:
+        hue = ((green_f - blue_f) / delta + (6 if green_f < blue_f else 0)) * 60.0
+    elif max_value == green_f:
+        hue = ((blue_f - red_f) / delta + 2) * 60.0
+    else:
+        hue = ((red_f - green_f) / delta + 4) * 60.0
+    return hue, saturation, lightness
+
+
+def project_com_int_values(value: int) -> List[Any]:
+    values: List[Any] = [int(value)]
     try:
         import pythoncom  # type: ignore
+        from win32com.client import VARIANT  # type: ignore
 
-        return pythoncom.Missing
+        values.append(VARIANT(pythoncom.VT_I4, int(value)))
     except Exception:
-        return None
+        pass
+    return values
+
+
+def project_com_value_label(value: Any) -> str:
+    try:
+        return str(int(value))
+    except Exception:
+        return type(value).__name__

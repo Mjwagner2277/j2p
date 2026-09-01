@@ -28,6 +28,7 @@ from j2p.project import (
     project_column_for_audit_field,
     project_column_aliases,
     project_date_for_com,
+    project_pj_color,
     project_predecessor_ids,
     review_table_columns,
 )
@@ -755,17 +756,28 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
         self.assertEqual(session.app.font32_calls, 0)
 
-    def test_color_project_cell_uses_safe_font32ex_fallback(self) -> None:
+    def test_project_adapter_does_not_call_font32ex(self) -> None:
+        source = (ROOT / "j2p" / "project.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Font32Ex", source)
+
+    def test_color_project_cell_uses_cellcolor_fallback_without_font32ex(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
-        session.app = FakeFont32ExFallbackFormattingApp()
+        session.app = FakeCellColorFallbackFormattingApp()
         task = FakeTask()
         task.ID = 9
 
         self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
-        self.assertEqual(session.app.font32_calls, 1)
-        self.assertEqual(len(session.app.font32_args), 10)
-        self.assertFalse(session.app.font32_args[6])
-        self.assertEqual(session.app.font32_args[8], 1)
+        self.assertEqual(session.app.font32_calls, 0)
+        self.assertEqual(session.app.ActiveCell.CellColor, 1)
+        self.assertEqual(session.app.ActiveCell.Pattern, 1)
+
+    def test_project_pj_color_maps_default_review_colors_to_visible_palette(self) -> None:
+        self.assertEqual(project_pj_color("#C6EFCE"), 3)
+        self.assertEqual(project_pj_color("#FFC7CE"), 1)
+        self.assertEqual(project_pj_color("#FFEB9C"), 2)
+        self.assertEqual(project_pj_color("#BDD7EE"), 5)
+        self.assertEqual(project_pj_color("#D9EAD3"), 15)
 
     def test_select_project_cell_treats_false_return_as_failure(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -1364,6 +1376,10 @@ def selection_call_parts(args: object, kwargs: Dict[str, object]) -> Tuple[int, 
 
 
 class FakeRejectingCell:
+    def __init__(self) -> None:
+        self.CellColor = 0
+        self.Pattern = 0
+
     @property
     def CellColorEx(self) -> int:
         return 0
@@ -1380,27 +1396,18 @@ class FakeUnexpectedFont32ExApp(FakeFormattingApp):
 
     def Font32Ex(self, *args: object, **kwargs: object) -> None:
         self.font32_calls += 1
-        raise AssertionError("Font32Ex should not be called when ActiveCell.CellColorEx works")
+        raise AssertionError("Font32Ex must not be called")
 
 
-class FakeFont32ExFallbackFormattingApp(FakeFormattingApp):
+class FakeCellColorFallbackFormattingApp(FakeFormattingApp):
     def __init__(self) -> None:
         super().__init__()
         self.ActiveCell = FakeRejectingCell()
         self.font32_calls = 0
-        self.font32_args: Tuple[object, ...] = tuple()
 
-    def Font32Ex(self, *args: object, **kwargs: object) -> bool:
+    def Font32Ex(self, *args: object, **kwargs: object) -> None:
         self.font32_calls += 1
-        if kwargs:
-            raise AssertionError("Font32Ex fallback should prefer the full positional call")
-        if len(args) != 10:
-            raise AssertionError("Font32Ex fallback must pass every argument to avoid the Font dialog")
-        color = int(args[7])
-        self.font32_args = args
-        self.ActiveCell = FakeCell()
-        self.ActiveCell.CellColorEx = color
-        return True
+        raise AssertionError("Font32Ex must not be called")
 
 
 class FakeAssignment:

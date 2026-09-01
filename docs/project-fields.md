@@ -105,6 +105,7 @@ Review coloring:
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.
 - Blue dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
+- Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property and does not call Project font-formatting commands.
 
 ## Adding Or Changing A Field
 

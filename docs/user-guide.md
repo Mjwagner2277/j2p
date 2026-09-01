@@ -228,11 +228,11 @@ j2p applies sandbox colors through Project cell background formatting. During `c
 
 To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. The colors appear in the left task-sheet cells, not on the right-side Gantt bars and not inside the HTML manager report.
 
-If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories. If the warning mentions `CellColorEx`, Project accepted the cell selection but rejected the direct background property; current j2p versions then try Project's fully specified selected-cell formatting command as a fallback.
+If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories. Current j2p versions try exact RGB cell coloring first and then Project's built-in direct `CellColor` palette as a fallback.
 
 Project stores predecessor links as Project task row IDs, not Jira keys. The manager report and audit CSV show Jira keys such as `CORE-1001`, but the sandbox `Predecessors` column normally shows values such as `12FS`. That is expected.
 
-j2p does not use VBA macros for default coloring. Macros can be useful for a controlled engineering workstation, but they add Office macro security prompts and Trust Center settings that are not ideal for nontechnical handoff. Default highlighting is macro-free; if Project rejects cell coloring, the manager report calls that out explicitly.
+j2p does not use VBA macros or Project font-formatting commands for default coloring. Macros can be useful for a controlled engineering workstation, but they add Office macro security prompts and Trust Center settings that are not ideal for nontechnical handoff. Default highlighting is macro-free and avoids the Project Font dialog; if Project rejects both direct cell-color properties, the manager report calls that out explicitly.
 
 ## CSV Inputs
 
