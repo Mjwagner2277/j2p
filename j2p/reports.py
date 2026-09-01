@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 from .core import (
     AuditItem,
     RunPlan,
-    calculate_hours_accuracy_percent,
+    calculate_story_points_per_standard_hours,
     calculate_percent,
     format_number,
     html_escape,
@@ -55,7 +55,7 @@ PLANNED_EPIC_COLUMNS = [
     "completed_story_points",
     "logged_hours",
     "completed_logged_hours",
-    "hours_accuracy_percent",
+    "story_points_per_8_hours",
     "percent_complete",
     "in_planning",
     "completed",
@@ -78,7 +78,7 @@ SUMMARY_ROLLUP_COLUMNS = [
     "completed_story_points",
     "logged_hours",
     "completed_logged_hours",
-    "hours_accuracy_percent",
+    "story_points_per_8_hours",
     "percent_complete",
 ]
 
@@ -210,6 +210,7 @@ def planned_epic_rows(plan: RunPlan) -> List[Dict[str, Any]]:
         row["drives_schedule"] = "Yes" if epic.drives_schedule else "No"
         row["in_planning"] = "Yes" if epic.in_planning else "No"
         row["completed"] = "Yes" if epic.completed else "No"
+        row["story_points_per_8_hours"] = epic.hours_accuracy_percent
         rows.append({key: row.get(key, "") for key in PLANNED_EPIC_COLUMNS})
     return rows
 
@@ -219,6 +220,7 @@ def summary_rollup_rows(plan: RunPlan) -> List[Dict[str, Any]]:
     for summary in sorted(plan.summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
         row = asdict(summary)
         row["rollup_key"] = row.pop("key")
+        row["story_points_per_8_hours"] = summary.hours_accuracy_percent
         rows.append({key: row.get(key, "") for key in SUMMARY_ROLLUP_COLUMNS})
     return rows
 
@@ -248,7 +250,7 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
             completed_logged_hours = round(sum(epic.completed_logged_hours for epic in reference_epics), 2)
             percent_complete = calculate_percent(reference_completed, reference_total)
             accuracy_completed = reference_completed
-        hours_accuracy_percent = calculate_hours_accuracy_percent(
+        hours_accuracy_percent = calculate_story_points_per_standard_hours(
             completed_logged_hours,
             accuracy_completed,
             float(plan.stats.get("hours_per_story_point", 8.0)),
@@ -608,8 +610,8 @@ def decision_briefing(plan: RunPlan) -> str:
         ("Completed Epics", len(completed_items), "Completed since comparison baseline"),
         ("Logged Hours", format_number(plan.stats.get("logged_hours", 0)), "Rolled up from child work"),
         (
-            "Project-Wide Accuracy",
-            f"{format_number(accuracy_summary['hours_accuracy_percent'])}%",
+            story_points_rate_label(plan),
+            format_number(accuracy_summary["hours_accuracy_percent"]),
             pluralize(accuracy_summary["epic_count"], "in-progress row", "in-progress rows"),
         ),
     ]
@@ -634,8 +636,8 @@ def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
     summary = project_wide_accuracy_summary(plan)
     metrics = [
         (
-            "Hours Accuracy %",
-            f"{format_number(summary['hours_accuracy_percent'])}%",
+            story_points_rate_label(plan),
+            format_number(summary["hours_accuracy_percent"]),
             "In-progress scheduled epic rows only",
         ),
         (
@@ -662,15 +664,18 @@ def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
             "All child logs under active epics",
         ),
         (
-            "Hours Per Point",
+            "Configured Hours per Point",
             format_number(summary["hours_per_story_point"]),
             "Configured in YAML",
         ),
     ]
     section = (
-        "<section><h2>Project-Wide Hours Accuracy</h2>"
+        f"<section><h2>{html_escape(story_points_rate_label(plan))}</h2>"
         f"<div class=\"briefing-grid\">{render_metric_cards(metrics)}</div>"
         "<p class=\"muted\">"
+        f"A value of 1.00 means one completed story point per configured "
+        f"{html_escape(format_number(summary['hours_per_story_point']))}-hour block. "
+        "Higher values mean more completed points per logged-time block; lower values mean fewer. "
         "This section excludes completed, not-started, in-planning, and reference-only rows."
         "</p></section>"
     )
@@ -684,12 +689,12 @@ def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
             format_number(row["completed_logged_hours"]),
             format_number(row["expected_completed_hours"]),
             format_number(row["logged_hours"]),
-            f"{format_number(row['hours_accuracy_percent'])}%",
+            format_number(row["hours_accuracy_percent"]),
         ]
         for row in resource_rows
     ]
     resource_table = render_table(
-        "Resource Group Accuracy",
+        "Resource Group Story Point Rate",
         [
             "Resource Group",
             "Project Keys",
@@ -698,7 +703,7 @@ def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
             "Completed Logged Hours",
             "Expected Completed Hours",
             "Total Logged Hours",
-            "Hours Accuracy %",
+            story_points_rate_label(plan),
         ],
         table_rows,
     )
@@ -708,7 +713,7 @@ def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
         if group_count
         else "No in-progress scheduled epic rows found."
     )
-    return section + render_collapsible("Accuracy By Resource Group", resource_table, summary_note)
+    return section + render_collapsible("Story Point Rate By Resource Group", resource_table, summary_note)
 
 
 def project_wide_accuracy_summary(plan: RunPlan) -> Dict[str, Any]:
@@ -752,7 +757,7 @@ def hours_accuracy_summary(epics: Iterable[Any], plan: RunPlan) -> Dict[str, Any
         "logged_hours": logged_hours,
         "completed_logged_hours": completed_logged_hours,
         "expected_completed_hours": expected_completed_hours,
-        "hours_accuracy_percent": calculate_hours_accuracy_percent(
+        "hours_accuracy_percent": calculate_story_points_per_standard_hours(
             completed_logged_hours,
             completed_story_points,
             hours_per_story_point,
@@ -764,6 +769,11 @@ def hours_accuracy_summary(epics: Iterable[Any], plan: RunPlan) -> Dict[str, Any
 def pluralize(count: int, singular: str, plural: Optional[str] = None) -> str:
     label = singular if count == 1 else (plural or f"{singular}s")
     return f"{count} {label}"
+
+
+def story_points_rate_label(plan: RunPlan) -> str:
+    hours = format_number(plan.stats.get("hours_per_story_point", 8.0))
+    return f"Story Points per {hours} Hours"
 
 
 def render_report_context(
@@ -806,7 +816,7 @@ def render_rollup_status(plan: RunPlan) -> str:
                 f"{summary.percent_complete}%",
                 f"{format_number(summary.completed_story_points)} / {format_number(summary.total_story_points)}",
                 format_number(summary.logged_hours),
-                f"{format_number(summary.hours_accuracy_percent)}%",
+                format_number(summary.hours_accuracy_percent),
                 summary.driving_epic_count,
                 summary.reference_epic_count,
                 summary.child_epic_count,
@@ -823,7 +833,7 @@ def render_rollup_status(plan: RunPlan) -> str:
             "% Complete",
             "Completed / Total Points",
             "Logged Hours",
-            "Hours Accuracy %",
+            story_points_rate_label(plan),
             "Driving Rows",
             "Reference Rows",
             "Total Rows",
@@ -1033,7 +1043,7 @@ def render_planned_epics(plan: RunPlan, collapsible: bool = False) -> str:
                 epic.resource_group,
                 epic.percent_complete,
                 format_number(epic.logged_hours),
-                f"{format_number(epic.hours_accuracy_percent)}%",
+                format_number(epic.hours_accuracy_percent),
                 "Yes" if epic.in_planning else "No",
                 "Yes" if epic.completed else "No",
                 epic.target_start,
@@ -1057,7 +1067,7 @@ def render_planned_epics(plan: RunPlan, collapsible: bool = False) -> str:
             "Resource Group",
             "% Complete",
             "Logged Hours",
-            "Hours Accuracy %",
+            story_points_rate_label(plan),
             "In Planning",
             "Done",
             "Target Start",

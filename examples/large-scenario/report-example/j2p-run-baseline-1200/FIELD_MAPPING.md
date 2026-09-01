@@ -17,7 +17,6 @@ Custom task fields used by j2p:
 | `dependency_review_needed` | `Flag3` | Dependency Review Needed |
 | `drives_schedule` | `Flag4` | Drives Schedule |
 | `fix_version` | `Text12` | Jira Fix Version |
-| `hours_accuracy_percent` | `Number4` | Hours Accuracy % |
 | `in_planning` | `Flag1` | In Planning |
 | `j2p_key` | `Text10` | j2p Unique Key |
 | `jira_issue_id` | `Text2` | Jira Issue ID |
@@ -32,6 +31,7 @@ Custom task fields used by j2p:
 | `rollup_key` | `Text5` | Rollup Key |
 | `rollup_mode` | `Text4` | Rollup Mode |
 | `row_role` | `Text11` | j2p Row Role |
+| `story_points_per_8_hours` | `Number4` | Story Points per 8 Hours |
 | `total_story_points` | `Number1` | Total Story Points |
 | `unmatched_project_task` | `Flag2` | Unmatched Project Task |
 

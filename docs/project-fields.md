@@ -25,7 +25,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | Project Column | Written By j2p | Read By j2p | Enables |
 | --- | --- | --- | --- |
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
-| `% Complete` / `PercentComplete` | Yes | Yes | Epic and summary percent complete. Used for baseline comparison, active-work accuracy filtering, and manager rollup status. |
+| `% Complete` / `PercentComplete` | Yes | Yes | Epic and summary percent complete. Used for baseline comparison, active-work story-point-rate filtering, and manager rollup status. |
 | `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Used with `Date1` to show Jira target start and with Project scheduling for review. |
 | `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison, green cascading changes, and red critical-path root finish changes. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
@@ -51,9 +51,9 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `fix_version` | `Text12` | `Jira Fix Version` | fixVersion-mode rows | Stores the specific fixVersion represented by this row. Needed because one Jira epic may produce multiple Project rows when it has multiple fixVersions. |
 | `primary_schedule_key` | `Text13` | `Primary Schedule Key` | Reference/split rows | Points a secondary row back to its primary schedule key. Reference rows use this to show which driving row owns schedule logic. |
 | `total_story_points` | `Number1` | `Total Story Points` | Summary rows, epics | Stores total child story/task points. Used for percent-complete math, rollup weighting, baseline comparison, changed-cell coloring, and in-planning detection. |
-| `completed_story_points` | `Number2` | `Completed Story Points` | Summary rows, epics | Stores completed child story/task points. Used with total points for percent complete and with logged hours for hours-accuracy calculations. |
+| `completed_story_points` | `Number2` | `Completed Story Points` | Summary rows, epics | Stores completed child story/task points. Used with total points for percent complete and with completed logged hours for story-point-rate calculations. |
 | `logged_hours` | `Number3` | `Logged Hours` | Summary rows, epics | Stores all logged hours rolled up from child story/task rows. Used for review reporting and changed-cell coloring. It does not affect percent complete. |
-| `hours_accuracy_percent` | `Number4` | `Hours Accuracy %` | Summary rows, epics | Stores completed logged hours divided by expected completed hours. Expected hours are completed story points times `metrics.hours_per_story_point`. The manager report also calculates active-work project-wide and resource-group accuracy from in-progress scheduled rows only. |
+| `story_points_per_8_hours` | `Number4` | `Story Points per 8 Hours` | Summary rows, epics | Stores completed story points delivered per configured logged-time block. With the default `metrics.hours_per_story_point: 8`, `1.00` means one completed story point per eight completed logged hours. Existing configs may still use the legacy key `hours_accuracy_percent`. |
 | `in_planning` | `Flag1` | `In Planning` | Epics | Marks included epics with no pointed child work. Enables gray/green-gray review coloring and manager review of intentionally unestimated work. |
 | `unmatched_project_task` | `Flag2` | `Unmatched Project Task` | Existing Project rows | Marks Project tasks found in the baseline/sandbox but not included in the current Jira plan. Enables amber review for stale or out-of-scope schedule items. |
 | `dependency_review_needed` | `Flag3` | `Dependency Review Needed` | Epics | Boolean quick filter for rows with dependency-review text. Enables fast review of rows that should be inspected for blocker issues. |
@@ -83,8 +83,8 @@ Completion and metrics:
 - `total_story_points` and `completed_story_points` are calculated from child Jira rows, not from Project children.
 - `PercentComplete` is manually written from the story-point ratio.
 - `logged_hours` is separate from completion and includes all child logged hours.
-- `hours_accuracy_percent` uses only completed child logged hours and completed child story points.
-- Manager-report aggregate accuracy uses only active scheduled epics: `drives_schedule == True` and `0 < percent_complete < 100`.
+- `story_points_per_8_hours` uses only completed child logged hours and completed child story points.
+- Manager-report aggregate story-point rate uses only active scheduled epics: `drives_schedule == True` and `0 < percent_complete < 100`.
 
 Dependencies:
 

@@ -1,5 +1,5 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,completed_logged_hours,hours_accuracy_percent,percent_complete
-Platform Q1,PLAT,Platform Q1,fixVersion,10,10,0,209.0,63.0,179.0,58.5,11.6,30
-Platform Q2,PLAT,Platform Q2,fixVersion,9,9,0,184.0,58.0,148.0,49.0,10.6,32
-Qualification Event 1,PLAT,Qualification Event 1,fixVersion,1,1,0,19.0,10.0,14.5,6.0,7.5,53
-Shared Services 2026,PLAT,Shared Services 2026,fixVersion,10,10,0,215.0,78.0,151.5,53.5,8.6,36
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,completed_logged_hours,story_points_per_8_hours,percent_complete
+Platform Q1,PLAT,Platform Q1,fixVersion,10,10,0,209.0,63.0,179.0,58.5,,30
+Platform Q2,PLAT,Platform Q2,fixVersion,9,9,0,184.0,58.0,148.0,49.0,,32
+Qualification Event 1,PLAT,Qualification Event 1,fixVersion,1,1,0,19.0,10.0,14.5,6.0,,53
+Shared Services 2026,PLAT,Shared Services 2026,fixVersion,10,10,0,215.0,78.0,151.5,53.5,,36

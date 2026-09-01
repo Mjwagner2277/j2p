@@ -340,7 +340,7 @@ def build_run_plan(
         completed_logged_hours = round(point_bucket["completed_logged_hours"], 2)
         in_planning = total_points <= 0
         percent_complete = calculate_percent(completed_points, total_points)
-        hours_accuracy_percent = calculate_hours_accuracy_percent(
+        hours_accuracy_percent = calculate_story_points_per_standard_hours(
             completed_logged_hours,
             completed_points,
             hours_per_story_point,
@@ -416,7 +416,7 @@ def build_run_plan(
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
         "logged_hours": driving_logged_hours,
         "completed_logged_hours": driving_completed_logged_hours,
-        "hours_accuracy_percent": calculate_hours_accuracy_percent(
+        "hours_accuracy_percent": calculate_story_points_per_standard_hours(
             driving_completed_logged_hours,
             driving_completed_points,
             hours_per_story_point,
@@ -758,7 +758,7 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
             completed_logged_hours = round(sum(child.completed_logged_hours for child in reference_children), 2)
             percent_complete = calculate_percent(reference_completed, reference_total)
             accuracy_completed = reference_completed
-        hours_accuracy_percent = calculate_hours_accuracy_percent(
+        hours_accuracy_percent = calculate_story_points_per_standard_hours(
             completed_logged_hours,
             accuracy_completed,
             hours_per_story_point,
@@ -792,13 +792,18 @@ def compare_with_baseline(
 ) -> None:
     if not baseline:
         for epic in epics.values():
-            add_added_epic_audit(audit, epic, "Epic is included in the planned sandbox and was not found in the comparison baseline.")
+            add_added_epic_audit(
+                audit,
+                epic,
+                "Epic is included in the planned sandbox and was not found in the comparison baseline.",
+                config,
+            )
         return
 
     for epic in epics.values():
         existing = baseline.get(epic.key)
         if not existing:
-            add_added_epic_audit(audit, epic, "Epic is new relative to the comparison baseline.")
+            add_added_epic_audit(audit, epic, "Epic is new relative to the comparison baseline.", config)
             continue
 
         compare_field(audit, epic, "Name", existing.name, epic.summary, "ChangedName")
@@ -839,7 +844,7 @@ def compare_with_baseline(
         compare_field(
             audit,
             epic,
-            "Hours Accuracy %",
+            story_points_rate_field_name(config),
             format_number(existing.hours_accuracy_percent),
             format_number(epic.hours_accuracy_percent),
             "ChangedField",
@@ -899,7 +904,12 @@ def compare_with_baseline(
         )
 
 
-def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -> None:
+def add_added_epic_audit(
+    audit: List[AuditItem],
+    epic: PlanEpic,
+    message: str,
+    config: Dict[str, Any],
+) -> None:
     fields = [
         ("Schedule Key", "" if epic.key == (epic.jira_key or epic.key) else epic.key),
         ("Name", epic.summary),
@@ -913,7 +923,7 @@ def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -
         ("Total Story Points", format_number(epic.total_story_points)),
         ("Completed Story Points", format_number(epic.completed_story_points)),
         ("Logged Hours", format_number(epic.logged_hours)),
-        ("Hours Accuracy %", format_number(epic.hours_accuracy_percent)),
+        (story_points_rate_field_name(config), format_number(epic.hours_accuracy_percent)),
         ("Jira Target Start", epic.target_start),
         ("Jira Target End", epic.target_end),
         ("Predecessors", ",".join(epic.predecessors)),
@@ -973,6 +983,15 @@ def compare_field(
     )
 
 
+def story_points_rate_field_name(config: Dict[str, Any]) -> str:
+    return str(
+        config.get("project_field_names", {}).get(
+            "story_points_per_8_hours",
+            "Story Points per 8 Hours",
+        )
+    )
+
+
 def add_dependency_review(epics: Dict[str, PlanEpic], key: str, note: str) -> None:
     epic = epics.get(key)
     if not epic:
@@ -1008,14 +1027,27 @@ def calculate_percent(completed: float, total: float) -> int:
 
 
 def calculate_hours_accuracy_percent(
-    logged_hours: float,
+    completed_logged_hours: float,
     completed_story_points: float,
     hours_per_story_point: float = 8.0,
 ) -> float:
-    expected_hours = completed_story_points * hours_per_story_point
-    if expected_hours <= 0:
+    """Backward-compatible wrapper for the renamed story-point rate metric."""
+    return calculate_story_points_per_standard_hours(
+        completed_logged_hours,
+        completed_story_points,
+        hours_per_story_point,
+    )
+
+
+def calculate_story_points_per_standard_hours(
+    completed_logged_hours: float,
+    completed_story_points: float,
+    hours_per_story_point: float = 8.0,
+) -> float:
+    """Return completed story points delivered per configured standard-hour block."""
+    if completed_story_points <= 0 or completed_logged_hours <= 0 or hours_per_story_point <= 0:
         return 0.0
-    return round((logged_hours / expected_hours) * 100, 1)
+    return round(completed_story_points / (completed_logged_hours / hours_per_story_point), 2)
 
 
 def parse_number(value: str) -> Optional[float]:
@@ -1195,9 +1227,14 @@ def run_plan_to_state(plan: RunPlan) -> Dict[str, Any]:
         "generated_at": plan.generated_at,
         "jira_csv": plan.jira_csv,
         "rollup_mode": plan.rollup_mode,
-        "epics": {key: asdict(epic) for key, epic in plan.epics.items()},
-        "summaries": {key: asdict(summary) for key, summary in plan.summaries.items()},
+        "epics": {key: state_metric_row(asdict(epic)) for key, epic in plan.epics.items()},
+        "summaries": {key: state_metric_row(asdict(summary)) for key, summary in plan.summaries.items()},
     }
+
+
+def state_metric_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    row["story_points_per_8_hours"] = row.pop("hours_accuracy_percent", 0.0)
+    return row
 
 
 def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
@@ -1219,7 +1256,9 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
             total_story_points=float(epic.get("total_story_points") or 0),
             completed_story_points=float(epic.get("completed_story_points") or 0),
             logged_hours=float(epic.get("logged_hours") or 0),
-            hours_accuracy_percent=float(epic.get("hours_accuracy_percent") or 0),
+            hours_accuracy_percent=float(
+                epic.get("story_points_per_8_hours", epic.get("hours_accuracy_percent")) or 0
+            ),
             percent_complete=int(epic.get("percent_complete") or 0),
             status=epic.get("status", ""),
             target_start=epic.get("target_start", ""),

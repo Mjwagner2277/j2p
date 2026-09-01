@@ -17,6 +17,7 @@ from j2p.core import (
     ProjectTaskSnapshot,
     build_run_plan,
     calculate_hours_accuracy_percent,
+    calculate_story_points_per_standard_hours,
     parse_logged_hours,
     run_plan_to_state,
     snapshots_from_state,
@@ -90,16 +91,16 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(plan.epics["TEAM-101"].percent_complete, 100)
         self.assertEqual(plan.epics["TEAM-101"].logged_hours, 14)
         self.assertEqual(plan.epics["TEAM-101"].completed_logged_hours, 14)
-        self.assertEqual(plan.epics["TEAM-101"].hours_accuracy_percent, 13.5)
+        self.assertEqual(plan.epics["TEAM-101"].hours_accuracy_percent, 7.43)
         self.assertEqual(plan.epics["TEAM-102"].percent_complete, 38)
         self.assertEqual(plan.epics["TEAM-102"].logged_hours, 7.25)
         self.assertEqual(plan.epics["TEAM-102"].completed_logged_hours, 3.25)
-        self.assertEqual(plan.epics["TEAM-102"].hours_accuracy_percent, 13.5)
+        self.assertEqual(plan.epics["TEAM-102"].hours_accuracy_percent, 7.38)
         self.assertEqual(plan.epics["TEAM-103"].rollup_key, "PLAT-100")
         self.assertEqual(plan.epics["PLAT-201"].rollup_mode, "fixVersion")
         self.assertEqual(plan.epics["PLAT-201"].rollup_key, "Portal 2026")
         self.assertEqual(plan.epics["PLAT-201"].logged_hours, 10)
-        self.assertEqual(plan.epics["PLAT-201"].hours_accuracy_percent, 15.6)
+        self.assertEqual(plan.epics["PLAT-201"].hours_accuracy_percent, 6.4)
         self.assertEqual(plan.epics["TEAM-102"].predecessors, ["TEAM-101"])
         self.assertIn("TEAM-103", plan.epics["TEAM-102"].successors)
         self.assertNotIn("TEAM-105", plan.epics)
@@ -122,13 +123,14 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(parse_logged_hours("45m"), 0.75)
         self.assertEqual(parse_logged_hours(""), 0)
 
-    def test_hours_accuracy_percent_uses_configured_story_point_hours(self) -> None:
-        self.assertEqual(calculate_hours_accuracy_percent(40, 5, 8), 100)
-        self.assertEqual(calculate_hours_accuracy_percent(30, 5, 8), 75)
-        self.assertEqual(calculate_hours_accuracy_percent(45, 5, 8), 112.5)
-        self.assertEqual(calculate_hours_accuracy_percent(0, 0, 8), 0)
+    def test_story_points_per_standard_hours_uses_configured_story_point_hours(self) -> None:
+        self.assertEqual(calculate_story_points_per_standard_hours(40, 5, 8), 1)
+        self.assertEqual(calculate_story_points_per_standard_hours(30, 5, 8), 1.33)
+        self.assertEqual(calculate_story_points_per_standard_hours(45, 5, 8), 0.89)
+        self.assertEqual(calculate_story_points_per_standard_hours(0, 0, 8), 0)
+        self.assertEqual(calculate_hours_accuracy_percent(40, 5, 8), 1)
 
-    def test_hours_accuracy_plan_uses_configured_story_point_hours(self) -> None:
+    def test_story_points_per_standard_hours_plan_uses_configured_story_point_hours(self) -> None:
         csv_text = "\n".join(
             [
                 "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
@@ -146,8 +148,8 @@ class J2PPlanningTests(unittest.TestCase):
             )
             plan = build_run_plan(csv_path, config)
 
-        self.assertEqual(plan.epics["TEAM-1"].hours_accuracy_percent, 80)
-        self.assertEqual(plan.stats["hours_accuracy_percent"], 80)
+        self.assertEqual(plan.epics["TEAM-1"].hours_accuracy_percent, 1.25)
+        self.assertEqual(plan.stats["hours_accuracy_percent"], 1.25)
 
     def test_unparsed_logged_hours_are_reported_without_stopping_run(self) -> None:
         csv_text = "\n".join(
@@ -240,6 +242,19 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(config["multi_fixversion_policy"]["default"], "reference")
         self.assertEqual(config["multi_fixversion_policy"]["OPS"], "split")
 
+    def test_legacy_hours_accuracy_project_field_alias_maps_to_story_point_rate(self) -> None:
+        config = load_config(
+            None,
+            {
+                "project_fields": {"hours_accuracy_percent": "Number9"},
+                "project_field_names": {"hours_accuracy_percent": "Hours Accuracy %"},
+            },
+        )
+
+        self.assertNotIn("hours_accuracy_percent", config["project_fields"])
+        self.assertEqual(config["project_fields"]["story_points_per_8_hours"], "Number9")
+        self.assertEqual(config["project_field_names"]["story_points_per_8_hours"], "Story Points per 8 Hours")
+
     def test_review_table_exposed_columns_rejects_scalar_other_than_all(self) -> None:
         with self.assertRaisesRegex(ConfigError, "review_table.exposed_columns"):
             load_config(None, {"review_table": {"exposed_columns": "finish"}})
@@ -281,7 +296,7 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("Review Type Summary", report)
             self.assertIn("Report Context", report)
             self.assertIn("Logged Hours", report)
-            self.assertIn("Hours Accuracy %", report)
+            self.assertIn("Story Points per 8 Hours", report)
             self.assertIn("Color Key", report)
             self.assertIn("Color Case Examples", report)
             self.assertIn("Project Key Rollup Mapping", report)
@@ -368,9 +383,9 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertNotIn("<script src=", report)
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)
-            self.assertIn("Project-Wide Hours Accuracy", report)
-            self.assertIn("Accuracy By Resource Group", report)
-            self.assertIn("Resource Group Accuracy", report)
+            self.assertIn("Story Points per 8 Hours", report)
+            self.assertIn("Story Point Rate By Resource Group", report)
+            self.assertIn("Resource Group Story Point Rate", report)
             field_mapping = paths["field_mapping"].read_text(encoding="utf-8")
             self.assertIn("Native Project fields used by j2p", field_mapping)
             self.assertIn("| Resource Group | Resource Group |", field_mapping)
@@ -389,20 +404,24 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_accuracy["logged_hours"], 7.25)
         self.assertEqual(project_accuracy["completed_logged_hours"], 3.25)
         self.assertEqual(project_accuracy["expected_completed_hours"], 24)
-        self.assertEqual(project_accuracy["hours_accuracy_percent"], 13.5)
+        self.assertEqual(project_accuracy["hours_accuracy_percent"], 7.38)
 
         resource_rows = resource_group_accuracy_rows(plan)
         self.assertEqual(len(resource_rows), 1)
         self.assertEqual(resource_rows[0]["resource_group"], "Product Delivery")
         self.assertEqual(resource_rows[0]["project_keys"], "TEAM")
-        self.assertEqual(resource_rows[0]["hours_accuracy_percent"], 13.5)
+        self.assertEqual(resource_rows[0]["hours_accuracy_percent"], 7.38)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
         initial = build_run_plan(FIXTURES / "project-wide-jira-initial.csv", config)
         with tempfile.TemporaryDirectory() as temp:
             state_path = Path(temp) / "j2p-state.json"
-            write_json(state_path, run_plan_to_state(initial))
+            state_data = run_plan_to_state(initial)
+            first_state_epic = next(iter(state_data["epics"].values()))
+            self.assertIn("story_points_per_8_hours", first_state_epic)
+            self.assertNotIn("hours_accuracy_percent", first_state_epic)
+            write_json(state_path, state_data)
             baseline = snapshots_from_state(state_path)
             follow_on = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config, baseline)
             categories = {item.category for item in follow_on.audit_items}
@@ -634,6 +653,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_for_audit_field("Jira Target End", config), "Date2")
         self.assertEqual(project_column_for_audit_field("Resource Group", config), "Resource Group")
         self.assertEqual(project_column_for_audit_field("Logged Hours", config), "Number3")
+        self.assertEqual(project_column_for_audit_field("Story Points per 8 Hours", config), "Number4")
         self.assertEqual(project_column_for_audit_field("Hours Accuracy %", config), "Number4")
         self.assertEqual(project_column_for_audit_field("Status", config), "Text9")
         self.assertEqual(project_column_for_audit_field("Unmatched Project Task", config), "Flag2")

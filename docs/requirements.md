@@ -99,15 +99,15 @@ Summary task `% Complete` is manually calculated from child epics using weighted
 
 Logged hours are calculated separately from percent complete. If the Jira CSV includes a mapped logged-hours column, j2p sums logged hours from child story/task/bug/sub-task rows to the parent epic and then to summary rollups. Logged hours do not change percent complete.
 
-Hours accuracy is calculated from completed child work only:
+Story-point rate is calculated from completed child work only:
 
 ```text
-completed child logged hours / (completed child story points * hours_per_story_point) * 100
+completed child story points / (completed child logged hours / hours_per_story_point)
 ```
 
-The default conversion is 8 hours per story point and is configurable in YAML.
+The default conversion is 8 hours per story point and is configurable in YAML. With the default, a value of `1.00` means one completed story point per eight completed logged hours.
 
-Manager report project-wide and resource-group accuracy views must use only active scheduled epic rows. For this purpose, active means the row drives the schedule and has `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
+Manager report project-wide and resource-group story-point-rate views must use only active scheduled epic rows. For this purpose, active means the row drives the schedule and has `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
 
 ## Dependencies
 
@@ -179,7 +179,7 @@ Epics with unmapped prefixes are excluded and reported.
 | Total Story Points | Number1 |
 | Completed Story Points | Number2 |
 | Logged Hours | Number3 |
-| Hours Accuracy % | Number4 |
+| Story Points per 8 Hours | Number4 |
 | In Planning | Flag1 |
 | Unmatched Project Task | Flag2 |
 | Dependency Review Needed | Flag3 |

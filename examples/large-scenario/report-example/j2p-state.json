@@ -7,7 +7,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.0,
       "in_planning": false,
       "issue_id": "200000",
       "jira_key": "CORE-1000",
@@ -24,6 +23,7 @@
       "row_role": "Scheduled",
       "source_row": 17,
       "status": "To Do",
+      "story_points_per_8_hours": 12.44,
       "successors": [],
       "summary": "Client Walkthrough - Identity API name before Jira rename",
       "target_end": "2026-03-02",
@@ -37,7 +37,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200001",
       "jira_key": "CORE-1001",
@@ -54,6 +53,7 @@
       "row_role": "Scheduled",
       "source_row": 18,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.33,
       "successors": [],
       "summary": "Client Walkthrough - Login service progress example",
       "target_end": "2026-03-16",
@@ -67,7 +67,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.8,
       "in_planning": false,
       "issue_id": "200002",
       "jira_key": "CORE-1002",
@@ -84,6 +83,7 @@
       "row_role": "Scheduled",
       "source_row": 19,
       "status": "In Progress",
+      "story_points_per_8_hours": 26.67,
       "successors": [],
       "summary": "Client Walkthrough - Access audit completion example",
       "target_end": "2026-03-30",
@@ -97,7 +97,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 13.3,
       "in_planning": false,
       "issue_id": "200003",
       "jira_key": "CORE-1003",
@@ -114,6 +113,7 @@
       "row_role": "Scheduled",
       "source_row": 20,
       "status": "To Do",
+      "story_points_per_8_hours": 7.53,
       "successors": [],
       "summary": "Client Walkthrough - Billing integration rollup move example",
       "target_end": "2026-04-13",
@@ -127,7 +127,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.1,
       "in_planning": false,
       "issue_id": "200004",
       "jira_key": "CORE-1004",
@@ -144,6 +143,7 @@
       "row_role": "Scheduled",
       "source_row": 21,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.0,
       "successors": [
         "CORE-1005"
       ],
@@ -159,7 +159,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 7.9,
       "in_planning": false,
       "issue_id": "200005",
       "jira_key": "CORE-1005",
@@ -178,6 +177,7 @@
       "row_role": "Scheduled",
       "source_row": 22,
       "status": "In Progress",
+      "story_points_per_8_hours": 12.63,
       "successors": [],
       "summary": "Client Walkthrough - Payment cutover downstream dependency",
       "target_end": "2026-04-06",
@@ -191,7 +191,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 20.3,
       "in_planning": false,
       "issue_id": "200006",
       "jira_key": "CORE-1006",
@@ -208,6 +207,7 @@
       "row_role": "Scheduled",
       "source_row": 23,
       "status": "To Do",
+      "story_points_per_8_hours": 4.92,
       "successors": [],
       "summary": "Client Walkthrough - Vendor gateway missing dependency example",
       "target_end": "2026-04-20",
@@ -221,7 +221,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.1,
       "in_planning": false,
       "issue_id": "200007",
       "jira_key": "CORE-1007",
@@ -238,6 +237,7 @@
       "row_role": "Scheduled",
       "source_row": 24,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.9,
       "successors": [],
       "summary": "Client Walkthrough - Account settings dependency change example",
       "target_end": "2026-05-04",
@@ -251,7 +251,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.4,
       "in_planning": false,
       "issue_id": "200008",
       "jira_key": "CORE-1008",
@@ -268,6 +267,7 @@
       "row_role": "Scheduled",
       "source_row": 170,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.6,
       "successors": [
         "CORE-1009"
       ],
@@ -283,7 +283,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.5,
       "in_planning": false,
       "issue_id": "200009",
       "jira_key": "CORE-1009",
@@ -302,6 +301,7 @@
       "row_role": "Scheduled",
       "source_row": 179,
       "status": "To Do",
+      "story_points_per_8_hours": 11.73,
       "successors": [
         "CORE-1010"
       ],
@@ -317,7 +317,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 28.1,
       "in_planning": false,
       "issue_id": "200010",
       "jira_key": "CORE-1010",
@@ -336,6 +335,7 @@
       "row_role": "Scheduled",
       "source_row": 111,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.56,
       "successors": [
         "CORE-1011"
       ],
@@ -351,7 +351,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200011",
       "jira_key": "CORE-1011",
@@ -370,6 +369,7 @@
       "row_role": "Scheduled",
       "source_row": 117,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "CORE-1012"
       ],
@@ -385,7 +385,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 15.6,
       "in_planning": false,
       "issue_id": "200012",
       "jira_key": "CORE-1012",
@@ -404,6 +403,7 @@
       "row_role": "Scheduled",
       "source_row": 124,
       "status": "To Do",
+      "story_points_per_8_hours": 6.4,
       "successors": [
         "CORE-1013"
       ],
@@ -419,7 +419,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200013",
       "jira_key": "CORE-1013",
@@ -438,6 +437,7 @@
       "row_role": "Scheduled",
       "source_row": 133,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.8,
       "successors": [
         "CORE-1014"
       ],
@@ -453,7 +453,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200014",
       "jira_key": "CORE-1014",
@@ -472,6 +471,7 @@
       "row_role": "Scheduled",
       "source_row": 142,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.33,
       "successors": [
         "CORE-1015"
       ],
@@ -487,7 +487,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200015",
       "jira_key": "CORE-1015",
@@ -506,6 +505,7 @@
       "row_role": "Scheduled",
       "source_row": 151,
       "status": "To Do",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "CORE-1016"
       ],
@@ -521,7 +521,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 5.6,
       "in_planning": false,
       "issue_id": "200016",
       "jira_key": "CORE-1016",
@@ -540,6 +539,7 @@
       "row_role": "Scheduled",
       "source_row": 160,
       "status": "In Progress",
+      "story_points_per_8_hours": 17.78,
       "successors": [
         "CORE-1017"
       ],
@@ -555,7 +555,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.6,
       "in_planning": false,
       "issue_id": "200017",
       "jira_key": "CORE-1017",
@@ -574,6 +573,7 @@
       "row_role": "Scheduled",
       "source_row": 169,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.86,
       "successors": [
         "CORE-1018"
       ],
@@ -589,7 +589,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.4,
       "in_planning": false,
       "issue_id": "200018",
       "jira_key": "CORE-1018",
@@ -608,6 +607,7 @@
       "row_role": "Scheduled",
       "source_row": 178,
       "status": "To Do",
+      "story_points_per_8_hours": 29.33,
       "successors": [
         "CORE-1019"
       ],
@@ -623,7 +623,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.8,
       "in_planning": false,
       "issue_id": "200019",
       "jira_key": "CORE-1019",
@@ -642,6 +641,7 @@
       "row_role": "Scheduled",
       "source_row": 186,
       "status": "In Progress",
+      "story_points_per_8_hours": 10.18,
       "successors": [
         "CORE-1020"
       ],
@@ -657,7 +657,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 28.1,
       "in_planning": false,
       "issue_id": "200020",
       "jira_key": "CORE-1020",
@@ -676,6 +675,7 @@
       "row_role": "Scheduled",
       "source_row": 116,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.56,
       "successors": [
         "CORE-1021"
       ],
@@ -691,7 +691,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200021",
       "jira_key": "CORE-1021",
@@ -710,6 +709,7 @@
       "row_role": "Scheduled",
       "source_row": 123,
       "status": "To Do",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "CORE-1022"
       ],
@@ -725,7 +725,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 0.8,
       "in_planning": false,
       "issue_id": "200022",
       "jira_key": "CORE-1022",
@@ -744,6 +743,7 @@
       "row_role": "Scheduled",
       "source_row": 131,
       "status": "In Progress",
+      "story_points_per_8_hours": 128.0,
       "successors": [
         "CORE-1023"
       ],
@@ -759,7 +759,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200023",
       "jira_key": "CORE-1023",
@@ -778,6 +777,7 @@
       "row_role": "Scheduled",
       "source_row": 140,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.0,
       "successors": [
         "CORE-1024"
       ],
@@ -793,7 +793,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200024",
       "jira_key": "CORE-1024",
@@ -812,6 +811,7 @@
       "row_role": "Scheduled",
       "source_row": 149,
       "status": "To Do",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "CORE-1025"
       ],
@@ -827,7 +827,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.1,
       "in_planning": false,
       "issue_id": "200025",
       "jira_key": "CORE-1025",
@@ -846,6 +845,7 @@
       "row_role": "Scheduled",
       "source_row": 158,
       "status": "In Progress",
+      "story_points_per_8_hours": 12.31,
       "successors": [
         "CORE-1026"
       ],
@@ -861,7 +861,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 68.8,
       "in_planning": false,
       "issue_id": "200026",
       "jira_key": "CORE-1026",
@@ -880,6 +879,7 @@
       "row_role": "Scheduled",
       "source_row": 167,
       "status": "In Progress",
+      "story_points_per_8_hours": 1.45,
       "successors": [
         "CORE-1027"
       ],
@@ -895,7 +895,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 5.7,
       "in_planning": false,
       "issue_id": "200027",
       "jira_key": "CORE-1027",
@@ -914,6 +913,7 @@
       "row_role": "Scheduled",
       "source_row": 176,
       "status": "To Do",
+      "story_points_per_8_hours": 17.6,
       "successors": [
         "CORE-1028"
       ],
@@ -929,7 +929,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.8,
       "in_planning": false,
       "issue_id": "200028",
       "jira_key": "CORE-1028",
@@ -948,6 +947,7 @@
       "row_role": "Scheduled",
       "source_row": 184,
       "status": "In Progress",
+      "story_points_per_8_hours": 26.67,
       "successors": [
         "CORE-1029"
       ],
@@ -963,7 +963,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200029",
       "jira_key": "CORE-1029",
@@ -982,6 +981,7 @@
       "row_role": "Scheduled",
       "source_row": 191,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.2,
       "successors": [
         "CORE-1030"
       ],
@@ -997,7 +997,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 28.1,
       "in_planning": false,
       "issue_id": "200030",
       "jira_key": "CORE-1030",
@@ -1016,6 +1015,7 @@
       "row_role": "Scheduled",
       "source_row": 122,
       "status": "To Do",
+      "story_points_per_8_hours": 3.56,
       "successors": [
         "CORE-1031"
       ],
@@ -1031,7 +1031,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200031",
       "jira_key": "CORE-1031",
@@ -1050,6 +1049,7 @@
       "row_role": "Scheduled",
       "source_row": 130,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "CORE-1032"
       ],
@@ -1065,7 +1065,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 15.6,
       "in_planning": false,
       "issue_id": "200032",
       "jira_key": "CORE-1032",
@@ -1084,6 +1083,7 @@
       "row_role": "Scheduled",
       "source_row": 138,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.4,
       "successors": [],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 33",
       "target_end": "2026-05-04",
@@ -1097,7 +1097,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200033",
       "jira_key": "CORE-1033",
@@ -1114,6 +1113,7 @@
       "row_role": "Scheduled",
       "source_row": 147,
       "status": "To Do",
+      "story_points_per_8_hours": 8.8,
       "successors": [],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 34",
       "target_end": "2026-05-18",
@@ -1127,7 +1127,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200034",
       "jira_key": "CORE-1034",
@@ -1144,6 +1143,7 @@
       "row_role": "Scheduled",
       "source_row": 156,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Notification routing wave 35",
       "target_end": "2026-06-01",
@@ -1157,7 +1157,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200035",
       "jira_key": "CORE-1035",
@@ -1174,6 +1173,7 @@
       "row_role": "Scheduled",
       "source_row": 165,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Session management wave 36",
       "target_end": "2026-05-11",
@@ -1187,7 +1187,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 5.6,
       "in_planning": false,
       "issue_id": "200036",
       "jira_key": "CORE-1036",
@@ -1204,6 +1203,7 @@
       "row_role": "Scheduled",
       "source_row": 174,
       "status": "To Do",
+      "story_points_per_8_hours": 17.78,
       "successors": [],
       "summary": "Scale Rows - Core Product - Account recovery wave 37",
       "target_end": "2026-05-25",
@@ -1217,7 +1217,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.6,
       "in_planning": false,
       "issue_id": "200037",
       "jira_key": "CORE-1037",
@@ -1234,6 +1233,7 @@
       "row_role": "Scheduled",
       "source_row": 182,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.86,
       "successors": [],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 38",
       "target_end": "2026-06-08",
@@ -1247,7 +1247,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.4,
       "in_planning": false,
       "issue_id": "200038",
       "jira_key": "CORE-1038",
@@ -1264,6 +1263,7 @@
       "row_role": "Scheduled",
       "source_row": 189,
       "status": "In Progress",
+      "story_points_per_8_hours": 29.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 39",
       "target_end": "2026-06-22",
@@ -1277,7 +1277,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.8,
       "in_planning": false,
       "issue_id": "200039",
       "jira_key": "CORE-1039",
@@ -1294,6 +1293,7 @@
       "row_role": "Scheduled",
       "source_row": 194,
       "status": "To Do",
+      "story_points_per_8_hours": 10.18,
       "successors": [],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 40",
       "target_end": "2026-07-06",
@@ -1307,7 +1307,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.8,
       "in_planning": false,
       "issue_id": "200040",
       "jira_key": "CORE-1040",
@@ -1324,6 +1323,7 @@
       "row_role": "Scheduled",
       "source_row": 129,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.43,
       "successors": [],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 41",
       "target_end": "2026-06-15",
@@ -1337,7 +1337,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200041",
       "jira_key": "CORE-1041",
@@ -1354,6 +1353,7 @@
       "row_role": "Scheduled",
       "source_row": 137,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 42",
       "target_end": "2026-06-29",
@@ -1367,7 +1367,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200042",
       "jira_key": "CORE-1042",
@@ -1384,6 +1383,7 @@
       "row_role": "Scheduled",
       "source_row": 145,
       "status": "To Do",
+      "story_points_per_8_hours": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Notification routing wave 43",
       "target_end": "2026-07-13",
@@ -1397,7 +1397,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200043",
       "jira_key": "CORE-1043",
@@ -1414,6 +1413,7 @@
       "row_role": "Scheduled",
       "source_row": 154,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Session management wave 44",
       "target_end": "2026-07-27",
@@ -1427,7 +1427,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200044",
       "jira_key": "CORE-1044",
@@ -1444,6 +1443,7 @@
       "row_role": "Scheduled",
       "source_row": 163,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Account recovery wave 45",
       "target_end": "2026-08-10",
@@ -1457,7 +1457,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.1,
       "in_planning": false,
       "issue_id": "200045",
       "jira_key": "CORE-1045",
@@ -1474,6 +1473,7 @@
       "row_role": "Scheduled",
       "source_row": 172,
       "status": "To Do",
+      "story_points_per_8_hours": 12.31,
       "successors": [],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 46",
       "target_end": "2026-07-20",
@@ -1487,7 +1487,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200046",
       "jira_key": "CORE-1046",
@@ -1504,6 +1503,7 @@
       "row_role": "Scheduled",
       "source_row": 180,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 47",
       "target_end": "2026-08-03",
@@ -1517,7 +1517,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 5.7,
       "in_planning": false,
       "issue_id": "200047",
       "jira_key": "CORE-1047",
@@ -1534,6 +1533,7 @@
       "row_role": "Scheduled",
       "source_row": 187,
       "status": "In Progress",
+      "story_points_per_8_hours": 17.6,
       "successors": [],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 48",
       "target_end": "2026-08-17",
@@ -1547,7 +1547,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 13.4,
       "in_planning": false,
       "issue_id": "200048",
       "jira_key": "CORE-1048",
@@ -1564,6 +1563,7 @@
       "row_role": "Scheduled",
       "source_row": 25,
       "status": "To Do",
+      "story_points_per_8_hours": 7.47,
       "successors": [],
       "summary": "Client Walkthrough - Legacy schedule item present only in baseline",
       "target_end": "2026-08-31",
@@ -1577,7 +1577,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200049",
       "jira_key": "CORE-1049",
@@ -1594,6 +1593,7 @@
       "row_role": "Scheduled",
       "source_row": 26,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.2,
       "successors": [],
       "summary": "Client Walkthrough - Marketplace experiment missing rollup example",
       "target_end": "2026-09-14",
@@ -1607,7 +1607,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 2.3,
       "in_planning": false,
       "issue_id": "200095",
       "jira_key": "DATA-3000",
@@ -1624,6 +1623,7 @@
       "row_role": "Scheduled",
       "source_row": 101,
       "status": "To Do",
+      "story_points_per_8_hours": 44.0,
       "successors": [
         "DATA-3001"
       ],
@@ -1639,7 +1639,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.0,
       "in_planning": false,
       "issue_id": "200096",
       "jira_key": "DATA-3001",
@@ -1658,6 +1657,7 @@
       "row_role": "Scheduled",
       "source_row": 103,
       "status": "In Progress",
+      "story_points_per_8_hours": 12.44,
       "successors": [
         "DATA-3002"
       ],
@@ -1673,7 +1673,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 21.9,
       "in_planning": false,
       "issue_id": "200097",
       "jira_key": "DATA-3002",
@@ -1692,6 +1691,7 @@
       "row_role": "Scheduled",
       "source_row": 106,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.57,
       "successors": [
         "DATA-3003"
       ],
@@ -1707,7 +1707,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.8,
       "in_planning": false,
       "issue_id": "200098",
       "jira_key": "DATA-3003",
@@ -1726,6 +1725,7 @@
       "row_role": "Scheduled",
       "source_row": 110,
       "status": "To Do",
+      "story_points_per_8_hours": 26.67,
       "successors": [
         "DATA-3004"
       ],
@@ -1741,7 +1741,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.5,
       "in_planning": false,
       "issue_id": "200099",
       "jira_key": "DATA-3004",
@@ -1760,6 +1759,7 @@
       "row_role": "Scheduled",
       "source_row": 115,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.73,
       "successors": [
         "DATA-3005"
       ],
@@ -1775,7 +1775,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.1,
       "in_planning": false,
       "issue_id": "200100",
       "jira_key": "DATA-3005",
@@ -1794,6 +1793,7 @@
       "row_role": "Scheduled",
       "source_row": 121,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.0,
       "successors": [
         "DATA-3006"
       ],
@@ -1809,7 +1809,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 7.1,
       "in_planning": false,
       "issue_id": "200101",
       "jira_key": "DATA-3006",
@@ -1828,6 +1827,7 @@
       "row_role": "Scheduled",
       "source_row": 128,
       "status": "To Do",
+      "story_points_per_8_hours": 14.0,
       "successors": [
         "DATA-3007"
       ],
@@ -1843,7 +1843,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 20.3,
       "in_planning": false,
       "issue_id": "200102",
       "jira_key": "DATA-3007",
@@ -1862,6 +1861,7 @@
       "row_role": "Scheduled",
       "source_row": 136,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.92,
       "successors": [
         "DATA-3010"
       ],
@@ -1877,7 +1877,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.2,
       "in_planning": false,
       "issue_id": "200103",
       "jira_key": "DATA-3008",
@@ -1894,6 +1893,7 @@
       "row_role": "Scheduled",
       "source_row": 29,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.89,
       "successors": [],
       "summary": "Client Walkthrough - Warehouse migration circular dependency A",
       "target_end": "2026-10-05",
@@ -1907,7 +1907,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.4,
       "in_planning": false,
       "issue_id": "200104",
       "jira_key": "DATA-3009",
@@ -1924,6 +1923,7 @@
       "row_role": "Scheduled",
       "source_row": 30,
       "status": "To Do",
+      "story_points_per_8_hours": 9.6,
       "successors": [],
       "summary": "Client Walkthrough - Warehouse migration circular dependency B",
       "target_end": "2026-10-19",
@@ -1937,7 +1937,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.6,
       "in_planning": false,
       "issue_id": "200105",
       "jira_key": "DATA-3010",
@@ -1956,6 +1955,7 @@
       "row_role": "Scheduled",
       "source_row": 102,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.62,
       "successors": [
         "DATA-3011"
       ],
@@ -1971,7 +1971,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 22.9,
       "in_planning": false,
       "issue_id": "200106",
       "jira_key": "DATA-3011",
@@ -1990,6 +1989,7 @@
       "row_role": "Scheduled",
       "source_row": 105,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.36,
       "successors": [
         "DATA-3012"
       ],
@@ -2005,7 +2005,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200107",
       "jira_key": "DATA-3012",
@@ -2024,6 +2023,7 @@
       "row_role": "Scheduled",
       "source_row": 109,
       "status": "To Do",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "DATA-3013"
       ],
@@ -2039,7 +2039,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200108",
       "jira_key": "DATA-3013",
@@ -2058,6 +2057,7 @@
       "row_role": "Scheduled",
       "source_row": 114,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.33,
       "successors": [
         "DATA-3014"
       ],
@@ -2073,7 +2073,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200109",
       "jira_key": "DATA-3014",
@@ -2092,6 +2091,7 @@
       "row_role": "Scheduled",
       "source_row": 120,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.8,
       "successors": [
         "DATA-3015"
       ],
@@ -2107,7 +2107,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.0,
       "in_planning": false,
       "issue_id": "200110",
       "jira_key": "DATA-3015",
@@ -2126,6 +2125,7 @@
       "row_role": "Scheduled",
       "source_row": 127,
       "status": "To Do",
+      "story_points_per_8_hours": 10.0,
       "successors": [
         "DATA-3016"
       ],
@@ -2141,7 +2141,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200111",
       "jira_key": "DATA-3016",
@@ -2160,6 +2159,7 @@
       "row_role": "Scheduled",
       "source_row": 135,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "DATA-3017"
       ],
@@ -2175,7 +2175,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 0.0,
       "in_planning": false,
       "issue_id": "200112",
       "jira_key": "DATA-3017",
@@ -2194,6 +2193,7 @@
       "row_role": "Scheduled",
       "source_row": 144,
       "status": "In Progress",
+      "story_points_per_8_hours": 0.0,
       "successors": [
         "DATA-3018"
       ],
@@ -2209,7 +2209,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.6,
       "in_planning": false,
       "issue_id": "200113",
       "jira_key": "DATA-3018",
@@ -2228,6 +2227,7 @@
       "row_role": "Scheduled",
       "source_row": 153,
       "status": "To Do",
+      "story_points_per_8_hours": 6.86,
       "successors": [
         "DATA-3019"
       ],
@@ -2243,7 +2243,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.9,
       "in_planning": false,
       "issue_id": "200114",
       "jira_key": "DATA-3019",
@@ -2262,6 +2261,7 @@
       "row_role": "Scheduled",
       "source_row": 162,
       "status": "In Progress",
+      "story_points_per_8_hours": 25.6,
       "successors": [
         "DATA-3020"
       ],
@@ -2277,7 +2277,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 2.3,
       "in_planning": false,
       "issue_id": "200115",
       "jira_key": "DATA-3020",
@@ -2296,6 +2295,7 @@
       "row_role": "Scheduled",
       "source_row": 104,
       "status": "In Progress",
+      "story_points_per_8_hours": 44.0,
       "successors": [
         "DATA-3021"
       ],
@@ -2311,7 +2311,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.0,
       "in_planning": false,
       "issue_id": "200116",
       "jira_key": "DATA-3021",
@@ -2330,6 +2329,7 @@
       "row_role": "Scheduled",
       "source_row": 108,
       "status": "To Do",
+      "story_points_per_8_hours": 12.44,
       "successors": [
         "DATA-3022"
       ],
@@ -2345,7 +2345,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 21.9,
       "in_planning": false,
       "issue_id": "200117",
       "jira_key": "DATA-3022",
@@ -2364,6 +2363,7 @@
       "row_role": "Scheduled",
       "source_row": 113,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.57,
       "successors": [
         "DATA-3023"
       ],
@@ -2379,7 +2379,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.8,
       "in_planning": false,
       "issue_id": "200118",
       "jira_key": "DATA-3023",
@@ -2398,6 +2397,7 @@
       "row_role": "Scheduled",
       "source_row": 119,
       "status": "In Progress",
+      "story_points_per_8_hours": 26.67,
       "successors": [
         "DATA-3024"
       ],
@@ -2413,7 +2413,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.5,
       "in_planning": false,
       "issue_id": "200119",
       "jira_key": "DATA-3024",
@@ -2432,6 +2431,7 @@
       "row_role": "Scheduled",
       "source_row": 126,
       "status": "To Do",
+      "story_points_per_8_hours": 8.73,
       "successors": [
         "DATA-3025"
       ],
@@ -2447,7 +2447,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.1,
       "in_planning": false,
       "issue_id": "200120",
       "jira_key": "DATA-3025",
@@ -2466,6 +2465,7 @@
       "row_role": "Scheduled",
       "source_row": 134,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 26",
       "target_end": "2026-07-20",
@@ -2479,7 +2479,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 7.1,
       "in_planning": false,
       "issue_id": "200121",
       "jira_key": "DATA-3026",
@@ -2496,6 +2495,7 @@
       "row_role": "Scheduled",
       "source_row": 143,
       "status": "In Progress",
+      "story_points_per_8_hours": 14.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Metrics certification wave 27",
       "target_end": "2026-08-03",
@@ -2509,7 +2509,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 20.3,
       "in_planning": false,
       "issue_id": "200122",
       "jira_key": "DATA-3027",
@@ -2526,6 +2525,7 @@
       "row_role": "Scheduled",
       "source_row": 152,
       "status": "To Do",
+      "story_points_per_8_hours": 4.92,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Forecast data mart wave 28",
       "target_end": "2026-08-17",
@@ -2539,7 +2539,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.2,
       "in_planning": false,
       "issue_id": "200123",
       "jira_key": "DATA-3028",
@@ -2556,6 +2555,7 @@
       "row_role": "Scheduled",
       "source_row": 161,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.89,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Streaming ingestion wave 29",
       "target_end": "2026-08-31",
@@ -2569,7 +2569,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.4,
       "in_planning": false,
       "issue_id": "200124",
       "jira_key": "DATA-3029",
@@ -2586,6 +2585,7 @@
       "row_role": "Scheduled",
       "source_row": 171,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.6,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Retention model update wave 30",
       "target_end": "2026-09-14",
@@ -2599,7 +2599,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.6,
       "in_planning": false,
       "issue_id": "200125",
       "jira_key": "DATA-3030",
@@ -2616,6 +2615,7 @@
       "row_role": "Scheduled",
       "source_row": 107,
       "status": "To Do",
+      "story_points_per_8_hours": 8.62,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Quality rule expansion wave 31",
       "target_end": "2026-08-24",
@@ -2629,7 +2629,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 28.1,
       "in_planning": false,
       "issue_id": "200126",
       "jira_key": "DATA-3031",
@@ -2646,6 +2645,7 @@
       "row_role": "Scheduled",
       "source_row": 112,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.56,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Analytics contract cleanup wave 32",
       "target_end": "2026-09-07",
@@ -2659,7 +2659,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200127",
       "jira_key": "DATA-3032",
@@ -2676,6 +2675,7 @@
       "row_role": "Scheduled",
       "source_row": 118,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Warehouse model refresh wave 33",
       "target_end": "2026-09-21",
@@ -2689,7 +2689,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 15.6,
       "in_planning": false,
       "issue_id": "200128",
       "jira_key": "DATA-3033",
@@ -2706,6 +2705,7 @@
       "row_role": "Scheduled",
       "source_row": 125,
       "status": "To Do",
+      "story_points_per_8_hours": 6.4,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 34",
       "target_end": "2026-10-05",
@@ -2719,7 +2719,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200129",
       "jira_key": "DATA-3034",
@@ -2736,6 +2735,7 @@
       "row_role": "Scheduled",
       "source_row": 31,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.8,
       "successors": [],
       "summary": "Client Walkthrough - Forecast refresh invalid date example",
       "target_end": "2026-10-19",
@@ -2749,7 +2749,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 2.5,
       "in_planning": false,
       "issue_id": "200160",
       "jira_key": "OPS-5000",
@@ -2766,6 +2765,7 @@
       "row_role": "Scheduled",
       "source_row": 76,
       "status": "To Do",
+      "story_points_per_8_hours": 40.0,
       "successors": [
         "OPS-5001"
       ],
@@ -2781,7 +2781,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 13.5,
       "in_planning": false,
       "issue_id": "200161",
       "jira_key": "OPS-5001",
@@ -2800,6 +2799,7 @@
       "row_role": "Scheduled",
       "source_row": 81,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.38,
       "successors": [
         "OPS-5002"
       ],
@@ -2815,7 +2815,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 5.1,
       "in_planning": false,
       "issue_id": "200162",
       "jira_key": "OPS-5002",
@@ -2834,6 +2833,7 @@
       "row_role": "Scheduled",
       "source_row": 85,
       "status": "In Progress",
+      "story_points_per_8_hours": 19.56,
       "successors": [
         "OPS-5003"
       ],
@@ -2849,7 +2849,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 13.5,
       "in_planning": false,
       "issue_id": "200163",
       "jira_key": "OPS-5003",
@@ -2868,6 +2867,7 @@
       "row_role": "Scheduled",
       "source_row": 88,
       "status": "To Do",
+      "story_points_per_8_hours": 7.38,
       "successors": [
         "OPS-5004"
       ],
@@ -2883,7 +2883,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 5.1,
       "in_planning": false,
       "issue_id": "200164",
       "jira_key": "OPS-5004",
@@ -2902,6 +2901,7 @@
       "row_role": "Scheduled",
       "source_row": 90,
       "status": "In Progress",
+      "story_points_per_8_hours": 19.56,
       "successors": [
         "OPS-5005"
       ],
@@ -2917,7 +2917,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 16.1,
       "in_planning": false,
       "issue_id": "200165",
       "jira_key": "OPS-5005",
@@ -2936,6 +2935,7 @@
       "row_role": "Scheduled",
       "source_row": 92,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.22,
       "successors": [
         "OPS-5006"
       ],
@@ -2951,7 +2951,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 5.1,
       "in_planning": false,
       "issue_id": "200166",
       "jira_key": "OPS-5006",
@@ -2970,6 +2969,7 @@
       "row_role": "Scheduled",
       "source_row": 94,
       "status": "To Do",
+      "story_points_per_8_hours": 19.56,
       "successors": [
         "OPS-5007"
       ],
@@ -2985,7 +2985,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 16.1,
       "in_planning": false,
       "issue_id": "200167",
       "jira_key": "OPS-5007",
@@ -3004,6 +3003,7 @@
       "row_role": "Scheduled",
       "source_row": 96,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.22,
       "successors": [
         "OPS-5008"
       ],
@@ -3019,7 +3019,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 21.9,
       "in_planning": false,
       "issue_id": "200168",
       "jira_key": "OPS-5008",
@@ -3038,6 +3037,7 @@
       "row_role": "Scheduled",
       "source_row": 98,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.57,
       "successors": [
         "OPS-5009"
       ],
@@ -3053,7 +3053,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 16.1,
       "in_planning": false,
       "issue_id": "200169",
       "jira_key": "OPS-5009",
@@ -3072,6 +3071,7 @@
       "row_role": "Scheduled",
       "source_row": 100,
       "status": "To Do",
+      "story_points_per_8_hours": 6.22,
       "successors": [
         "OPS-5010"
       ],
@@ -3087,7 +3087,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200170",
       "jira_key": "OPS-5010",
@@ -3106,6 +3105,7 @@
       "row_role": "Scheduled",
       "source_row": 80,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.0,
       "successors": [
         "OPS-5011"
       ],
@@ -3121,7 +3121,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 5.0,
       "in_planning": false,
       "issue_id": "200171",
       "jira_key": "OPS-5011",
@@ -3140,6 +3139,7 @@
       "row_role": "Scheduled",
       "source_row": 84,
       "status": "In Progress",
+      "story_points_per_8_hours": 20.0,
       "successors": [
         "OPS-5012"
       ],
@@ -3155,7 +3155,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 4.2,
       "in_planning": false,
       "issue_id": "200172",
       "jira_key": "OPS-5012",
@@ -3174,6 +3173,7 @@
       "row_role": "Scheduled",
       "source_row": 87,
       "status": "To Do",
+      "story_points_per_8_hours": 24.0,
       "successors": [
         "OPS-5013"
       ],
@@ -3189,7 +3189,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 1.6,
       "in_planning": false,
       "issue_id": "200173",
       "jira_key": "OPS-5013",
@@ -3208,6 +3207,7 @@
       "row_role": "Scheduled",
       "source_row": 89,
       "status": "In Progress",
+      "story_points_per_8_hours": 64.0,
       "successors": [
         "OPS-5014"
       ],
@@ -3223,7 +3223,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 4.2,
       "in_planning": false,
       "issue_id": "200174",
       "jira_key": "OPS-5014",
@@ -3242,6 +3241,7 @@
       "row_role": "Scheduled",
       "source_row": 91,
       "status": "In Progress",
+      "story_points_per_8_hours": 24.0,
       "successors": [
         "OPS-5015"
       ],
@@ -3257,7 +3257,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 7.4,
       "in_planning": false,
       "issue_id": "200175",
       "jira_key": "OPS-5015",
@@ -3276,6 +3275,7 @@
       "row_role": "Scheduled",
       "source_row": 93,
       "status": "To Do",
+      "story_points_per_8_hours": 13.54,
       "successors": [
         "OPS-5016"
       ],
@@ -3291,7 +3291,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 0.0,
       "in_planning": false,
       "issue_id": "200176",
       "jira_key": "OPS-5016",
@@ -3310,6 +3309,7 @@
       "row_role": "Scheduled",
       "source_row": 95,
       "status": "In Progress",
+      "story_points_per_8_hours": 0.0,
       "successors": [
         "OPS-5017"
       ],
@@ -3325,7 +3325,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q2",
-      "hours_accuracy_percent": 7.4,
       "in_planning": false,
       "issue_id": "200177",
       "jira_key": "OPS-5017",
@@ -3344,6 +3343,7 @@
       "row_role": "Scheduled",
       "source_row": 97,
       "status": "In Progress",
+      "story_points_per_8_hours": 13.54,
       "successors": [
         "OPS-5018"
       ],
@@ -3359,7 +3359,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Operations Q1",
-      "hours_accuracy_percent": 8.0,
       "in_planning": false,
       "issue_id": "200178",
       "jira_key": "OPS-5018",
@@ -3378,6 +3377,7 @@
       "row_role": "Scheduled",
       "source_row": 99,
       "status": "To Do",
+      "story_points_per_8_hours": 12.44,
       "successors": [],
       "summary": "Scale Rows - Operations - Support workflow routing wave 19",
       "target_end": "2026-10-05",
@@ -3391,7 +3391,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Qualification Event 2",
-      "hours_accuracy_percent": 22.9,
       "in_planning": false,
       "issue_id": "200179",
       "jira_key": "OPS-5019",
@@ -3408,6 +3407,7 @@
       "row_role": "Scheduled",
       "source_row": 34,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.36,
       "successors": [],
       "summary": "Client Walkthrough - Shop deliverable split fixVersion example",
       "target_end": "2026-10-19",
@@ -3421,7 +3421,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 0.8,
       "in_planning": false,
       "issue_id": "200130",
       "jira_key": "PLAT-4000",
@@ -3438,6 +3437,7 @@
       "row_role": "Scheduled",
       "source_row": 132,
       "status": "To Do",
+      "story_points_per_8_hours": 128.0,
       "successors": [
         "PLAT-4001"
       ],
@@ -3453,7 +3453,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200131",
       "jira_key": "PLAT-4001",
@@ -3472,6 +3471,7 @@
       "row_role": "Scheduled",
       "source_row": 141,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.0,
       "successors": [
         "PLAT-4002"
       ],
@@ -3487,7 +3487,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200132",
       "jira_key": "PLAT-4002",
@@ -3506,6 +3505,7 @@
       "row_role": "Scheduled",
       "source_row": 150,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "PLAT-4003"
       ],
@@ -3521,7 +3521,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 8.1,
       "in_planning": false,
       "issue_id": "200133",
       "jira_key": "PLAT-4003",
@@ -3540,6 +3539,7 @@
       "row_role": "Scheduled",
       "source_row": 159,
       "status": "To Do",
+      "story_points_per_8_hours": 12.31,
       "successors": [
         "PLAT-4004"
       ],
@@ -3555,7 +3555,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 68.8,
       "in_planning": false,
       "issue_id": "200134",
       "jira_key": "PLAT-4004",
@@ -3574,6 +3573,7 @@
       "row_role": "Scheduled",
       "source_row": 168,
       "status": "In Progress",
+      "story_points_per_8_hours": 1.45,
       "successors": [
         "PLAT-4005"
       ],
@@ -3589,7 +3589,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 5.7,
       "in_planning": false,
       "issue_id": "200135",
       "jira_key": "PLAT-4005",
@@ -3608,6 +3607,7 @@
       "row_role": "Scheduled",
       "source_row": 177,
       "status": "In Progress",
+      "story_points_per_8_hours": 17.6,
       "successors": [
         "PLAT-4006"
       ],
@@ -3623,7 +3623,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 3.8,
       "in_planning": false,
       "issue_id": "200136",
       "jira_key": "PLAT-4006",
@@ -3642,6 +3641,7 @@
       "row_role": "Scheduled",
       "source_row": 185,
       "status": "To Do",
+      "story_points_per_8_hours": 26.67,
       "successors": [
         "PLAT-4007"
       ],
@@ -3657,7 +3657,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200137",
       "jira_key": "PLAT-4007",
@@ -3676,6 +3675,7 @@
       "row_role": "Scheduled",
       "source_row": 192,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.2,
       "successors": [
         "PLAT-4008"
       ],
@@ -3691,7 +3691,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200138",
       "jira_key": "PLAT-4008",
@@ -3710,6 +3709,7 @@
       "row_role": "Scheduled",
       "source_row": 196,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.0,
       "successors": [
         "PLAT-4009"
       ],
@@ -3725,7 +3725,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 4.2,
       "in_planning": false,
       "issue_id": "200139",
       "jira_key": "PLAT-4009",
@@ -3744,6 +3743,7 @@
       "row_role": "Scheduled",
       "source_row": 199,
       "status": "To Do",
+      "story_points_per_8_hours": 24.0,
       "successors": [
         "PLAT-4010"
       ],
@@ -3759,7 +3759,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 15.6,
       "in_planning": false,
       "issue_id": "200140",
       "jira_key": "PLAT-4010",
@@ -3778,6 +3777,7 @@
       "row_role": "Scheduled",
       "source_row": 139,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.4,
       "successors": [
         "PLAT-4011"
       ],
@@ -3793,7 +3793,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200141",
       "jira_key": "PLAT-4011",
@@ -3812,6 +3811,7 @@
       "row_role": "Scheduled",
       "source_row": 148,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.8,
       "successors": [
         "PLAT-4012"
       ],
@@ -3827,7 +3827,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200142",
       "jira_key": "PLAT-4012",
@@ -3846,6 +3845,7 @@
       "row_role": "Scheduled",
       "source_row": 157,
       "status": "To Do",
+      "story_points_per_8_hours": 9.33,
       "successors": [
         "PLAT-4013"
       ],
@@ -3861,7 +3861,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200143",
       "jira_key": "PLAT-4013",
@@ -3880,6 +3879,7 @@
       "row_role": "Scheduled",
       "source_row": 166,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "PLAT-4014"
       ],
@@ -3895,7 +3895,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 5.6,
       "in_planning": false,
       "issue_id": "200144",
       "jira_key": "PLAT-4014",
@@ -3914,6 +3913,7 @@
       "row_role": "Scheduled",
       "source_row": 175,
       "status": "In Progress",
+      "story_points_per_8_hours": 17.78,
       "successors": [
         "PLAT-4015"
       ],
@@ -3929,7 +3929,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 14.6,
       "in_planning": false,
       "issue_id": "200145",
       "jira_key": "PLAT-4015",
@@ -3948,6 +3947,7 @@
       "row_role": "Scheduled",
       "source_row": 183,
       "status": "To Do",
+      "story_points_per_8_hours": 6.86,
       "successors": [
         "PLAT-4016"
       ],
@@ -3963,7 +3963,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 3.4,
       "in_planning": false,
       "issue_id": "200146",
       "jira_key": "PLAT-4016",
@@ -3982,6 +3981,7 @@
       "row_role": "Scheduled",
       "source_row": 190,
       "status": "In Progress",
+      "story_points_per_8_hours": 29.33,
       "successors": [
         "PLAT-4017"
       ],
@@ -3997,7 +3997,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 9.8,
       "in_planning": false,
       "issue_id": "200147",
       "jira_key": "PLAT-4017",
@@ -4016,6 +4015,7 @@
       "row_role": "Scheduled",
       "source_row": 195,
       "status": "In Progress",
+      "story_points_per_8_hours": 10.18,
       "successors": [
         "PLAT-4018"
       ],
@@ -4031,7 +4031,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200148",
       "jira_key": "PLAT-4018",
@@ -4050,6 +4049,7 @@
       "row_role": "Scheduled",
       "source_row": 198,
       "status": "To Do",
+      "story_points_per_8_hours": 4.0,
       "successors": [
         "PLAT-4019"
       ],
@@ -4065,7 +4065,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 5.0,
       "in_planning": false,
       "issue_id": "200149",
       "jira_key": "PLAT-4019",
@@ -4084,6 +4083,7 @@
       "row_role": "Scheduled",
       "source_row": 200,
       "status": "In Progress",
+      "story_points_per_8_hours": 20.0,
       "successors": [
         "PLAT-4020"
       ],
@@ -4099,7 +4099,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200150",
       "jira_key": "PLAT-4020",
@@ -4118,6 +4117,7 @@
       "row_role": "Scheduled",
       "source_row": 146,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "PLAT-4021"
       ],
@@ -4133,7 +4133,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200151",
       "jira_key": "PLAT-4021",
@@ -4152,6 +4151,7 @@
       "row_role": "Scheduled",
       "source_row": 155,
       "status": "To Do",
+      "story_points_per_8_hours": 7.0,
       "successors": [
         "PLAT-4022"
       ],
@@ -4167,7 +4167,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200152",
       "jira_key": "PLAT-4022",
@@ -4186,6 +4185,7 @@
       "row_role": "Scheduled",
       "source_row": 164,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "PLAT-4023"
       ],
@@ -4201,7 +4201,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 8.1,
       "in_planning": false,
       "issue_id": "200153",
       "jira_key": "PLAT-4023",
@@ -4220,6 +4219,7 @@
       "row_role": "Scheduled",
       "source_row": 173,
       "status": "In Progress",
+      "story_points_per_8_hours": 12.31,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Deployment guardrails wave 24",
       "target_end": "2026-10-05",
@@ -4233,7 +4233,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200154",
       "jira_key": "PLAT-4024",
@@ -4250,6 +4249,7 @@
       "row_role": "Scheduled",
       "source_row": 181,
       "status": "To Do",
+      "story_points_per_8_hours": 5.33,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Kubernetes platform upgrade wave 25",
       "target_end": "2026-10-19",
@@ -4263,7 +4263,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q2",
-      "hours_accuracy_percent": 5.7,
       "in_planning": false,
       "issue_id": "200155",
       "jira_key": "PLAT-4025",
@@ -4280,6 +4279,7 @@
       "row_role": "Scheduled",
       "source_row": 188,
       "status": "In Progress",
+      "story_points_per_8_hours": 17.6,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Build runner rotation wave 26",
       "target_end": "2026-09-28",
@@ -4293,7 +4293,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 13.4,
       "in_planning": false,
       "issue_id": "200156",
       "jira_key": "PLAT-4026",
@@ -4310,6 +4309,7 @@
       "row_role": "Scheduled",
       "source_row": 193,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.47,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Secrets management wave 27",
       "target_end": "2026-10-12",
@@ -4323,7 +4323,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Platform Q1",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200157",
       "jira_key": "PLAT-4027",
@@ -4340,6 +4339,7 @@
       "row_role": "Scheduled",
       "source_row": 197,
       "status": "To Do",
+      "story_points_per_8_hours": 3.2,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Shared logging wave 28",
       "target_end": "2026-10-26",
@@ -4353,7 +4353,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Qualification Event 1",
-      "hours_accuracy_percent": 7.5,
       "in_planning": false,
       "issue_id": "200158",
       "jira_key": "PLAT-4028",
@@ -4370,6 +4369,7 @@
       "row_role": "Scheduled",
       "source_row": 32,
       "status": "In Progress",
+      "story_points_per_8_hours": 13.33,
       "successors": [],
       "summary": "Client Walkthrough - Qualification software reference example",
       "target_end": "2026-11-09",
@@ -4383,7 +4383,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "Shared Services 2026",
-      "hours_accuracy_percent": 4.2,
       "in_planning": false,
       "issue_id": "200159",
       "jira_key": "PLAT-4029",
@@ -4400,6 +4399,7 @@
       "row_role": "Scheduled",
       "source_row": 33,
       "status": "In Progress",
+      "story_points_per_8_hours": 24.0,
       "successors": [],
       "summary": "Client Walkthrough - Deployment runner fixVersion example",
       "target_end": "2026-11-23",
@@ -4413,7 +4413,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200050",
       "jira_key": "WEB-2000",
@@ -4430,6 +4429,7 @@
       "row_role": "Scheduled",
       "source_row": 36,
       "status": "To Do",
+      "story_points_per_8_hours": 9.33,
       "successors": [
         "WEB-2001"
       ],
@@ -4445,7 +4445,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.1,
       "in_planning": false,
       "issue_id": "200051",
       "jira_key": "WEB-2001",
@@ -4464,6 +4463,7 @@
       "row_role": "Scheduled",
       "source_row": 37,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.0,
       "successors": [
         "WEB-2002"
       ],
@@ -4479,7 +4479,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200052",
       "jira_key": "WEB-2002",
@@ -4498,6 +4497,7 @@
       "row_role": "Scheduled",
       "source_row": 40,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.33,
       "successors": [
         "WEB-2003"
       ],
@@ -4513,7 +4513,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200053",
       "jira_key": "WEB-2003",
@@ -4532,6 +4531,7 @@
       "row_role": "Scheduled",
       "source_row": 44,
       "status": "To Do",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "WEB-2004"
       ],
@@ -4547,7 +4547,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.7,
       "in_planning": false,
       "issue_id": "200054",
       "jira_key": "WEB-2004",
@@ -4566,6 +4565,7 @@
       "row_role": "Scheduled",
       "source_row": 49,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.33,
       "successors": [
         "WEB-2005"
       ],
@@ -4581,7 +4581,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200055",
       "jira_key": "WEB-2005",
@@ -4600,6 +4599,7 @@
       "row_role": "Scheduled",
       "source_row": 54,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "WEB-2006"
       ],
@@ -4615,7 +4615,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 2.5,
       "in_planning": false,
       "issue_id": "200056",
       "jira_key": "WEB-2006",
@@ -4634,6 +4633,7 @@
       "row_role": "Scheduled",
       "source_row": 59,
       "status": "To Do",
+      "story_points_per_8_hours": 40.0,
       "successors": [
         "WEB-2007"
       ],
@@ -4649,7 +4649,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200057",
       "jira_key": "WEB-2007",
@@ -4668,6 +4667,7 @@
       "row_role": "Scheduled",
       "source_row": 64,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "WEB-2009"
       ],
@@ -4683,7 +4683,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 2.5,
       "in_planning": false,
       "issue_id": "200058",
       "jira_key": "WEB-2008",
@@ -4700,6 +4699,7 @@
       "row_role": "Scheduled",
       "source_row": 27,
       "status": "In Progress",
+      "story_points_per_8_hours": 40.0,
       "successors": [],
       "summary": "Client Walkthrough - Web launch self dependency example",
       "target_end": "2026-05-18",
@@ -4713,7 +4713,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 13.5,
       "in_planning": false,
       "issue_id": "200059",
       "jira_key": "WEB-2009",
@@ -4732,6 +4731,7 @@
       "row_role": "Scheduled",
       "source_row": 72,
       "status": "To Do",
+      "story_points_per_8_hours": 7.38,
       "successors": [
         "WEB-2011"
       ],
@@ -4747,7 +4747,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 0.0,
       "in_planning": true,
       "issue_id": "200060",
       "jira_key": "WEB-2010",
@@ -4764,6 +4763,7 @@
       "row_role": "Scheduled",
       "source_row": 28,
       "status": "To Do",
+      "story_points_per_8_hours": 0.0,
       "successors": [],
       "summary": "Client Walkthrough - Design system discovery with no pointed child work",
       "target_end": "2026-05-11",
@@ -4777,7 +4777,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 12.5,
       "in_planning": false,
       "issue_id": "200061",
       "jira_key": "WEB-2011",
@@ -4796,6 +4795,7 @@
       "row_role": "Scheduled",
       "source_row": 39,
       "status": "In Progress",
+      "story_points_per_8_hours": 8.0,
       "successors": [
         "WEB-2012"
       ],
@@ -4811,7 +4811,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 11.4,
       "in_planning": false,
       "issue_id": "200062",
       "jira_key": "WEB-2012",
@@ -4830,6 +4829,7 @@
       "row_role": "Scheduled",
       "source_row": 43,
       "status": "To Do",
+      "story_points_per_8_hours": 8.8,
       "successors": [
         "WEB-2013"
       ],
@@ -4845,7 +4845,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200063",
       "jira_key": "WEB-2013",
@@ -4864,6 +4863,7 @@
       "row_role": "Scheduled",
       "source_row": 48,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.0,
       "successors": [
         "WEB-2014"
       ],
@@ -4879,7 +4879,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 16.7,
       "in_planning": false,
       "issue_id": "200064",
       "jira_key": "WEB-2014",
@@ -4898,6 +4897,7 @@
       "row_role": "Scheduled",
       "source_row": 53,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.0,
       "successors": [
         "WEB-2015"
       ],
@@ -4913,7 +4913,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 14.3,
       "in_planning": false,
       "issue_id": "200065",
       "jira_key": "WEB-2015",
@@ -4932,6 +4931,7 @@
       "row_role": "Scheduled",
       "source_row": 58,
       "status": "To Do",
+      "story_points_per_8_hours": 7.0,
       "successors": [
         "WEB-2016"
       ],
@@ -4947,7 +4947,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200066",
       "jira_key": "WEB-2016",
@@ -4966,6 +4965,7 @@
       "row_role": "Scheduled",
       "source_row": 63,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.33,
       "successors": [
         "WEB-2017"
       ],
@@ -4981,7 +4981,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200067",
       "jira_key": "WEB-2017",
@@ -5000,6 +4999,7 @@
       "row_role": "Scheduled",
       "source_row": 68,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.33,
       "successors": [
         "WEB-2018"
       ],
@@ -5015,7 +5015,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 18.8,
       "in_planning": false,
       "issue_id": "200068",
       "jira_key": "WEB-2018",
@@ -5034,6 +5033,7 @@
       "row_role": "Scheduled",
       "source_row": 71,
       "status": "To Do",
+      "story_points_per_8_hours": 5.33,
       "successors": [
         "WEB-2019"
       ],
@@ -5049,7 +5049,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 5.0,
       "in_planning": false,
       "issue_id": "200069",
       "jira_key": "WEB-2019",
@@ -5068,6 +5067,7 @@
       "row_role": "Scheduled",
       "source_row": 75,
       "status": "In Progress",
+      "story_points_per_8_hours": 20.0,
       "successors": [
         "WEB-2020"
       ],
@@ -5083,7 +5083,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 15.6,
       "in_planning": false,
       "issue_id": "200070",
       "jira_key": "WEB-2020",
@@ -5102,6 +5101,7 @@
       "row_role": "Scheduled",
       "source_row": 38,
       "status": "In Progress",
+      "story_points_per_8_hours": 6.4,
       "successors": [
         "WEB-2021"
       ],
@@ -5117,7 +5117,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200071",
       "jira_key": "WEB-2021",
@@ -5136,6 +5135,7 @@
       "row_role": "Scheduled",
       "source_row": 42,
       "status": "To Do",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "WEB-2022"
       ],
@@ -5151,7 +5151,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 17.9,
       "in_planning": false,
       "issue_id": "200072",
       "jira_key": "WEB-2022",
@@ -5170,6 +5169,7 @@
       "row_role": "Scheduled",
       "source_row": 47,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.6,
       "successors": [
         "WEB-2023"
       ],
@@ -5185,7 +5185,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200073",
       "jira_key": "WEB-2023",
@@ -5204,6 +5203,7 @@
       "row_role": "Scheduled",
       "source_row": 52,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [
         "WEB-2024"
       ],
@@ -5219,7 +5219,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 17.9,
       "in_planning": false,
       "issue_id": "200074",
       "jira_key": "WEB-2024",
@@ -5238,6 +5237,7 @@
       "row_role": "Scheduled",
       "source_row": 57,
       "status": "To Do",
+      "story_points_per_8_hours": 5.6,
       "successors": [
         "WEB-2025"
       ],
@@ -5253,7 +5253,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200075",
       "jira_key": "WEB-2025",
@@ -5272,6 +5271,7 @@
       "row_role": "Scheduled",
       "source_row": 62,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.0,
       "successors": [
         "WEB-2026"
       ],
@@ -5287,7 +5287,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 17.9,
       "in_planning": false,
       "issue_id": "200076",
       "jira_key": "WEB-2026",
@@ -5306,6 +5305,7 @@
       "row_role": "Scheduled",
       "source_row": 67,
       "status": "In Progress",
+      "story_points_per_8_hours": 5.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 27",
       "target_end": "2026-09-07",
@@ -5319,7 +5319,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200077",
       "jira_key": "WEB-2027",
@@ -5336,6 +5335,7 @@
       "row_role": "Scheduled",
       "source_row": 70,
       "status": "To Do",
+      "story_points_per_8_hours": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 28",
       "target_end": "2026-09-21",
@@ -5349,7 +5349,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 7.5,
       "in_planning": false,
       "issue_id": "200078",
       "jira_key": "WEB-2028",
@@ -5366,6 +5365,7 @@
       "row_role": "Scheduled",
       "source_row": 74,
       "status": "In Progress",
+      "story_points_per_8_hours": 13.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 29",
       "target_end": "2026-10-05",
@@ -5379,7 +5379,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200079",
       "jira_key": "WEB-2029",
@@ -5396,6 +5395,7 @@
       "row_role": "Scheduled",
       "source_row": 79,
       "status": "In Progress",
+      "story_points_per_8_hours": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 30",
       "target_end": "2026-10-19",
@@ -5409,7 +5409,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 2.3,
       "in_planning": false,
       "issue_id": "200080",
       "jira_key": "WEB-2030",
@@ -5426,6 +5425,7 @@
       "row_role": "Scheduled",
       "source_row": 41,
       "status": "To Do",
+      "story_points_per_8_hours": 42.67,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Localization pass wave 31",
       "target_end": "2026-09-28",
@@ -5439,7 +5439,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 6.2,
       "in_planning": false,
       "issue_id": "200081",
       "jira_key": "WEB-2031",
@@ -5456,6 +5455,7 @@
       "row_role": "Scheduled",
       "source_row": 46,
       "status": "In Progress",
+      "story_points_per_8_hours": 16.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 32",
       "target_end": "2026-10-12",
@@ -5469,7 +5469,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.5,
       "in_planning": false,
       "issue_id": "200082",
       "jira_key": "WEB-2032",
@@ -5486,6 +5485,7 @@
       "row_role": "Scheduled",
       "source_row": 51,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.73,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 33",
       "target_end": "2026-10-26",
@@ -5499,7 +5499,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 1.2,
       "in_planning": false,
       "issue_id": "200083",
       "jira_key": "WEB-2033",
@@ -5516,6 +5515,7 @@
       "row_role": "Scheduled",
       "source_row": 56,
       "status": "To Do",
+      "story_points_per_8_hours": 80.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 34",
       "target_end": "2026-11-09",
@@ -5529,7 +5529,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 8.5,
       "in_planning": false,
       "issue_id": "200084",
       "jira_key": "WEB-2034",
@@ -5546,6 +5545,7 @@
       "row_role": "Scheduled",
       "source_row": 61,
       "status": "In Progress",
+      "story_points_per_8_hours": 11.73,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 35",
       "target_end": "2026-06-01",
@@ -5559,7 +5559,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.8,
       "in_planning": false,
       "issue_id": "200085",
       "jira_key": "WEB-2035",
@@ -5576,6 +5575,7 @@
       "row_role": "Scheduled",
       "source_row": 66,
       "status": "In Progress",
+      "story_points_per_8_hours": 10.18,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 36",
       "target_end": "2026-05-11",
@@ -5589,7 +5589,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 25.0,
       "in_planning": false,
       "issue_id": "200086",
       "jira_key": "WEB-2036",
@@ -5606,6 +5605,7 @@
       "row_role": "Scheduled",
       "source_row": 69,
       "status": "To Do",
+      "story_points_per_8_hours": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 37",
       "target_end": "2026-05-25",
@@ -5619,7 +5619,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 9.8,
       "in_planning": false,
       "issue_id": "200087",
       "jira_key": "WEB-2037",
@@ -5636,6 +5635,7 @@
       "row_role": "Scheduled",
       "source_row": 73,
       "status": "In Progress",
+      "story_points_per_8_hours": 10.18,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 38",
       "target_end": "2026-06-08",
@@ -5649,7 +5649,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200088",
       "jira_key": "WEB-2038",
@@ -5666,6 +5665,7 @@
       "row_role": "Scheduled",
       "source_row": 77,
       "status": "In Progress",
+      "story_points_per_8_hours": 3.2,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Localization pass wave 39",
       "target_end": "2026-06-22",
@@ -5679,7 +5679,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 31.2,
       "in_planning": false,
       "issue_id": "200089",
       "jira_key": "WEB-2039",
@@ -5696,6 +5695,7 @@
       "row_role": "Scheduled",
       "source_row": 82,
       "status": "To Do",
+      "story_points_per_8_hours": 3.2,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 40",
       "target_end": "2026-07-06",
@@ -5709,7 +5709,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.4,
       "in_planning": false,
       "issue_id": "200090",
       "jira_key": "WEB-2040",
@@ -5726,6 +5725,7 @@
       "row_role": "Scheduled",
       "source_row": 45,
       "status": "In Progress",
+      "story_points_per_8_hours": 9.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 41",
       "target_end": "2026-06-15",
@@ -5739,7 +5739,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.4,
       "in_planning": false,
       "issue_id": "200091",
       "jira_key": "WEB-2041",
@@ -5756,6 +5755,7 @@
       "row_role": "Scheduled",
       "source_row": 50,
       "status": "In Progress",
+      "story_points_per_8_hours": 29.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 42",
       "target_end": "2026-06-29",
@@ -5769,7 +5769,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 10.4,
       "in_planning": false,
       "issue_id": "200092",
       "jira_key": "WEB-2042",
@@ -5786,6 +5785,7 @@
       "row_role": "Scheduled",
       "source_row": 55,
       "status": "To Do",
+      "story_points_per_8_hours": 9.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 43",
       "target_end": "2026-07-13",
@@ -5799,7 +5799,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 3.4,
       "in_planning": false,
       "issue_id": "200093",
       "jira_key": "WEB-2043",
@@ -5816,6 +5815,7 @@
       "row_role": "Scheduled",
       "source_row": 60,
       "status": "In Progress",
+      "story_points_per_8_hours": 29.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 44",
       "target_end": "2026-07-27",
@@ -5829,7 +5829,6 @@
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "hours_accuracy_percent": 13.4,
       "in_planning": false,
       "issue_id": "200094",
       "jira_key": "WEB-2044",
@@ -5846,6 +5845,7 @@
       "row_role": "Scheduled",
       "source_row": 65,
       "status": "In Progress",
+      "story_points_per_8_hours": 7.47,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 45",
       "target_end": "2026-08-10",
@@ -5862,7 +5862,6 @@
       "completed_logged_hours": 33.0,
       "completed_story_points": 72.0,
       "driving_epic_count": 10,
-      "hours_accuracy_percent": 5.7,
       "key": "Operations Q1",
       "logged_hours": 153.5,
       "name": "Operations Q1",
@@ -5870,6 +5869,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 17.45,
       "summary_id": "fixVersion:Operations Q1",
       "total_story_points": 209.0
     },
@@ -5878,7 +5878,6 @@
       "completed_logged_hours": 58.0,
       "completed_story_points": 73.0,
       "driving_epic_count": 9,
-      "hours_accuracy_percent": 9.9,
       "key": "Operations Q2",
       "logged_hours": 157.5,
       "name": "Operations Q2",
@@ -5886,6 +5885,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 10.07,
       "summary_id": "fixVersion:Operations Q2",
       "total_story_points": 190.0
     },
@@ -5894,7 +5894,6 @@
       "completed_logged_hours": 58.5,
       "completed_story_points": 63.0,
       "driving_epic_count": 10,
-      "hours_accuracy_percent": 11.6,
       "key": "Platform Q1",
       "logged_hours": 179.0,
       "name": "Platform Q1",
@@ -5902,6 +5901,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 8.62,
       "summary_id": "fixVersion:Platform Q1",
       "total_story_points": 209.0
     },
@@ -5910,7 +5910,6 @@
       "completed_logged_hours": 49.0,
       "completed_story_points": 58.0,
       "driving_epic_count": 9,
-      "hours_accuracy_percent": 10.6,
       "key": "Platform Q2",
       "logged_hours": 148.0,
       "name": "Platform Q2",
@@ -5918,6 +5917,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 9.47,
       "summary_id": "fixVersion:Platform Q2",
       "total_story_points": 184.0
     },
@@ -5926,7 +5926,6 @@
       "completed_logged_hours": 6.0,
       "completed_story_points": 10.0,
       "driving_epic_count": 1,
-      "hours_accuracy_percent": 7.5,
       "key": "Qualification Event 1",
       "logged_hours": 14.5,
       "name": "Qualification Event 1",
@@ -5934,6 +5933,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 13.33,
       "summary_id": "fixVersion:Qualification Event 1",
       "total_story_points": 19.0
     },
@@ -5942,7 +5942,6 @@
       "completed_logged_hours": 5.5,
       "completed_story_points": 3.0,
       "driving_epic_count": 1,
-      "hours_accuracy_percent": 22.9,
       "key": "Qualification Event 2",
       "logged_hours": 14.5,
       "name": "Qualification Event 2",
@@ -5950,6 +5949,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 4.36,
       "summary_id": "fixVersion:Qualification Event 2",
       "total_story_points": 19.0
     },
@@ -5958,7 +5958,6 @@
       "completed_logged_hours": 53.5,
       "completed_story_points": 78.0,
       "driving_epic_count": 10,
-      "hours_accuracy_percent": 8.6,
       "key": "Shared Services 2026",
       "logged_hours": 151.5,
       "name": "Shared Services 2026",
@@ -5966,6 +5965,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
+      "story_points_per_8_hours": 11.66,
       "summary_id": "fixVersion:Shared Services 2026",
       "total_story_points": 215.0
     },
@@ -5974,7 +5974,6 @@
       "completed_logged_hours": 161.5,
       "completed_story_points": 200.0,
       "driving_epic_count": 29,
-      "hours_accuracy_percent": 10.1,
       "key": "INIT-100",
       "logged_hours": 447.0,
       "name": "Customer Identity And Access",
@@ -5982,6 +5981,7 @@
       "project_key": "MULTIPLE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 9.91,
       "summary_id": "initiative:INIT-100",
       "total_story_points": 591.0
     },
@@ -5990,7 +5990,6 @@
       "completed_logged_hours": 88.5,
       "completed_story_points": 99.0,
       "driving_epic_count": 15,
-      "hours_accuracy_percent": 11.2,
       "key": "INIT-1200",
       "logged_hours": 249.0,
       "name": "Search And Discovery",
@@ -5998,6 +5997,7 @@
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 8.95,
       "summary_id": "initiative:INIT-1200",
       "total_story_points": 313.0
     },
@@ -6006,7 +6006,6 @@
       "completed_logged_hours": 58.5,
       "completed_story_points": 85.0,
       "driving_epic_count": 11,
-      "hours_accuracy_percent": 8.6,
       "key": "INIT-1500",
       "logged_hours": 181.5,
       "name": "Forecasting Program",
@@ -6014,6 +6013,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 11.62,
       "summary_id": "initiative:INIT-1500",
       "total_story_points": 229.0
     },
@@ -6022,7 +6022,6 @@
       "completed_logged_hours": 94.5,
       "completed_story_points": 103.0,
       "driving_epic_count": 13,
-      "hours_accuracy_percent": 11.5,
       "key": "INIT-200",
       "logged_hours": 279.5,
       "name": "Revenue And Billing Modernization",
@@ -6030,6 +6029,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 8.72,
       "summary_id": "initiative:INIT-200",
       "total_story_points": 326.0
     },
@@ -6038,7 +6038,6 @@
       "completed_logged_hours": 60.5,
       "completed_story_points": 85.0,
       "driving_epic_count": 12,
-      "hours_accuracy_percent": 8.9,
       "key": "INIT-300",
       "logged_hours": 176.5,
       "name": "Data Foundations",
@@ -6046,6 +6045,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 11.24,
       "summary_id": "initiative:INIT-300",
       "total_story_points": 253.0
     },
@@ -6054,7 +6054,6 @@
       "completed_logged_hours": 84.0,
       "completed_story_points": 95.0,
       "driving_epic_count": 15,
-      "hours_accuracy_percent": 11.1,
       "key": "INIT-500",
       "logged_hours": 253.5,
       "name": "Web Experience Refresh",
@@ -6062,6 +6061,7 @@
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 9.05,
       "summary_id": "initiative:INIT-500",
       "total_story_points": 312.0
     },
@@ -6070,7 +6070,6 @@
       "completed_logged_hours": 72.0,
       "completed_story_points": 77.0,
       "driving_epic_count": 12,
-      "hours_accuracy_percent": 11.7,
       "key": "INIT-600",
       "logged_hours": 215.5,
       "name": "Program Reporting",
@@ -6078,6 +6077,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 8.56,
       "summary_id": "initiative:INIT-600",
       "total_story_points": 249.0
     },
@@ -6086,7 +6086,6 @@
       "completed_logged_hours": 66.0,
       "completed_story_points": 84.0,
       "driving_epic_count": 12,
-      "hours_accuracy_percent": 9.8,
       "key": "INIT-700",
       "logged_hours": 185.5,
       "name": "Security Hardening",
@@ -6094,6 +6093,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 10.18,
       "summary_id": "initiative:INIT-700",
       "total_story_points": 233.0
     },
@@ -6102,7 +6102,6 @@
       "completed_logged_hours": 61.5,
       "completed_story_points": 91.0,
       "driving_epic_count": 11,
-      "hours_accuracy_percent": 8.4,
       "key": "INIT-800",
       "logged_hours": 167.0,
       "name": "Integrations Roadmap",
@@ -6110,6 +6109,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
+      "story_points_per_8_hours": 11.84,
       "summary_id": "initiative:INIT-800",
       "total_story_points": 243.0
     }

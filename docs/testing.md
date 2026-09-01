@@ -88,7 +88,7 @@ Review the generated sandbox `.mpp` and confirm:
 - epics are under the correct initiative/fixVersion summary tasks
 - multi-fixVersion epics have the expected `j2p Row Role`, `Drives Schedule`, and `Primary Schedule Key` values
 - logged hours are visible in the `Logged Hours` custom number field
-- hours accuracy is visible in the `Hours Accuracy %` custom number field
+- story-point rate is visible in the `Story Points per 8 Hours` custom number field
 - predecessor links match Jira blocker relationships; Project may display row IDs such as `12FS` instead of Jira keys
 - changed cells are green
 - dependency review cells are blue

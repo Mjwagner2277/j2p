@@ -375,9 +375,7 @@ class MicrosoftProjectSession:
                     safe_get(task, fields.get("completed_story_points", "Number2"))
                 ),
                 logged_hours=safe_float(safe_get(task, fields.get("logged_hours", "Number3"))),
-                hours_accuracy_percent=safe_float(
-                    safe_get(task, fields.get("hours_accuracy_percent", "Number4"))
-                ),
+                hours_accuracy_percent=safe_float(safe_get(task, story_points_rate_project_field(config))),
                 percent_complete=safe_int(safe_get(task, "PercentComplete")),
                 status=str(safe_get(task, fields.get("jira_status", "Text9"))),
                 target_start=project_date_to_iso(safe_get(task, fields.get("jira_target_start", "Date1"))),
@@ -509,7 +507,7 @@ class MicrosoftProjectSession:
             setattr(task, fields.get("total_story_points", "Number1"), summary.total_story_points)
             setattr(task, fields.get("completed_story_points", "Number2"), summary.completed_story_points)
             setattr(task, fields.get("logged_hours", "Number3"), summary.logged_hours)
-            setattr(task, fields.get("hours_accuracy_percent", "Number4"), summary.hours_accuracy_percent)
+            setattr(task, story_points_rate_project_field(config), summary.hours_accuracy_percent)
             task.PercentComplete = summary.percent_complete
             summary_tasks[summary.summary_id] = task
         return summary_tasks
@@ -607,7 +605,7 @@ class MicrosoftProjectSession:
         setattr(task, fields.get("total_story_points", "Number1"), epic.total_story_points)
         setattr(task, fields.get("completed_story_points", "Number2"), epic.completed_story_points)
         setattr(task, fields.get("logged_hours", "Number3"), epic.logged_hours)
-        setattr(task, fields.get("hours_accuracy_percent", "Number4"), epic.hours_accuracy_percent)
+        setattr(task, story_points_rate_project_field(config), epic.hours_accuracy_percent)
         setattr(task, fields.get("in_planning", "Flag1"), bool(epic.in_planning))
         setattr(task, fields.get("dependency_review_needed", "Flag3"), bool(epic.dependency_review))
         setattr(task, fields.get("drives_schedule", "Flag4"), bool(epic.drives_schedule))
@@ -2005,6 +2003,10 @@ class MicrosoftProjectSession:
 
 def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> str:
     fields = config.get("project_fields", {})
+    story_points_rate_field = story_points_rate_project_field(config)
+    story_points_rate_name = str(
+        config.get("project_field_names", {}).get("story_points_per_8_hours", "Story Points per 8 Hours")
+    )
     mapping = {
         "Name": "Name",
         "% Complete": "% Complete",
@@ -2025,7 +2027,11 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Total Story Points": fields.get("total_story_points", "Number1"),
         "Completed Story Points": fields.get("completed_story_points", "Number2"),
         "Logged Hours": fields.get("logged_hours", "Number3"),
-        "Hours Accuracy %": fields.get("hours_accuracy_percent", "Number4"),
+        story_points_rate_name: story_points_rate_field,
+        "Story Points per 8 Hours": story_points_rate_field,
+        "Story Points Per 8 Hours": story_points_rate_field,
+        "SP per 8 Hours": story_points_rate_field,
+        "Hours Accuracy %": story_points_rate_field,
         "In Planning": fields.get("in_planning", "Flag1"),
         "Unmatched Project Task": fields.get("unmatched_project_task", "Flag2"),
         "Dependency Review": fields.get("dependency_review", "Text8"),
@@ -2064,7 +2070,7 @@ def review_table_standard_columns(config: Dict[str, Any]) -> List[Tuple[str, str
         ("total_story_points", fields.get("total_story_points", "Number1")),
         ("completed_story_points", fields.get("completed_story_points", "Number2")),
         ("logged_hours", fields.get("logged_hours", "Number3")),
-        ("hours_accuracy_percent", fields.get("hours_accuracy_percent", "Number4")),
+        ("story_points_per_8_hours", story_points_rate_project_field(config)),
         ("in_planning", fields.get("in_planning", "Flag1")),
         ("unmatched_project_task", fields.get("unmatched_project_task", "Flag2")),
         ("dependency_review_needed", fields.get("dependency_review_needed", "Flag3")),
@@ -2115,8 +2121,11 @@ def review_table_column_lookup(
         "story_points": "total_story_points",
         "points": "total_story_points",
         "completed_points": "completed_story_points",
-        "accuracy": "hours_accuracy_percent",
-        "hours_accuracy": "hours_accuracy_percent",
+        "accuracy": "story_points_per_8_hours",
+        "hours_accuracy": "story_points_per_8_hours",
+        "story_points_per_8_hours": "story_points_per_8_hours",
+        "sp_per_8_hours": "story_points_per_8_hours",
+        "points_per_8_hours": "story_points_per_8_hours",
         "dependency": "dependency_review",
         "dependency_needed": "dependency_review_needed",
     }
@@ -2180,6 +2189,16 @@ def project_column_title(column: str, config: Dict[str, Any]) -> str:
         "Start": "Start",
     }
     return titles.get(column, column)
+
+
+def story_points_rate_project_field(config: Dict[str, Any]) -> str:
+    fields = config.get("project_fields", {})
+    return str(
+        fields.get(
+            "story_points_per_8_hours",
+            fields.get("hours_accuracy_percent", "Number4"),
+        )
+    )
 
 
 def project_column_aliases(column: str, config: Dict[str, Any]) -> List[str]:
