@@ -1,5 +1,11 @@
 severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,UnparsedDate,DATA-3034,DATA,,,,not-a-date,,,Could not parse date 'not-a-date' on CSV row 146.,Use YYYY-MM-DD or configure a supported export date format.,146
-Warning,CircularDependencySkipped,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,121
-Info,DependencyChange,DATA-3009,DATA,Epic,Data platform blue circular dependency pair,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,121
-Info,ChangedField,DATA-3034,DATA,Epic,Data platform unparsed date warning,Jira Target End,2026-10-19,not-a-date,changed_cell,Jira Target End changed from '2026-10-19' to 'not-a-date'.,Review the changed sandbox cell.,146
+Warning,UnparsedDate,DATA-3034,DATA,,,,not-a-date,,,Could not parse date 'not-a-date' on CSV row 31.,Use YYYY-MM-DD or configure a supported export date format.,31
+Warning,CircularDependencySkipped,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,30
+Info,ChangedField,DATA-3008,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency A,% Complete,50,45,changed_cell,% Complete changed from '50' to '45'.,Review the changed sandbox cell.,29
+Info,ChangedField,DATA-3008,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency A,Total Story Points,20,22,changed_cell,Total Story Points changed from '20' to '22'.,Review the changed sandbox cell.,29
+Info,ChangedField,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,% Complete,32,22,changed_cell,% Complete changed from '32' to '22'.,Review the changed sandbox cell.,30
+Info,ChangedField,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Total Story Points,19,27,changed_cell,Total Story Points changed from '19' to '27'.,Review the changed sandbox cell.,30
+Info,DependencyChange,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,30
+Info,ChangedField,DATA-3034,DATA,Epic,Client Walkthrough - Forecast refresh invalid date example,% Complete,46,34,changed_cell,% Complete changed from '46' to '34'.,Review the changed sandbox cell.,31
+Info,ChangedField,DATA-3034,DATA,Epic,Client Walkthrough - Forecast refresh invalid date example,Total Story Points,24,32,changed_cell,Total Story Points changed from '24' to '32'.,Review the changed sandbox cell.,31
+Info,ChangedField,DATA-3034,DATA,Epic,Client Walkthrough - Forecast refresh invalid date example,Jira Target End,2026-10-19,not-a-date,changed_cell,Jira Target End changed from '2026-10-19' to 'not-a-date'.,Review the changed sandbox cell.,31

@@ -563,7 +563,9 @@ def schedule_driver_candidate(plan: RunPlan) -> Optional[AuditItem]:
     preferred = [
         item
         for item in date_changes
-        if "red" in item.summary.lower() or "cascade" in item.summary.lower()
+        if "red" in item.summary.lower()
+        or "cascade" in item.summary.lower()
+        or "schedule driver" in item.summary.lower()
     ]
     return (preferred or date_changes or [None])[0]
 

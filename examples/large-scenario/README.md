@@ -2,6 +2,8 @@
 
 This folder is the full training scenario for j2p. It is intentionally larger than the quick-start files so reviewers can practice with a project-wide Jira export that feels closer to a real portfolio.
 
+Rows 2-34 start the client walkthrough. Rows 17-34 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
+
 ## Files
 
 | File | Purpose |
@@ -13,7 +15,7 @@ This folder is the full training scenario for j2p. It is intentionally larger th
 | `report-example\j2p-run-updated-1200\Manager-Review-Report.html` | Generated manager report for the updated CSV |
 | `report-example\j2p-run-updated-1200\by-project-key\index.csv` | Index of the per-project-key CSV outputs |
 
-The CSVs are deterministic generated fixtures. Rebuild them with:
+The CSVs are authored fixtures maintained by a generator so line counts and scale rows stay consistent. They are not random. Rebuild them only when changing the training scenario:
 
 ```powershell
 py -3.14 .\scripts\generate_large_examples.py
@@ -40,6 +42,8 @@ Expected result:
 1200
 1200
 ```
+
+Then open the updated CSV and look at rows 17-34, then rows 201-202. Those rows are the complete teaching path.
 
 ## Step 2: Review The Prefix Rollup Mapping
 
@@ -148,21 +152,28 @@ examples\large-scenario\expected-review-cases.csv
 
 | Color | Case | Example Jira Key | What The Reviewer Should Learn |
 | --- | --- | --- | --- |
-| Green | Changed Jira value | `CORE-1000` | The Jira summary changed, so the sandbox task name is updated and logged |
-| Green | Percent/date changes | `CORE-1001` | Child story completion changes percent complete; Jira target dates can also change |
-| Green | New epic | `CORE-1980` | A new valid epic is added to the sandbox and appears in `Added Epics` |
-| Green | Dependency changed | `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
-| Red | Critical-path root finish change | `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
-| Green | Downstream cascade item | `CORE-1005` | This is the intended downstream dependency item after `CORE-1004` |
-| Yellow/amber | Unknown prefix | `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
-| Yellow/amber | Missing initiative parent | `CORE-1049` | `CORE` uses initiative rollup, so a missing parent excludes the epic |
-| Yellow/amber | Missing fixVersion | `PLAT-4029` | `PLAT` uses fixVersion rollup, so a missing fixVersion excludes the epic |
-| Yellow/amber | Multiple fixVersions | `OPS-5019` | Multiple fixVersions are excluded by default because the rollup would be ambiguous |
-| Yellow/amber | Baseline-only unmatched item | `CORE-1048` | The item existed in the baseline but is not in the updated plan |
-| Blue | Missing dependency target | `CORE-1006` | Jira references `EXT-999`, which is not an included epic |
-| Blue | Self dependency | `WEB-2008` | An epic cannot block itself, so the dependency is skipped and reported |
-| Blue | Circular dependency | `DATA-3008` and `DATA-3009` | One dependency is skipped to prevent a schedule cycle |
-| Gray/green-gray | In planning | `WEB-2010` | The epic is included but has no pointed child stories/tasks |
+| Green | Changed Jira value | updated row 17, `CORE-1000` | The Jira summary changed, so the sandbox task name is updated and logged |
+| Green | Percent/date changes | updated row 18, `CORE-1001` | Child story completion changes percent complete; Jira target dates can also change |
+| Green | New epic | updated row 25, `CORE-1980` | A new valid epic is added to the sandbox and appears in `Added Epics` |
+| Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
+| Red | Critical-path root finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
+| Green | Downstream cascade item | updated row 22, `CORE-1005` | This is the intended downstream dependency item after `CORE-1004` |
+| Yellow/amber | Unknown prefix | updated row 34, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
+| Yellow/amber | Missing initiative parent | updated row 26, `CORE-1049` | `CORE` uses initiative rollup, so a missing parent excludes the epic |
+| Yellow/amber | Missing fixVersion | updated row 32, `PLAT-4029` | `PLAT` uses fixVersion rollup, so a missing fixVersion excludes the epic |
+| Yellow/amber | Multiple fixVersions | updated row 33, `OPS-5019` | Multiple fixVersions are excluded by default because the rollup would be ambiguous |
+| Yellow/amber | Baseline-only unmatched item | baseline row 25, `CORE-1048` | The item existed in the baseline but is not in the updated plan |
+| Blue | Missing dependency target | updated row 23, `CORE-1006` | Jira references `EXT-999`, which is not an included epic |
+| Blue | Self dependency | updated row 27, `WEB-2008` | An epic cannot block itself, so the dependency is skipped and reported |
+| Blue | Circular dependency | updated rows 29-30, `DATA-3008` and `DATA-3009` | One dependency is skipped to prevent a schedule cycle |
+| Gray/green-gray | In planning | updated row 28, `WEB-2010` | The epic is included but has no pointed child stories/tasks |
+
+Data-quality rows that do not produce Project cell colors:
+
+| Case | Example Row | What The Reviewer Should Learn |
+| --- | --- | --- |
+| Blank Jira key | updated row 201 | The CSV row is skipped and reported in `Reviewer Action Needed` |
+| Orphan child story | updated row 202, `CORE-899999` | The story is not counted toward any epic because `Epic Link` is blank |
 
 ## Step 6: Review Per-Project-Key CSVs
 

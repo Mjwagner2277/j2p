@@ -68,36 +68,143 @@ PREFIX_SPECS = [
     PrefixSpec("CORE", 1000, 50, "initiative", ("INIT-100", "INIT-200", "INIT-700", "INIT-800"), ()),
     PrefixSpec("WEB", 2000, 45, "initiative", ("INIT-500", "INIT-100", "INIT-1200"), ()),
     PrefixSpec("DATA", 3000, 35, "initiative", ("INIT-300", "INIT-600", "INIT-1500"), ()),
-    PrefixSpec("PLAT", 4000, 30, "fixVersion", ("INIT-400",), ("Platform Q1", "Platform Q2", "Shared Services 2026")),
+    PrefixSpec(
+        "PLAT",
+        4000,
+        30,
+        "fixVersion",
+        ("INIT-400",),
+        ("Platform Q1", "Platform Q2", "Shared Services 2026"),
+    ),
     PrefixSpec("OPS", 5000, 20, "fixVersion", ("INIT-400",), ("Operations Q1", "Operations Q2")),
     PrefixSpec("UNK", 9000, 4, "initiative", ("INIT-100",), ()),
 ]
 
-SPECIAL_DESCRIPTIONS = {
-    "CORE-1000": "green changed name",
-    "CORE-1001": "green percent/date changes",
-    "CORE-1002": "completed since last update",
-    "CORE-1003": "rollup move",
-    "CORE-1004": "intended red schedule cascade root when run through Microsoft Project",
-    "CORE-1005": "intended downstream schedule cascade item",
-    "CORE-1006": "blue missing dependency target",
-    "CORE-1007": "green dependency change",
-    "CORE-1048": "baseline-only unmatched Project task",
-    "CORE-1049": "yellow missing initiative rollup in updated CSV",
-    "WEB-2008": "blue self dependency",
-    "WEB-2010": "green-gray in planning",
-    "DATA-3008": "blue circular dependency pair",
-    "DATA-3009": "blue circular dependency pair",
-    "DATA-3034": "unparsed date warning",
-    "PLAT-4029": "yellow missing fixVersion in updated CSV",
-    "OPS-5019": "yellow multiple fixVersions in updated CSV",
-    "CORE-1980": "green added epic",
-    "UNK-9000": "yellow unknown Jira key prefix",
+CURATED_ORDER = [
+    "CORE-1000",
+    "CORE-1001",
+    "CORE-1002",
+    "CORE-1003",
+    "CORE-1004",
+    "CORE-1005",
+    "CORE-1006",
+    "CORE-1007",
+    "CORE-1048",
+    "CORE-1980",
+    "CORE-1049",
+    "WEB-2008",
+    "WEB-2010",
+    "DATA-3008",
+    "DATA-3009",
+    "DATA-3034",
+    "PLAT-4029",
+    "OPS-5019",
+    "UNK-9000",
+]
+
+CURATED_SORT = {key: index for index, key in enumerate(CURATED_ORDER)}
+CURATED_SORT["CORE-1980"] = CURATED_SORT["CORE-1048"]
+
+BASELINE_CURATED_SUMMARIES = {
+    "CORE-1000": "Client Walkthrough - Identity API name before Jira rename",
+    "CORE-1001": "Client Walkthrough - Login service progress example",
+    "CORE-1002": "Client Walkthrough - Access audit completion example",
+    "CORE-1003": "Client Walkthrough - Billing integration rollup move example",
+    "CORE-1004": "Client Walkthrough - Payment cutover schedule driver candidate",
+    "CORE-1005": "Client Walkthrough - Payment cutover downstream dependency",
+    "CORE-1006": "Client Walkthrough - Vendor gateway missing dependency example",
+    "CORE-1007": "Client Walkthrough - Account settings dependency change example",
+    "CORE-1048": "Client Walkthrough - Legacy schedule item present only in baseline",
+    "CORE-1049": "Client Walkthrough - Marketplace experiment missing rollup example",
+    "WEB-2008": "Client Walkthrough - Web launch self dependency example",
+    "WEB-2010": "Client Walkthrough - Design system discovery with no pointed child work",
+    "DATA-3008": "Client Walkthrough - Warehouse migration circular dependency A",
+    "DATA-3009": "Client Walkthrough - Warehouse migration circular dependency B",
+    "DATA-3034": "Client Walkthrough - Forecast refresh invalid date example",
+    "PLAT-4029": "Client Walkthrough - Deployment runner fixVersion example",
+    "OPS-5019": "Client Walkthrough - Release readiness fixVersion ambiguity example",
+    "UNK-9000": "Client Walkthrough - Unknown team prefix example",
 }
+
+UPDATED_CURATED_SUMMARIES = {
+    **BASELINE_CURATED_SUMMARIES,
+    "CORE-1000": "Client Walkthrough - Identity API renamed in Jira",
+    "CORE-1980": "Client Walkthrough - Mobile onboarding added after baseline",
+}
+
+SCALE_TOPICS = {
+    "CORE": [
+        "Profile service rollout",
+        "Entitlement cleanup",
+        "Notification routing",
+        "Session management",
+        "Account recovery",
+        "API gateway refresh",
+        "Consent preference updates",
+        "Fraud signal ingestion",
+    ],
+    "WEB": [
+        "Search results tuning",
+        "Checkout web flow",
+        "Homepage personalization",
+        "Accessibility remediation",
+        "Content publishing",
+        "Navigation refresh",
+        "Localization pass",
+        "Experiment cleanup",
+    ],
+    "DATA": [
+        "Warehouse model refresh",
+        "Pipeline observability",
+        "Metrics certification",
+        "Forecast data mart",
+        "Streaming ingestion",
+        "Retention model update",
+        "Quality rule expansion",
+        "Analytics contract cleanup",
+    ],
+    "PLAT": [
+        "Kubernetes platform upgrade",
+        "Build runner rotation",
+        "Secrets management",
+        "Shared logging",
+        "Service mesh controls",
+        "Environment provisioning",
+        "Artifact retention",
+        "Deployment guardrails",
+    ],
+    "OPS": [
+        "Release checklist automation",
+        "Incident readiness",
+        "Support workflow routing",
+        "Change advisory preparation",
+        "Runbook modernization",
+        "Capacity review",
+        "Monitoring handoff",
+        "Service review cadence",
+    ],
+    "UNK": [
+        "Unmapped intake",
+        "Legacy partner request",
+        "Triage placeholder",
+        "Unassigned portfolio item",
+    ],
+}
+
+STORY_PHASES = [
+    "Discovery",
+    "Implementation",
+    "Validation",
+    "Documentation",
+    "Release readiness",
+    "Stakeholder review",
+    "Operational handoff",
+    "Post-release check",
+]
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate deterministic 1,200-line Jira CSV examples.")
+    parser = argparse.ArgumentParser(description="Generate authored 1,200-line Jira CSV examples.")
     parser.add_argument(
         "--check",
         action="store_true",
@@ -118,7 +225,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             path.write_text(text, encoding="utf-8")
 
     action = "Verified" if args.check else "Generated"
-    print(f"{action} {len(outputs)} large example CSV files with {LINE_TARGET} lines each.")
+    print(f"{action} {len(outputs)} authored large example CSV files with {LINE_TARGET} lines each.")
     return 0
 
 
@@ -163,7 +270,14 @@ def epic_rows(variant: str) -> List[Dict[str, str]]:
                 key = "CORE-1980"
             epics.append(make_epic(spec, key, offset, sequence, variant))
             sequence += 1
-    return epics
+    return sorted(epics, key=epic_sort_key)
+
+
+def epic_sort_key(epic: Dict[str, str]) -> tuple[int, str]:
+    key = epic["Issue key"]
+    if key in CURATED_SORT:
+        return CURATED_SORT[key], key
+    return len(CURATED_SORT) + stable_number(key), key
 
 
 def make_epic(
@@ -183,12 +297,9 @@ def make_epic(
     resolution = ""
     start = date(2026, 2, 2) + timedelta(days=(sequence % 28) * 7 + (sequence // 28) * 21)
     finish = start + timedelta(days=28 + (offset % 5) * 7)
-    summary = f"{team_name(spec.prefix)} epic {offset + 1:02d}"
+    summary = epic_summary(spec.prefix, key, offset, variant)
     successors = ""
     predecessors = ""
-
-    if key in SPECIAL_DESCRIPTIONS:
-        summary = f"{team_name(spec.prefix)} {SPECIAL_DESCRIPTIONS[key]}"
 
     if key == "CORE-1002":
         status = "Done" if variant == "updated" else "In Progress"
@@ -211,7 +322,6 @@ def make_epic(
         start = date(2026, 9, 8)
         finish = date(2026, 10, 20)
     if key == "CORE-1000" and variant == "updated":
-        summary += " - renamed in Jira"
         finish += timedelta(days=7)
     if key == "CORE-1001" and variant == "updated":
         start += timedelta(days=3)
@@ -249,13 +359,22 @@ def make_epic(
     )
 
 
+def epic_summary(prefix: str, key: str, offset: int, variant: str) -> str:
+    summaries = UPDATED_CURATED_SUMMARIES if variant == "updated" else BASELINE_CURATED_SUMMARIES
+    if key in summaries:
+        return summaries[key]
+    topics = SCALE_TOPICS[prefix]
+    topic = topics[offset % len(topics)]
+    return f"Scale Rows - {team_name(prefix)} - {topic} wave {offset + 1:02d}"
+
+
 def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, str]]:
     stories = [
         row(
             key="",
             issue_id="399998",
             issue_type="Story",
-            summary="Blank-key row included to show CSV row missing Jira key handling",
+            summary="Client Walkthrough - Blank-key story row for CSV quality warning",
             story_points="3",
             status="To Do",
         ),
@@ -263,16 +382,17 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
             key="CORE-899999",
             issue_id="399999",
             issue_type="Story",
-            summary="Orphan story with no Epic Link",
+            summary="Client Walkthrough - Orphan child story with no Epic Link",
             story_points="5",
             status="Done",
             resolution="Done",
         ),
     ]
-    eligible_keys = [item["Issue key"] for item in epics if has_child_stories(item, variant)]
-    counts = story_counts(eligible_keys)
+    eligible_epics = [item for item in epics if has_child_stories(item, variant)]
+    counts = story_counts([item["Issue key"] for item in eligible_epics])
     sequence = 0
-    for epic_key in eligible_keys:
+    for epic in eligible_epics:
+        epic_key = epic["Issue key"]
         for local_index in range(counts[epic_key]):
             sequence += 1
             points = story_points(epic_key, local_index)
@@ -284,9 +404,9 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
                     key=f"{prefix}-{700000 + sequence}",
                     issue_id=str(400000 + sequence),
                     issue_type=issue_type,
-                    summary=f"{issue_type} {local_index + 1} for {epic_key}",
+                    summary=child_summary(issue_type, epic["Summary"], local_index),
                     epic_link=epic_key,
-                    fix_versions="Portfolio 2026",
+                    fix_versions=epic.get("Fix versions", "Portfolio 2026"),
                     story_points=str(points),
                     status=status,
                     resolution="Done" if status == "Done" else "",
@@ -339,14 +459,20 @@ def story_points(epic_key: str, local_index: int) -> int:
     return values[(stable_number(epic_key) + local_index) % len(values)]
 
 
+def child_summary(issue_type: str, epic_summary_text: str, local_index: int) -> str:
+    phase = STORY_PHASES[local_index % len(STORY_PHASES)]
+    cleaned_epic = epic_summary_text.replace("Client Walkthrough - ", "")
+    return f"{phase} {issue_type.lower()} for {cleaned_epic}"
+
+
 def team_name(prefix: str) -> str:
     return {
-        "CORE": "Core platform",
-        "WEB": "Web experience",
-        "DATA": "Data platform",
-        "PLAT": "Platform services",
+        "CORE": "Core Product",
+        "WEB": "Web Experience",
+        "DATA": "Data Platform",
+        "PLAT": "Platform Services",
         "OPS": "Operations",
-        "UNK": "Unknown prefix",
+        "UNK": "Unknown Prefix",
     }.get(prefix, prefix)
 
 

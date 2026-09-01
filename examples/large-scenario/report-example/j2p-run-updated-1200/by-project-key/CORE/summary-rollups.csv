@@ -1,5 +1,5 @@
 rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
-INIT-100,CORE,Customer Identity And Access,initiative,13,280.0,89.0,32
-INIT-200,CORE,Revenue And Billing Modernization,initiative,13,343.0,122.0,36
-INIT-700,CORE,Security Hardening,initiative,12,246.0,98.0,40
-INIT-800,CORE,Integrations Roadmap,initiative,11,256.0,91.0,36
+INIT-100,CORE,Customer Identity And Access,initiative,13,263.0,80.0,30
+INIT-200,CORE,Revenue And Billing Modernization,initiative,13,324.0,121.0,37
+INIT-700,CORE,Security Hardening,initiative,12,233.0,95.0,41
+INIT-800,CORE,Integrations Roadmap,initiative,11,243.0,91.0,37
