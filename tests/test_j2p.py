@@ -650,20 +650,18 @@ class J2PPlanningTests(unittest.TestCase):
             [
                 "Name",
                 "Text1",
-                "Text5",
                 "Resource Group",
                 "Text8",
                 "Text9",
                 "Start",
                 "Finish",
                 "% Complete",
-                "Text11",
-                "Text12",
                 "Predecessors",
             ],
         )
         self.assertNotIn("Text10", columns)
         self.assertNotIn("Text4", columns)
+        self.assertNotIn("Text5", columns)
         self.assertNotIn("Text7", columns)
         self.assertNotIn("Text3", columns)
         self.assertNotIn("Date1", columns)
@@ -676,6 +674,8 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertNotIn("Flag2", columns)
         self.assertNotIn("Flag3", columns)
         self.assertNotIn("Flag4", columns)
+        self.assertNotIn("Text11", columns)
+        self.assertNotIn("Text12", columns)
 
     def test_review_table_columns_can_be_pruned_by_config(self) -> None:
         config = load_config(
@@ -753,6 +753,7 @@ class J2PPlanningTests(unittest.TestCase):
             epics={},
             audit_items=[
                 AuditItem("Info", "ChangedField", jira_key="CORE-1", field="Jira Target End", color="changed_cell"),
+                AuditItem("Review", "RollupMove", jira_key="CORE-1", field="Rollup Key", color="changed_cell"),
                 AuditItem("Info", "ChangedField", jira_key="CORE-1", field="Finish", color="changed_cell"),
             ],
         )
@@ -772,6 +773,7 @@ class J2PPlanningTests(unittest.TestCase):
         MicrosoftProjectSession.apply_review_formatting(session, plan, config)
 
         self.assertNotIn("Date2", prepared_columns)
+        self.assertNotIn("Text5", prepared_columns)
         self.assertIn("Finish", prepared_columns)
         self.assertEqual(colored_columns, ["Finish"])
 

@@ -37,7 +37,7 @@ Custom task fields used by j2p:
 
 Review table visibility:
 
-- Exposed columns: `jira_key`, `summary`, `rollup_key`, `resource_group`, `dependency_review`, `jira_status`, `start`, `finish`, `percent_complete`, `row_role`, `fix_version`, `predecessors`
+- Exposed columns: `jira_key`, `summary`, `resource_group`, `dependency_review`, `jira_status`, `start`, `finish`, `percent_complete`, `predecessors`
 - Auto-include changed/review columns: no
 
 Color key:
