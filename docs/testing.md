@@ -24,7 +24,7 @@ The smoke test verifies:
 - all Python files compile
 - initiative-mode validation produces a complete report bundle
 - follow-on validation against saved state reports expected manager-review categories
-- fixVersion-mode validation produces a complete report bundle
+- fixVersion-mode validation produces a complete report bundle and default multi-fixVersion reference rows
 - per-project-key split CSVs are written
 - large 1,200-line baseline/update CSV fixtures have not drifted
 - large scenario reports expected manager-review categories and per-project-key CSVs
@@ -86,6 +86,7 @@ Review the generated sandbox `.mpp` and confirm:
 - sandbox `.mpp` was timestamped
 - Jira Key and other custom fields were created/renamed
 - epics are under the correct initiative/fixVersion summary tasks
+- multi-fixVersion epics have the expected `j2p Row Role`, `Drives Schedule`, and `Primary Schedule Key` values
 - predecessor links match Jira blocker relationships
 - changed cells are green
 - dependency review cells are blue

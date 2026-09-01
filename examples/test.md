@@ -108,7 +108,8 @@ py -3.14 -m j2p validate `
 Expected:
 
 - `TEAM-501` and `TEAM-502` are included under fixVersion `Portal 2026`.
-- `TEAM-503` is excluded because it has multiple fixVersions.
+- `TEAM-503` has two fixVersions. Because `reference` is the default, the first fixVersion gets the scheduled primary row and the second fixVersion gets a non-driving reference row.
+- The manager report includes a `Multi-FixVersion Epics` section that explains the primary/reference placement.
 
 ## Step 4: Update A Real Sandbox
 

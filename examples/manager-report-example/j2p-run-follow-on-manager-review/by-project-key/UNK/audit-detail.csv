@@ -1,2 +1,2 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,ExcludedUnknownPrefix,UNK-106,UNK,Epic,Unknown team epic,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,10
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,ExcludedUnknownPrefix,UNK-106,,UNK,Epic,Unknown team epic,Resource Group,UNK,,review_needed,Epic key prefix 'UNK' is not mapped to a resource group.,Add the prefix to resource_groups or confirm the epic should be excluded.,10

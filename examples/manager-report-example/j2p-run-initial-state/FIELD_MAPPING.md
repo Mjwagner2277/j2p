@@ -7,7 +7,10 @@ These task custom fields are used by j2p when it creates or updates a sandbox Pr
 | `completed_story_points` | `Number2` | Completed Story Points |
 | `dependency_review` | `Text8` | Dependency Review |
 | `dependency_review_needed` | `Flag3` | Dependency Review Needed |
+| `drives_schedule` | `Flag4` | Drives Schedule |
+| `fix_version` | `Text12` | Jira Fix Version |
 | `in_planning` | `Flag1` | In Planning |
+| `j2p_key` | `Text10` | j2p Unique Key |
 | `jira_issue_id` | `Text2` | Jira Issue ID |
 | `jira_issue_type` | `Text3` | Jira Issue Type |
 | `jira_key` | `Text1` | Jira Key |
@@ -15,9 +18,11 @@ These task custom fields are used by j2p when it creates or updates a sandbox Pr
 | `jira_status` | `Text9` | Jira Status |
 | `jira_target_end` | `Date2` | Jira Target End |
 | `jira_target_start` | `Date1` | Jira Target Start |
+| `primary_schedule_key` | `Text13` | Primary Schedule Key |
 | `resource_group` | `Text6` | Resource Group |
 | `rollup_key` | `Text5` | Rollup Key |
 | `rollup_mode` | `Text4` | Rollup Mode |
+| `row_role` | `Text11` | j2p Row Role |
 | `total_story_points` | `Number1` | Total Story Points |
 | `unmatched_project_task` | `Flag2` | Unmatched Project Task |
 

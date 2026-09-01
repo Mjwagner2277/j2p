@@ -15,6 +15,9 @@ resource_groups:
   PLAT: Platform Engineering
   DATA: Data Engineering
 
+multi_fixversion_policy:
+  default: reference
+
 columns:
   jira_key:
     - Issue key
@@ -57,7 +60,6 @@ columns:
 
 behavior:
   unknown_prefix: exclude
-  multiple_fix_versions: exclude
   hide_completed_epics: true
   write_state_on_validate: false
 
@@ -71,10 +73,15 @@ project_fields:
   jira_key_prefix: Text7
   dependency_review: Text8
   jira_status: Text9
+  j2p_key: Text10
+  row_role: Text11
+  fix_version: Text12
+  primary_schedule_key: Text13
   total_story_points: Number1
   completed_story_points: Number2
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3
+  drives_schedule: Flag4
   jira_target_start: Date1
   jira_target_end: Date2

@@ -14,3 +14,7 @@ resource_groups:
   TEAM: Product Delivery
   PLAT: Platform Engineering
   DATA: Data Engineering
+
+multi_fixversion_policy:
+  default: reference
+  DATA: split

@@ -1,4 +1,4 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
-INIT-100,WEB,Customer Identity And Access,initiative,15,315.0,106.0,34
-INIT-1200,WEB,Search And Discovery,initiative,15,324.0,103.0,32
-INIT-500,WEB,Web Experience Refresh,initiative,15,336.0,98.0,29
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,percent_complete
+INIT-100,WEB,Customer Identity And Access,initiative,15,15,0,307.0,106.0,35
+INIT-1200,WEB,Search And Discovery,initiative,15,15,0,324.0,103.0,32
+INIT-500,WEB,Web Experience Refresh,initiative,15,15,0,318.0,98.0,31

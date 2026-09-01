@@ -1,2 +1,2 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,CsvRowMissingJiraKey,,UNASSIGNED,,,,,,,CSV row 201 has no Jira key and was skipped.,Correct the Jira export or remove the blank row.,201
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,CsvRowMissingJiraKey,,,UNASSIGNED,,,,,,,CSV row 201 has no Jira key and was skipped.,Correct the Jira export or remove the blank row.,201

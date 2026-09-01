@@ -1,2 +1,2 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,SelfDependencySkipped,WEB-2008,WEB,Epic,Client Walkthrough - Web launch self dependency example,Dependency Review,,,dependency_review,Skipped self-dependency WEB-2008 -> WEB-2008.,Correct the Jira blocker link.,27
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,SelfDependencySkipped,WEB-2008,WEB-2008,WEB,Epic,Client Walkthrough - Web launch self dependency example,Dependency Review,,,dependency_review,Skipped self-dependency WEB-2008 -> WEB-2008.,Correct the Jira blocker link.,27

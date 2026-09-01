@@ -1,2 +1,2 @@
-jira_key,project_key,summary,status,rollup_mode,rollup_key,rollup_name,resource_group,key_prefix,total_story_points,completed_story_points,percent_complete,in_planning,completed,target_start,target_end,predecessors,successors,dependency_review
-PLAT-201,PLAT,Shared deployment pipeline,Done,fixVersion,Portal 2026,Portal 2026,Platform Engineering,PLAT,8.0,8.0,100,False,True,2026-09-01,2026-09-20,,,
+jira_key,schedule_key,project_key,summary,status,rollup_mode,rollup_key,rollup_name,row_role,fix_version,drives_schedule,primary_schedule_key,resource_group,key_prefix,total_story_points,completed_story_points,percent_complete,in_planning,completed,target_start,target_end,predecessors,successors,dependency_review
+PLAT-201,PLAT-201,PLAT,Shared deployment pipeline,Done,fixVersion,Portal 2026,Portal 2026,Scheduled,Portal 2026,Yes,PLAT-201,Platform Engineering,PLAT,8.0,8.0,100,No,Yes,2026-09-01,2026-09-20,,,

@@ -44,9 +44,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "predecessors": ["Inward issue link (Blocks)", "Blocked by", "is blocked by"],
     },
     "resource_groups": {},
+    "multi_fixversion_policy": {
+        "default": "reference",
+    },
     "behavior": {
         "unknown_prefix": "exclude",
-        "multiple_fix_versions": "exclude",
         "hide_completed_epics": True,
         "write_state_on_validate": False,
     },
@@ -60,11 +62,16 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "jira_key_prefix": "Text7",
         "dependency_review": "Text8",
         "jira_status": "Text9",
+        "j2p_key": "Text10",
+        "row_role": "Text11",
+        "fix_version": "Text12",
+        "primary_schedule_key": "Text13",
         "total_story_points": "Number1",
         "completed_story_points": "Number2",
         "in_planning": "Flag1",
         "unmatched_project_task": "Flag2",
         "dependency_review_needed": "Flag3",
+        "drives_schedule": "Flag4",
         "jira_target_start": "Date1",
         "jira_target_end": "Date2",
     },
@@ -78,11 +85,16 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "jira_key_prefix": "Jira Key Prefix",
         "dependency_review": "Dependency Review",
         "jira_status": "Jira Status",
+        "j2p_key": "j2p Unique Key",
+        "row_role": "j2p Row Role",
+        "fix_version": "Jira Fix Version",
+        "primary_schedule_key": "Primary Schedule Key",
         "total_story_points": "Total Story Points",
         "completed_story_points": "Completed Story Points",
         "in_planning": "In Planning",
         "unmatched_project_task": "Unmatched Project Task",
         "dependency_review_needed": "Dependency Review Needed",
+        "drives_schedule": "Drives Schedule",
         "jira_target_start": "Jira Target Start",
         "jira_target_end": "Jira Target End",
     },
@@ -147,6 +159,32 @@ def normalize_config(config: Dict[str, Any]) -> None:
     config["resource_groups"] = {
         str(k).upper(): str(v) for k, v in config.get("resource_groups", {}).items()
     }
+
+    policy_config = config.get("multi_fixversion_policy", {})
+    if policy_config is None:
+        policy_config = {}
+    if isinstance(policy_config, str):
+        policy_config = {"default": policy_config}
+    if not isinstance(policy_config, dict):
+        raise ConfigError("multi_fixversion_policy must be a YAML mapping or a scalar policy.")
+    normalized_policy = {"default": "reference"}
+    for prefix, policy in policy_config.items():
+        policy_text = str(policy).strip().lower()
+        if policy_text not in {"reference", "split"}:
+            raise ConfigError(
+                f"multi_fixversion_policy.{prefix} must be either 'reference' or 'split'."
+            )
+        prefix_text = str(prefix).strip()
+        policy_key = "default" if prefix_text.lower() == "default" else prefix_text.upper()
+        normalized_policy[policy_key] = policy_text
+    config["multi_fixversion_policy"] = normalized_policy
+
+    legacy_policy = config.get("behavior", {}).get("multiple_fix_versions")
+    if legacy_policy is not None:
+        raise ConfigError(
+            "behavior.multiple_fix_versions is no longer supported. "
+            "Use multi_fixversion_policy with 'reference' or 'split'."
+        )
 
 
 def ensure_list(value: Any) -> List[Any]:

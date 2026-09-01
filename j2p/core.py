@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import html
 import json
 import re
@@ -26,6 +27,7 @@ class AuditItem:
     severity: str
     category: str
     jira_key: str = ""
+    schedule_key: str = ""
     issue_type: str = ""
     summary: str = ""
     field: str = ""
@@ -78,6 +80,11 @@ class PlanEpic:
     successors: List[str] = field(default_factory=list)
     dependency_review: str = ""
     source_row: Optional[int] = None
+    jira_key: str = ""
+    row_role: str = "Scheduled"
+    fix_version: str = ""
+    drives_schedule: bool = True
+    primary_schedule_key: str = ""
 
 
 @dataclass
@@ -91,11 +98,14 @@ class PlanSummary:
     completed_story_points: float
     percent_complete: int
     child_epic_count: int
+    driving_epic_count: int = 0
+    reference_epic_count: int = 0
 
 
 @dataclass
 class ProjectTaskSnapshot:
     key: str
+    jira_key: str = ""
     name: str = ""
     issue_id: str = ""
     issue_type: str = ""
@@ -113,6 +123,10 @@ class ProjectTaskSnapshot:
     finish: str = ""
     predecessors: List[str] = field(default_factory=list)
     successors: List[str] = field(default_factory=list)
+    row_role: str = ""
+    fix_version: str = ""
+    drives_schedule: Optional[bool] = None
+    primary_schedule_key: str = ""
     is_summary: bool = False
     active: Optional[bool] = None
     source: str = ""
@@ -128,6 +142,17 @@ class RunPlan:
     summaries: Dict[str, PlanSummary]
     epics: Dict[str, PlanEpic]
     audit_items: List[AuditItem]
+
+
+@dataclass(frozen=True)
+class RollupAssignment:
+    schedule_key: str
+    rollup_key: str
+    rollup_name: str
+    row_role: str
+    fix_version: str
+    drives_schedule: bool
+    primary_schedule_key: str
 
 
 class CsvTable:
@@ -271,7 +296,7 @@ def build_run_plan(
             continue
 
         rollup_mode = rollup_mode_for_prefix(config, prefix)
-        rollup_key, rollup_name, rollup_error = resolve_rollup(epic, rollup_mode, initiatives, config)
+        assignments, rollup_error = resolve_rollup_assignments(epic, rollup_mode, initiatives, config, prefix)
         if rollup_error:
             excluded_count += 1
             audit.append(
@@ -314,25 +339,32 @@ def build_run_plan(
                 )
             )
 
-        planned_epics[epic.key] = PlanEpic(
-            key=epic.key,
-            issue_id=epic.issue_id,
-            summary=epic.summary,
-            status=epic.status,
-            rollup_mode=rollup_mode,
-            rollup_key=rollup_key,
-            rollup_name=rollup_name,
-            resource_group=resource_group,
-            key_prefix=prefix,
-            total_story_points=total_points,
-            completed_story_points=completed_points,
-            percent_complete=percent_complete,
-            in_planning=in_planning,
-            completed=completed,
-            target_start=epic.target_start,
-            target_end=epic.target_end,
-            source_row=epic.source_row,
-        )
+        for assignment in assignments:
+            planned_epics[assignment.schedule_key] = PlanEpic(
+                key=assignment.schedule_key,
+                issue_id=epic.issue_id,
+                summary=epic.summary,
+                status=epic.status,
+                rollup_mode=rollup_mode,
+                rollup_key=assignment.rollup_key,
+                rollup_name=assignment.rollup_name,
+                resource_group=resource_group,
+                key_prefix=prefix,
+                total_story_points=total_points,
+                completed_story_points=completed_points,
+                percent_complete=percent_complete,
+                in_planning=in_planning,
+                completed=completed,
+                target_start=epic.target_start,
+                target_end=epic.target_end,
+                source_row=epic.source_row,
+                jira_key=epic.key,
+                row_role=assignment.row_role,
+                fix_version=assignment.fix_version,
+                drives_schedule=assignment.drives_schedule,
+                primary_schedule_key=assignment.primary_schedule_key,
+            )
+        add_multi_fixversion_audit(audit, epic, assignments, rollup_mode)
 
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(planned_epics)
@@ -344,12 +376,20 @@ def build_run_plan(
         "initiatives_read": len(initiatives),
         "epics_read": len(epics),
         "story_rows_used_for_completion": len(stories),
-        "epics_included": len(planned_epics),
+        "epics_included": len({epic.jira_key or epic.key for epic in planned_epics.values()}),
+        "planned_epic_rows": len(planned_epics),
         "epics_excluded": excluded_count,
         "summary_rows": len(summaries),
         "audit_items": len(audit),
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
         "rollup_modes_by_prefix": config.get("rollup_modes", {}),
+        "multi_fixversion_epics": len(
+            {
+                epic.jira_key or epic.key
+                for epic in planned_epics.values()
+                if epic.row_role in {"Primary", "Reference", "Split"}
+            }
+        ),
     }
     return RunPlan(
         generated_at=datetime.now().isoformat(timespec="seconds"),
@@ -412,29 +452,112 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
     return issues
 
 
-def resolve_rollup(
+def resolve_rollup_assignments(
     epic: JiraIssue,
     rollup_mode: str,
     initiatives: Dict[str, JiraIssue],
     config: Dict[str, Any],
-) -> Tuple[str, str, str]:
+    prefix: str,
+) -> Tuple[List[RollupAssignment], str]:
     if rollup_mode == "initiative":
         if not epic.parent:
-            return "", "", "Epic has no initiative parent key."
+            return [], "Epic has no initiative parent key."
         initiative = initiatives.get(epic.parent)
         if not initiative:
-            return "", "", f"Epic parent '{epic.parent}' was not found as an Initiative row in the CSV."
-        return initiative.key, initiative.summary or initiative.key, ""
+            return [], f"Epic parent '{epic.parent}' was not found as an Initiative row in the CSV."
+        return [
+            RollupAssignment(
+                schedule_key=epic.key,
+                rollup_key=initiative.key,
+                rollup_name=initiative.summary or initiative.key,
+                row_role="Scheduled",
+                fix_version="",
+                drives_schedule=True,
+                primary_schedule_key=epic.key,
+            )
+        ], ""
 
     fix_versions = epic.fix_versions
     if not fix_versions:
-        return "", "", "Epic has no fixVersion."
+        return [], "Epic has no fixVersion."
     if len(fix_versions) > 1:
-        behavior = str(config.get("behavior", {}).get("multiple_fix_versions", "exclude"))
-        if behavior == "first":
-            return fix_versions[0], fix_versions[0], ""
-        return "", "", f"Epic has multiple fixVersions: {', '.join(fix_versions)}."
-    return fix_versions[0], fix_versions[0], ""
+        policy = multi_fixversion_policy_for_prefix(config, prefix)
+        primary_schedule_key = epic.key
+        assignments = []
+        for index, fix_version in enumerate(fix_versions):
+            schedule_key = epic.key if index == 0 else fix_version_schedule_key(epic.key, fix_version)
+            assignments.append(
+                RollupAssignment(
+                    schedule_key=schedule_key,
+                    rollup_key=fix_version,
+                    rollup_name=fix_version,
+                    row_role="Reference" if policy == "reference" and index > 0 else (
+                        "Primary" if policy == "reference" else "Split"
+                    ),
+                    fix_version=fix_version,
+                    drives_schedule=policy == "split" or index == 0,
+                    primary_schedule_key=primary_schedule_key,
+                )
+            )
+        return assignments, ""
+    return [
+        RollupAssignment(
+            schedule_key=epic.key,
+            rollup_key=fix_versions[0],
+            rollup_name=fix_versions[0],
+            row_role="Scheduled",
+            fix_version=fix_versions[0],
+            drives_schedule=True,
+            primary_schedule_key=epic.key,
+        )
+    ], ""
+
+
+def add_multi_fixversion_audit(
+    audit: List[AuditItem],
+    epic: JiraIssue,
+    assignments: Sequence[RollupAssignment],
+    rollup_mode: str,
+) -> None:
+    if rollup_mode != "fixVersion" or len(assignments) <= 1:
+        return
+    policy = "reference" if any(not item.drives_schedule for item in assignments) else "split"
+    primary = assignments[0]
+    for assignment in assignments:
+        if policy == "reference" and assignment.row_role == "Reference":
+            message = (
+                f"Reference row created under fixVersion '{assignment.fix_version}'. "
+                f"Schedule is driven by primary row '{primary.schedule_key}' under "
+                f"fixVersion '{primary.fix_version}'."
+            )
+            reviewer_action = "Confirm this secondary fixVersion is for visibility only."
+        elif policy == "reference":
+            message = (
+                f"Primary scheduled row selected from the first Jira fixVersion '{assignment.fix_version}'. "
+                "Secondary fixVersions are added as non-driving reference rows."
+            )
+            reviewer_action = "Confirm the first Jira fixVersion should drive the schedule."
+        else:
+            message = (
+                f"Split scheduled row created under fixVersion '{assignment.fix_version}'. "
+                "Each split row can drive the Project schedule."
+            )
+            reviewer_action = "Confirm this epic should drive schedule dates under each listed fixVersion."
+        audit.append(
+            AuditItem(
+                "Info",
+                "MultiFixVersionReference" if policy == "reference" else "MultiFixVersionSplit",
+                jira_key=epic.key,
+                schedule_key=assignment.schedule_key,
+                issue_type=epic.issue_type,
+                summary=epic.summary,
+                field="Fix versions",
+                new_value=", ".join(epic.fix_versions),
+                message=message,
+                reviewer_action=reviewer_action,
+                source_row=epic.source_row,
+            )
+        )
 
 
 def apply_dependencies(
@@ -442,11 +565,19 @@ def apply_dependencies(
     all_epics: List[JiraIssue],
     audit: List[AuditItem],
 ) -> None:
-    included_keys = set(planned_epics)
+    row_keys_by_jira: Dict[str, List[str]] = {}
+    driving_keys_by_jira: Dict[str, List[str]] = {}
+    for schedule_key, planned_epic in planned_epics.items():
+        jira_key = planned_epic.jira_key or planned_epic.key
+        row_keys_by_jira.setdefault(jira_key, []).append(schedule_key)
+        if planned_epic.drives_schedule:
+            driving_keys_by_jira.setdefault(jira_key, []).append(schedule_key)
+
+    included_keys = set(driving_keys_by_jira)
     raw_epics = {epic.key: epic for epic in all_epics}
     candidate_edges: List[Tuple[str, str, str]] = []
     for epic_key, epic in raw_epics.items():
-        if epic_key not in included_keys:
+        if epic_key not in row_keys_by_jira:
             continue
         for predecessor_key in sorted(epic.predecessors):
             candidate_edges.append((predecessor_key, epic_key, "blocked by"))
@@ -454,7 +585,8 @@ def apply_dependencies(
             candidate_edges.append((epic_key, successor_key, "blocks"))
 
     accepted: Set[Tuple[str, str]] = set()
-    graph: Dict[str, Set[str]] = {key: set() for key in included_keys}
+    driving_schedule_keys = {key for keys in driving_keys_by_jira.values() for key in keys}
+    graph: Dict[str, Set[str]] = {key: set() for key in driving_schedule_keys}
     seen: Set[Tuple[str, str]] = set()
     for predecessor_key, successor_key, relation in sorted(candidate_edges):
         edge = (predecessor_key, successor_key)
@@ -462,11 +594,12 @@ def apply_dependencies(
             continue
         seen.add(edge)
         source_key = successor_key if relation == "blocked by" else predecessor_key
-        source_epic = planned_epics.get(source_key)
+        source_schedule_key = primary_planned_key(row_keys_by_jira, source_key)
+        source_epic = planned_epics.get(source_schedule_key)
         if predecessor_key == successor_key:
             add_dependency_review(
                 planned_epics,
-                source_key,
+                source_schedule_key,
                 f"Skipped self-dependency {predecessor_key} -> {successor_key}.",
             )
             audit.append(
@@ -474,6 +607,7 @@ def apply_dependencies(
                     "Warning",
                     "SelfDependencySkipped",
                     jira_key=source_key,
+                    schedule_key=source_schedule_key,
                     issue_type="Epic" if source_epic else "",
                     summary=source_epic.summary if source_epic else "",
                     field="Dependency Review",
@@ -488,7 +622,7 @@ def apply_dependencies(
             missing = predecessor_key if predecessor_key not in included_keys else successor_key
             add_dependency_review(
                 planned_epics,
-                source_key,
+                source_schedule_key,
                 f"Missing dependency target {missing}.",
             )
             audit.append(
@@ -496,6 +630,7 @@ def apply_dependencies(
                     "Warning",
                     "MissingDependencyTarget",
                     jira_key=source_key,
+                    schedule_key=source_schedule_key,
                     issue_type="Epic" if source_epic else "",
                     summary=source_epic.summary if source_epic else "",
                     field="Dependency Review",
@@ -503,36 +638,55 @@ def apply_dependencies(
                     color="dependency_review",
                     message=f"Dependency target '{missing}' is not an included epic.",
                     reviewer_action="Confirm the target epic is in the Jira export and meets rollup/resource rules.",
-                )
-            )
-            continue
-        if creates_cycle(graph, predecessor_key, successor_key):
-            add_dependency_review(
-                planned_epics,
-                source_key,
-                f"Skipped circular dependency {predecessor_key} -> {successor_key}.",
-            )
-            audit.append(
-                AuditItem(
-                    "Warning",
-                    "CircularDependencySkipped",
-                    jira_key=source_key,
-                    issue_type="Epic" if source_epic else "",
-                    summary=source_epic.summary if source_epic else "",
-                    field="Dependency Review",
-                    color="dependency_review",
-                    message=f"Skipped circular dependency {predecessor_key} -> {successor_key}.",
-                    reviewer_action="Resolve the circular Jira blocker relationship.",
                     source_row=source_epic.source_row if source_epic else None,
                 )
             )
             continue
-        graph[predecessor_key].add(successor_key)
-        accepted.add(edge)
 
-    for predecessor_key, successor_key in sorted(accepted):
-        planned_epics[successor_key].predecessors.append(predecessor_key)
-        planned_epics[predecessor_key].successors.append(successor_key)
+        for predecessor_schedule_key in driving_keys_by_jira[predecessor_key]:
+            for successor_schedule_key in driving_keys_by_jira[successor_key]:
+                if creates_cycle(graph, predecessor_schedule_key, successor_schedule_key):
+                    add_dependency_review(
+                        planned_epics,
+                        source_schedule_key,
+                        f"Skipped circular dependency {predecessor_key} -> {successor_key}.",
+                    )
+                    audit.append(
+                        AuditItem(
+                            "Warning",
+                            "CircularDependencySkipped",
+                            jira_key=source_key,
+                            schedule_key=source_schedule_key,
+                            issue_type="Epic" if source_epic else "",
+                            summary=source_epic.summary if source_epic else "",
+                            field="Dependency Review",
+                            color="dependency_review",
+                            message=f"Skipped circular dependency {predecessor_key} -> {successor_key}.",
+                            reviewer_action="Resolve the circular Jira blocker relationship.",
+                            source_row=source_epic.source_row if source_epic else None,
+                        )
+                    )
+                    continue
+                graph[predecessor_schedule_key].add(successor_schedule_key)
+                accepted.add((predecessor_schedule_key, successor_schedule_key))
+
+    for predecessor_schedule_key, successor_schedule_key in sorted(accepted):
+        planned_epics[successor_schedule_key].predecessors.append(predecessor_schedule_key)
+        planned_epics[predecessor_schedule_key].successors.append(successor_schedule_key)
+
+    for epic in planned_epics.values():
+        if epic.drives_schedule:
+            continue
+        primary = planned_epics.get(epic.primary_schedule_key)
+        if primary:
+            add_dependency_review(
+                planned_epics,
+                epic.key,
+                (
+                    f"Reference row only. Schedule logic is driven by {primary.key} "
+                    f"under fixVersion {primary.fix_version or primary.rollup_key}."
+                )
+            )
 
 
 def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
@@ -541,8 +695,16 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
         buckets.setdefault(summary_id(epic.rollup_mode, epic.rollup_key), []).append(epic)
     summaries: Dict[str, PlanSummary] = {}
     for bucket_id, children in sorted(buckets.items()):
-        total = round(sum(child.total_story_points for child in children), 2)
-        completed = round(sum(child.completed_story_points for child in children), 2)
+        driving_children = [child for child in children if child.drives_schedule]
+        reference_children = [child for child in children if not child.drives_schedule]
+        total = round(sum(child.total_story_points for child in driving_children), 2)
+        completed = round(sum(child.completed_story_points for child in driving_children), 2)
+        if driving_children:
+            percent_complete = calculate_percent(completed, total)
+        else:
+            reference_total = round(sum(child.total_story_points for child in reference_children), 2)
+            reference_completed = round(sum(child.completed_story_points for child in reference_children), 2)
+            percent_complete = calculate_percent(reference_completed, reference_total)
         project_keys = sorted({child.key_prefix for child in children})
         summaries[bucket_id] = PlanSummary(
             summary_id=bucket_id,
@@ -552,8 +714,10 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
             project_key=project_keys[0] if len(project_keys) == 1 else "MULTIPLE",
             total_story_points=total,
             completed_story_points=completed,
-            percent_complete=calculate_percent(completed, total),
+            percent_complete=percent_complete,
             child_epic_count=len(children),
+            driving_epic_count=len(driving_children),
+            reference_epic_count=len(reference_children),
         )
     return summaries
 
@@ -620,7 +784,8 @@ def compare_with_baseline(
                 AuditItem(
                     "Info",
                     "CompletedSinceLastUpdate",
-                    jira_key=epic.key,
+                    jira_key=epic.jira_key or epic.key,
+                    schedule_key=epic.key,
                     issue_type="Epic",
                     summary=epic.summary,
                     field="Status",
@@ -644,7 +809,8 @@ def compare_with_baseline(
             AuditItem(
                 "Warning",
                 "UnmatchedProjectTask",
-                jira_key=key,
+                jira_key=existing.jira_key or key,
+                schedule_key=key,
                 issue_type=existing.issue_type,
                 summary=existing.name,
                 field="Unmatched Project Task",
@@ -658,9 +824,14 @@ def compare_with_baseline(
 
 def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -> None:
     fields = [
+        ("Schedule Key", "" if epic.key == (epic.jira_key or epic.key) else epic.key),
         ("Name", epic.summary),
         ("Rollup Key", epic.rollup_key),
         ("Resource Group", epic.resource_group),
+        ("Row Role", "" if epic.row_role == "Scheduled" else epic.row_role),
+        ("Fix Version", epic.fix_version),
+        ("Drives Schedule", "No" if not epic.drives_schedule else ""),
+        ("Primary Schedule Key", "" if epic.primary_schedule_key == epic.key else epic.primary_schedule_key),
         ("% Complete", str(epic.percent_complete)),
         ("Total Story Points", format_number(epic.total_story_points)),
         ("Completed Story Points", format_number(epic.completed_story_points)),
@@ -676,7 +847,8 @@ def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -
             AuditItem(
                 "Info",
                 "AddedEpic",
-                jira_key=epic.key,
+                jira_key=epic.jira_key or epic.key,
+                schedule_key=epic.key,
                 issue_type="Epic",
                 summary=epic.summary,
                 field=field_name,
@@ -707,7 +879,8 @@ def compare_field(
         AuditItem(
             severity,
             category,
-            jira_key=epic.key,
+            jira_key=epic.jira_key or epic.key,
+            schedule_key=epic.key,
             issue_type="Epic",
             summary=epic.summary,
             field=field_name,
@@ -728,6 +901,11 @@ def add_dependency_review(epics: Dict[str, PlanEpic], key: str, note: str) -> No
     if epic.dependency_review:
         epic.dependency_review += " "
     epic.dependency_review += note
+
+
+def primary_planned_key(row_keys_by_jira: Dict[str, List[str]], jira_key: str) -> str:
+    keys = row_keys_by_jira.get(jira_key, [])
+    return keys[0] if keys else jira_key
 
 
 def creates_cycle(graph: Dict[str, Set[str]], predecessor_key: str, successor_key: str) -> bool:
@@ -818,6 +996,17 @@ def rollup_mode_for_prefix(config: Dict[str, Any], prefix: str) -> str:
     return str(config.get("rollup_modes", {}).get(prefix.upper(), config.get("rollup_mode", "initiative")))
 
 
+def multi_fixversion_policy_for_prefix(config: Dict[str, Any], prefix: str) -> str:
+    policy_config = config.get("multi_fixversion_policy", {})
+    return str(policy_config.get(prefix.upper(), policy_config.get("default", "reference")))
+
+
+def fix_version_schedule_key(jira_key: str, fix_version: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "-", fix_version).strip("-").upper() or "FIXVERSION"
+    digest = hashlib.sha1(fix_version.encode("utf-8")).hexdigest()[:8]
+    return f"{jira_key}::FV::{cleaned[:40]}::{digest}".upper()
+
+
 def summary_id(rollup_mode: str, rollup_key: str) -> str:
     return f"{rollup_mode}:{rollup_key}"
 
@@ -864,6 +1053,7 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
     for key, epic in data.get("epics", {}).items():
         snapshots[key] = ProjectTaskSnapshot(
             key=key,
+            jira_key=epic.get("jira_key", key),
             name=epic.get("summary", ""),
             issue_id=epic.get("issue_id", ""),
             issue_type="Epic",
@@ -879,6 +1069,10 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
             target_end=epic.get("target_end", ""),
             predecessors=list(epic.get("predecessors", [])),
             successors=list(epic.get("successors", [])),
+            row_role=epic.get("row_role", ""),
+            fix_version=epic.get("fix_version", ""),
+            drives_schedule=bool(epic.get("drives_schedule", True)),
+            primary_schedule_key=epic.get("primary_schedule_key", ""),
             source=str(path),
         )
     return snapshots

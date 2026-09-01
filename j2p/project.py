@@ -143,13 +143,15 @@ class MicrosoftProjectSession:
         snapshots: Dict[str, ProjectTaskSnapshot] = {}
         fields = config.get("project_fields", {})
         for task in self.iter_tasks():
-            key = safe_get(task, fields.get("jira_key", "Text1"))
+            jira_key = safe_get(task, fields.get("jira_key", "Text1"))
+            j2p_key = safe_get(task, fields.get("j2p_key", "Text10"))
             rollup_key = safe_get(task, fields.get("rollup_key", "Text5"))
-            snapshot_key = key or rollup_key
+            snapshot_key = j2p_key or jira_key or rollup_key
             if not snapshot_key:
                 continue
             snapshots[str(snapshot_key).upper()] = ProjectTaskSnapshot(
                 key=str(snapshot_key).upper(),
+                jira_key=str(jira_key),
                 name=str(safe_get(task, "Name")),
                 issue_id=str(safe_get(task, fields.get("jira_issue_id", "Text2"))),
                 issue_type=str(safe_get(task, fields.get("jira_issue_type", "Text3"))),
@@ -169,6 +171,10 @@ class MicrosoftProjectSession:
                 finish=project_date_to_iso(safe_get(task, "Finish")),
                 predecessors=parse_project_key_list(str(safe_get(task, "Predecessors"))),
                 successors=parse_project_key_list(str(safe_get(task, "Successors"))),
+                row_role=str(safe_get(task, fields.get("row_role", "Text11"))),
+                fix_version=str(safe_get(task, fields.get("fix_version", "Text12"))),
+                drives_schedule=safe_bool(safe_get(task, fields.get("drives_schedule", "Flag4"))),
+                primary_schedule_key=str(safe_get(task, fields.get("primary_schedule_key", "Text13"))),
                 is_summary=bool(safe_get(task, "Summary")),
                 active=safe_bool(safe_get(task, "Active")),
                 source="project",
@@ -218,8 +224,9 @@ class MicrosoftProjectSession:
     def index_tasks_by_key(self, config: Dict[str, Any]) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
         key_field = config.get("project_fields", {}).get("jira_key", "Text1")
+        j2p_key_field = config.get("project_fields", {}).get("j2p_key", "Text10")
         for task in self.iter_tasks():
-            key = safe_get(task, key_field)
+            key = safe_get(task, j2p_key_field) or safe_get(task, key_field)
             if key:
                 result[str(key).upper()] = task
         return result
@@ -332,7 +339,7 @@ class MicrosoftProjectSession:
             pass
         task.Name = epic.summary
         task.PercentComplete = epic.percent_complete
-        setattr(task, fields.get("jira_key", "Text1"), epic.key)
+        setattr(task, fields.get("jira_key", "Text1"), epic.jira_key or epic.key)
         setattr(task, fields.get("jira_issue_id", "Text2"), epic.issue_id)
         setattr(task, fields.get("jira_issue_type", "Text3"), "Epic")
         setattr(task, fields.get("rollup_mode", "Text4"), epic.rollup_mode)
@@ -341,10 +348,15 @@ class MicrosoftProjectSession:
         setattr(task, fields.get("jira_key_prefix", "Text7"), epic.key_prefix)
         setattr(task, fields.get("dependency_review", "Text8"), epic.dependency_review)
         setattr(task, fields.get("jira_status", "Text9"), epic.status)
+        setattr(task, fields.get("j2p_key", "Text10"), epic.key)
+        setattr(task, fields.get("row_role", "Text11"), epic.row_role)
+        setattr(task, fields.get("fix_version", "Text12"), epic.fix_version)
+        setattr(task, fields.get("primary_schedule_key", "Text13"), epic.primary_schedule_key)
         setattr(task, fields.get("total_story_points", "Number1"), epic.total_story_points)
         setattr(task, fields.get("completed_story_points", "Number2"), epic.completed_story_points)
         setattr(task, fields.get("in_planning", "Flag1"), bool(epic.in_planning))
         setattr(task, fields.get("dependency_review_needed", "Flag3"), bool(epic.dependency_review))
+        setattr(task, fields.get("drives_schedule", "Flag4"), bool(epic.drives_schedule))
         if epic.target_start:
             setattr(task, fields.get("jira_target_start", "Date1"), epic.target_start)
             try:
@@ -366,9 +378,25 @@ class MicrosoftProjectSession:
                 task.HideBar = True
             except Exception:
                 pass
+        elif not epic.drives_schedule:
+            try:
+                task.Active = False
+            except Exception:
+                pass
+        else:
+            try:
+                task.Active = True
+            except Exception:
+                pass
+            try:
+                task.HideBar = False
+            except Exception:
+                pass
 
     def apply_dependencies(self, plan: RunPlan, task_by_key: Dict[str, Any]) -> None:
         for epic in plan.epics.values():
+            if not epic.drives_schedule:
+                continue
             task = task_by_key.get(epic.key)
             if task is None:
                 continue
@@ -425,6 +453,8 @@ class MicrosoftProjectSession:
         after = self.snapshot_tasks(config)
         changed_finishes = []
         for key, epic in plan.epics.items():
+            if not epic.drives_schedule:
+                continue
             before_finish = before.get(key).finish if key in before else ""
             after_finish = after.get(key).finish if key in after else ""
             if before_finish and after_finish and before_finish != after_finish:
@@ -498,7 +528,8 @@ class MicrosoftProjectSession:
         for item in plan.audit_items:
             if not item.jira_key or not item.color:
                 continue
-            task = task_by_key.get(item.jira_key.upper())
+            lookup_key = (item.schedule_key or item.jira_key).upper()
+            task = task_by_key.get(lookup_key)
             if task is None:
                 continue
             column = project_column_for_audit_field(item.field, config)
@@ -523,6 +554,11 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Start": "Start",
         "Resource Group": names.get("resource_group", "Resource Group"),
         "Rollup Key": names.get("rollup_key", "Rollup Key"),
+        "Schedule Key": names.get("j2p_key", "j2p Unique Key"),
+        "Row Role": names.get("row_role", "j2p Row Role"),
+        "Fix Version": names.get("fix_version", "Jira Fix Version"),
+        "Drives Schedule": names.get("drives_schedule", "Drives Schedule"),
+        "Primary Schedule Key": names.get("primary_schedule_key", "Primary Schedule Key"),
         "Total Story Points": names.get("total_story_points", "Total Story Points"),
         "Completed Story Points": names.get("completed_story_points", "Completed Story Points"),
         "In Planning": names.get("in_planning", "In Planning"),
@@ -557,6 +593,12 @@ def safe_int(value: Any) -> int:
 def safe_bool(value: Any) -> Optional[bool]:
     if value in ("", None):
         return None
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"false", "no", "0"}:
+            return False
+        if normalized in {"true", "yes", "1"}:
+            return True
     return bool(value)
 
 

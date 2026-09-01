@@ -1,2 +1,2 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Info,AddedEpic,CORE-1005,CORE,Epic,Client Walkthrough - Payment cutover downstream dependency,Predecessors,,CORE-1004,changed_cell,Epic is included in the planned sandbox and was not found in the comparison baseline.,Review the added epic in the sandbox Project file.,22
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Info,AddedEpic,CORE-1005,CORE-1005,CORE,Epic,Client Walkthrough - Payment cutover downstream dependency,Predecessors,,CORE-1004,changed_cell,Epic is included in the planned sandbox and was not found in the comparison baseline.,Review the added epic in the sandbox Project file.,22

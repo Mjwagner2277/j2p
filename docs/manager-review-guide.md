@@ -47,6 +47,12 @@ Moved epics:
 - j2p moves the epic under the new initiative/fixVersion in the sandbox when Project automation can perform the move.
 - The move is reported.
 
+Multi-fixVersion epics:
+
+- `reference` is the default policy. The first fixVersion gets the primary scheduled row; additional fixVersions get visible non-driving reference rows.
+- `split` creates one driving schedule row per fixVersion and should be used only when that is the intended planning behavior.
+- Review `j2p Row Role`, `Drives Schedule`, and `Primary Schedule Key` to understand how each row is being used.
+
 Unmatched Project tasks:
 
 - The task exists in the source-of-truth comparison baseline.

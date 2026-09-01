@@ -129,7 +129,11 @@ def run_smoke(output_dir: Path) -> int:
         [],
     )
     assert_report_bundle(fixversion_dir)
-    assert_audit_categories(fixversion_dir / "audit-detail.csv", {"ExcludedMissingRollup"})
+    assert_audit_categories(fixversion_dir / "audit-detail.csv", {"MultiFixVersionReference"})
+    assert_report_contains(
+        fixversion_dir / "Manager-Review-Report.html",
+        ["Multi-FixVersion Epics", "TEAM-503", "Reference", "Drives Schedule"],
+    )
 
     assert_line_count(ROOT / "examples" / "large-scenario" / "project-wide-jira-baseline-1200.csv", 1200)
     assert_line_count(ROOT / "examples" / "large-scenario" / "project-wide-jira-updated-1200.csv", 1200)
@@ -167,6 +171,8 @@ def run_smoke(output_dir: Path) -> int:
             "ExcludedUnknownPrefix",
             "InPlanning",
             "MissingDependencyTarget",
+            "MultiFixVersionReference",
+            "MultiFixVersionSplit",
             "RollupMove",
             "SelfDependencySkipped",
             "StoryMissingEpicLink",

@@ -97,6 +97,7 @@ CURATED_ORDER = [
     "DATA-3008",
     "DATA-3009",
     "DATA-3034",
+    "PLAT-4028",
     "PLAT-4029",
     "OPS-5019",
     "UNK-9000",
@@ -121,8 +122,9 @@ BASELINE_CURATED_SUMMARIES = {
     "DATA-3008": "Client Walkthrough - Warehouse migration circular dependency A",
     "DATA-3009": "Client Walkthrough - Warehouse migration circular dependency B",
     "DATA-3034": "Client Walkthrough - Forecast refresh invalid date example",
+    "PLAT-4028": "Client Walkthrough - Qualification software reference example",
     "PLAT-4029": "Client Walkthrough - Deployment runner fixVersion example",
-    "OPS-5019": "Client Walkthrough - Release readiness fixVersion ambiguity example",
+    "OPS-5019": "Client Walkthrough - Shop deliverable split fixVersion example",
     "UNK-9000": "Client Walkthrough - Unknown team prefix example",
 }
 
@@ -338,10 +340,16 @@ def make_epic(
         finish_value = "not-a-date"
     else:
         finish_value = finish.isoformat()
+    if key == "PLAT-4028":
+        fix_version = "Qualification Event 1"
+    if key == "PLAT-4028" and variant == "updated":
+        fix_version = "Qualification Event 1;Shop Deliverable A"
     if key == "PLAT-4029" and variant == "updated":
         fix_version = ""
+    if key == "OPS-5019":
+        fix_version = "Qualification Event 2"
     if key == "OPS-5019" and variant == "updated":
-        fix_version = "Operations Q1;Operations Q2"
+        fix_version = "Qualification Event 2;Shop Deliverable B"
 
     return row(
         key=key,
@@ -423,7 +431,7 @@ def has_child_stories(epic: Dict[str, str], variant: str) -> bool:
         return False
     if key.startswith("UNK-"):
         return False
-    if variant == "updated" and key in {"CORE-1049", "PLAT-4029", "OPS-5019"}:
+    if variant == "updated" and key in {"CORE-1049", "PLAT-4029"}:
         return False
     return True
 

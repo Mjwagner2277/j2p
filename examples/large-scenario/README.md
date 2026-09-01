@@ -2,7 +2,7 @@
 
 This folder is the full training scenario for j2p. It is intentionally larger than the quick-start files so reviewers can practice with a project-wide Jira export that feels closer to a real portfolio.
 
-Rows 2-34 start the client walkthrough. Rows 17-34 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
+Rows 2-35 start the client walkthrough. Rows 17-35 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
 
 ## Files
 
@@ -43,7 +43,7 @@ Expected result:
 1200
 ```
 
-Then open the updated CSV and look at rows 17-34, then rows 201-202. Those rows are the complete teaching path.
+Then open the updated CSV and look at rows 17-35, then rows 201-202. Those rows are the complete teaching path.
 
 ## Step 2: Review The Prefix Rollup Mapping
 
@@ -62,6 +62,10 @@ rollup_modes:
   DATA: initiative
   PLAT: fixVersion
   OPS: fixVersion
+
+multi_fixversion_policy:
+  default: reference
+  OPS: split
 ```
 
 That means:
@@ -71,8 +75,8 @@ That means:
 | `CORE` | Core Product Engineering | Initiative parent |
 | `WEB` | Web Experience | Initiative parent |
 | `DATA` | Data Engineering | Initiative parent |
-| `PLAT` | Platform Engineering | fixVersion |
-| `OPS` | Operations | fixVersion |
+| `PLAT` | Platform Engineering | fixVersion with default reference handling |
+| `OPS` | Operations | fixVersion with split handling |
 
 The `UNK` prefix is intentionally not configured. It appears in the report as an unknown-prefix review case.
 
@@ -134,13 +138,14 @@ Then read sections in this order:
 3. `Reviewer Action Needed`
 4. `Changed Names`
 5. `Added Epics`
-6. `Parent Or Rollup Moves`
-7. `Completed Since Last Update`
-8. `In Planning`
-9. `Dependency Review`
-10. `Date Review`
-11. `Unmatched Project Tasks`
-12. `Excluded Items`
+6. `Multi-FixVersion Epics`
+7. `Parent Or Rollup Moves`
+8. `Completed Since Last Update`
+9. `In Planning`
+10. `Dependency Review`
+11. `Date Review`
+12. `Unmatched Project Tasks`
+13. `Excluded Items`
 
 ## Color And Review Cases In This Scenario
 
@@ -158,15 +163,20 @@ examples\large-scenario\expected-review-cases.csv
 | Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
 | Red | Critical-path root finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
 | Green | Downstream cascade item | updated row 22, `CORE-1005` | This is the intended downstream dependency item after `CORE-1004` |
-| Yellow/amber | Unknown prefix | updated row 34, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
+| Yellow/amber | Unknown prefix | updated row 35, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
 | Yellow/amber | Missing initiative parent | updated row 26, `CORE-1049` | `CORE` uses initiative rollup, so a missing parent excludes the epic |
-| Yellow/amber | Missing fixVersion | updated row 32, `PLAT-4029` | `PLAT` uses fixVersion rollup, so a missing fixVersion excludes the epic |
-| Yellow/amber | Multiple fixVersions | updated row 33, `OPS-5019` | Multiple fixVersions are excluded by default because the rollup would be ambiguous |
+| Yellow/amber | Missing fixVersion | updated row 33, `PLAT-4029` | fixVersion-mode teams still need at least one fixVersion |
+| Report-only | Default reference multi-fixVersion | updated row 32, `PLAT-4028` | `PLAT` uses the default reference policy: one primary scheduled row plus one non-driving reference row |
+| Report-only | Configured split multi-fixVersion | updated row 34, `OPS-5019` | `OPS` uses split policy: one driving schedule row per fixVersion |
 | Yellow/amber | Baseline-only unmatched item | baseline row 25, `CORE-1048` | The item existed in the baseline but is not in the updated plan |
 | Blue | Missing dependency target | updated row 23, `CORE-1006` | Jira references `EXT-999`, which is not an included epic |
 | Blue | Self dependency | updated row 27, `WEB-2008` | An epic cannot block itself, so the dependency is skipped and reported |
 | Blue | Circular dependency | updated rows 29-30, `DATA-3008` and `DATA-3009` | One dependency is skipped to prevent a schedule cycle |
 | Gray/green-gray | In planning | updated row 28, `WEB-2010` | The epic is included but has no pointed child stories/tasks |
+
+For `PLAT-4028`, the `planned-epics.csv` output has two rows with the same Jira key. The primary row has `Drives Schedule` set to `Yes`; the reference row has `Drives Schedule` set to `No` and points back to the primary schedule key. The multi-fixVersion audit item is informational; if the reference row is new relative to the baseline, its new Project cells are still colored green like any other added row.
+
+For `OPS-5019`, both generated rows have `Drives Schedule` set to `Yes` because `OPS` is configured with `split`.
 
 Data-quality rows that do not produce Project cell colors:
 

@@ -1,15 +1,19 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,total_story_points,completed_story_points,percent_complete
-Operations Q1,OPS,Operations Q1,fixVersion,10,209.0,72.0,34
-Operations Q2,OPS,Operations Q2,fixVersion,9,190.0,73.0,38
-Platform Q1,PLAT,Platform Q1,fixVersion,10,209.0,63.0,30
-Platform Q2,PLAT,Platform Q2,fixVersion,10,203.0,68.0,33
-Shared Services 2026,PLAT,Shared Services 2026,fixVersion,9,188.0,72.0,38
-INIT-100,MULTIPLE,Customer Identity And Access,initiative,28,578.0,186.0,32
-INIT-1200,WEB,Search And Discovery,initiative,15,324.0,103.0,32
-INIT-1500,DATA,Forecasting Program,initiative,11,231.0,85.0,37
-INIT-200,CORE,Revenue And Billing Modernization,initiative,13,324.0,121.0,37
-INIT-300,DATA,Data Foundations,initiative,12,261.0,85.0,33
-INIT-500,WEB,Web Experience Refresh,initiative,15,336.0,98.0,29
-INIT-600,DATA,Program Reporting,initiative,12,257.0,77.0,30
-INIT-700,CORE,Security Hardening,initiative,12,233.0,95.0,41
-INIT-800,CORE,Integrations Roadmap,initiative,11,243.0,91.0,37
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,percent_complete
+Operations Q1,OPS,Operations Q1,fixVersion,10,10,0,209.0,72.0,34
+Operations Q2,OPS,Operations Q2,fixVersion,9,9,0,190.0,73.0,38
+Platform Q1,PLAT,Platform Q1,fixVersion,10,10,0,209.0,63.0,30
+Platform Q2,PLAT,Platform Q2,fixVersion,9,9,0,184.0,58.0,32
+Qualification Event 1,PLAT,Qualification Event 1,fixVersion,1,1,0,20.0,10.0,50
+Qualification Event 2,OPS,Qualification Event 2,fixVersion,1,1,0,20.0,4.0,20
+Shared Services 2026,PLAT,Shared Services 2026,fixVersion,9,9,0,188.0,72.0,38
+Shop Deliverable A,PLAT,Shop Deliverable A,fixVersion,1,0,1,0,0,50
+Shop Deliverable B,OPS,Shop Deliverable B,fixVersion,1,1,0,20.0,4.0,20
+INIT-100,MULTIPLE,Customer Identity And Access,initiative,28,28,0,570.0,186.0,33
+INIT-1200,WEB,Search And Discovery,initiative,15,15,0,324.0,103.0,32
+INIT-1500,DATA,Forecasting Program,initiative,11,11,0,231.0,85.0,37
+INIT-200,CORE,Revenue And Billing Modernization,initiative,13,13,0,324.0,121.0,37
+INIT-300,DATA,Data Foundations,initiative,12,12,0,261.0,85.0,33
+INIT-500,WEB,Web Experience Refresh,initiative,15,15,0,318.0,98.0,31
+INIT-600,DATA,Program Reporting,initiative,12,12,0,257.0,77.0,30
+INIT-700,CORE,Security Hardening,initiative,12,12,0,233.0,95.0,41
+INIT-800,CORE,Integrations Roadmap,initiative,11,11,0,243.0,91.0,37

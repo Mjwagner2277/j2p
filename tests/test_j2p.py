@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from j2p.cli import main
-from j2p.config import load_config
+from j2p.config import ConfigError, load_config
 from j2p.core import (
     J2PError,
     PlanEpic,
@@ -81,15 +81,78 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("ExcludedUnknownPrefix", categories)
         self.assertIn("MissingDependencyTarget", categories)
 
-    def test_fixversion_mode_uses_fixversion_parent_and_rejects_ambiguous_parent(self) -> None:
+    def test_fixversion_mode_defaults_multi_fixversion_epics_to_reference_rows(self) -> None:
         config = load_config(EXAMPLES / "config.fixversion.example.yaml")
         plan = build_run_plan(EXAMPLES / "project-wide-jira-fixversion.csv", config)
 
         self.assertEqual(plan.rollup_mode, "fixVersion")
         self.assertEqual(plan.epics["TEAM-501"].rollup_key, "Portal 2026")
         self.assertIn("fixVersion:Portal 2026", plan.summaries)
-        self.assertNotIn("TEAM-503", plan.epics)
-        self.assertIn("ExcludedMissingRollup", {item.category for item in plan.audit_items})
+        self.assertIn("TEAM-503", plan.epics)
+        reference_key = "TEAM-503::FV::PORTAL-2027::BF5F3312"
+        self.assertIn(reference_key, plan.epics)
+        self.assertEqual(plan.epics["TEAM-503"].jira_key, "TEAM-503")
+        self.assertEqual(plan.epics["TEAM-503"].row_role, "Primary")
+        self.assertTrue(plan.epics["TEAM-503"].drives_schedule)
+        self.assertEqual(plan.epics[reference_key].jira_key, "TEAM-503")
+        self.assertEqual(plan.epics[reference_key].row_role, "Reference")
+        self.assertFalse(plan.epics[reference_key].drives_schedule)
+        categories = {item.category for item in plan.audit_items}
+        self.assertIn("MultiFixVersionReference", categories)
+        self.assertNotIn("ExcludedMissingRollup", categories)
+
+    def test_fixversion_policy_can_split_multi_fixversion_epics(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "DATA-1,1,Epic,Qualification and shop deliverable,,,\"Qual Event 1;Shop Drop A\",,In Progress,,2026-01-01,2026-01-15,,",
+                "DATA-11,2,Story,Qual prep,DATA-1,,Qual Event 1,3,Done,Done,,,,",
+                "DATA-12,3,Story,Shop prep,DATA-1,,Shop Drop A,5,To Do,,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "split.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(EXAMPLES / "config.fixversion.example.yaml")
+            plan = build_run_plan(csv_path, config)
+
+        split_keys = [epic.key for epic in plan.epics.values()]
+        self.assertIn("DATA-1", split_keys)
+        self.assertIn("DATA-1::FV::SHOP-DROP-A::72104C44", split_keys)
+        self.assertTrue(all(epic.row_role == "Split" for epic in plan.epics.values()))
+        self.assertTrue(all(epic.drives_schedule for epic in plan.epics.values()))
+        self.assertIn("MultiFixVersionSplit", {item.category for item in plan.audit_items})
+
+    def test_reference_rollup_shows_progress_without_counting_story_points_twice(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PLAT-1,1,Epic,Qualification and shop visibility,,,\"Qual Event 1;Shop Drop A\",,In Progress,,2026-01-01,2026-01-15,,",
+                "PLAT-11,2,Story,Qual prep,PLAT-1,,Qual Event 1,3,Done,Done,,,,",
+                "PLAT-12,3,Story,Shop prep,PLAT-1,,Shop Drop A,5,To Do,,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "reference.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(EXAMPLES / "config.example.yaml")
+            plan = build_run_plan(csv_path, config)
+
+        reference_summary = plan.summaries["fixVersion:Shop Drop A"]
+        self.assertEqual(reference_summary.total_story_points, 0)
+        self.assertEqual(reference_summary.completed_story_points, 0)
+        self.assertEqual(reference_summary.reference_epic_count, 1)
+        self.assertEqual(reference_summary.percent_complete, 38)
+
+    def test_old_multiple_fixversion_behavior_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "multiple_fix_versions is no longer supported"):
+            load_config(None, {"behavior": {"multiple_fix_versions": "exclude"}})
+
+    def test_multi_fixversion_policy_normalizes_case_and_whitespace(self) -> None:
+        config = load_config(None, {"multi_fixversion_policy": {"default": " Reference ", "ops": "SPLIT"}})
+
+        self.assertEqual(config["multi_fixversion_policy"]["default"], "reference")
+        self.assertEqual(config["multi_fixversion_policy"]["OPS"], "split")
 
     def test_validate_cli_writes_manager_and_audit_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -123,6 +186,7 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("Unknown team epic", report)
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
+            self.assertIn("schedule_key", audit_header)
 
     def test_circular_dependencies_are_skipped_and_reported(self) -> None:
         csv_text = "\n".join(

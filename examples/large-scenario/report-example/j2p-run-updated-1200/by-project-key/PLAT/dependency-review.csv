@@ -1,1 +1,2 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Info,AddedEpic,PLAT-4028,PLAT-4028::FV::SHOP-DELIVERABLE-A::DE89D3A4,PLAT,Epic,Client Walkthrough - Qualification software reference example,Dependency Review,,Reference row only. Schedule logic is driven by PLAT-4028 under fixVersion Qualification Event 1.,dependency_review,Epic is new relative to the comparison baseline.,Review the added epic in the sandbox Project file.,32

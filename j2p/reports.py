@@ -7,13 +7,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from .core import AuditItem, RunPlan, calculate_percent, html_escape, summary_id
+from .core import AuditItem, RunPlan, calculate_percent, html_escape, multi_fixversion_policy_for_prefix, summary_id
 
 
 AUDIT_COLUMNS = [
     "severity",
     "category",
     "jira_key",
+    "schedule_key",
     "project_key",
     "issue_type",
     "summary",
@@ -28,12 +29,17 @@ AUDIT_COLUMNS = [
 
 PLANNED_EPIC_COLUMNS = [
     "jira_key",
+    "schedule_key",
     "project_key",
     "summary",
     "status",
     "rollup_mode",
     "rollup_key",
     "rollup_name",
+    "row_role",
+    "fix_version",
+    "drives_schedule",
+    "primary_schedule_key",
     "resource_group",
     "key_prefix",
     "total_story_points",
@@ -54,6 +60,8 @@ SUMMARY_ROLLUP_COLUMNS = [
     "name",
     "rollup_mode",
     "child_epic_count",
+    "driving_epic_count",
+    "reference_epic_count",
     "total_story_points",
     "completed_story_points",
     "percent_complete",
@@ -179,10 +187,14 @@ def planned_epic_rows(plan: RunPlan) -> List[Dict[str, Any]]:
     rows = []
     for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_mode, item.rollup_key, item.key)):
         row = asdict(epic)
-        row["jira_key"] = row.pop("key")
+        row["schedule_key"] = row.pop("key")
+        row["jira_key"] = epic.jira_key or epic.key
         row["project_key"] = epic.key_prefix
         row["predecessors"] = ",".join(epic.predecessors)
         row["successors"] = ",".join(epic.successors)
+        row["drives_schedule"] = "Yes" if epic.drives_schedule else "No"
+        row["in_planning"] = "Yes" if epic.in_planning else "No"
+        row["completed"] = "Yes" if epic.completed else "No"
         rows.append({key: row.get(key, "") for key in PLANNED_EPIC_COLUMNS})
     return rows
 
@@ -205,8 +217,16 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
 
     rows = []
     for _bucket_id, epics in sorted(buckets.items()):
-        total = round(sum(epic.total_story_points for epic in epics), 2)
-        completed = round(sum(epic.completed_story_points for epic in epics), 2)
+        driving_epics = [epic for epic in epics if epic.drives_schedule]
+        reference_epics = [epic for epic in epics if not epic.drives_schedule]
+        total = round(sum(epic.total_story_points for epic in driving_epics), 2)
+        completed = round(sum(epic.completed_story_points for epic in driving_epics), 2)
+        if driving_epics:
+            percent_complete = calculate_percent(completed, total)
+        else:
+            reference_total = round(sum(epic.total_story_points for epic in reference_epics), 2)
+            reference_completed = round(sum(epic.completed_story_points for epic in reference_epics), 2)
+            percent_complete = calculate_percent(reference_completed, reference_total)
         first = epics[0]
         rows.append(
             {
@@ -215,9 +235,11 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
                 "name": first.rollup_name,
                 "rollup_mode": first.rollup_mode,
                 "child_epic_count": len(epics),
+                "driving_epic_count": len(driving_epics),
+                "reference_epic_count": len(reference_epics),
                 "total_story_points": total,
                 "completed_story_points": completed,
-                "percent_complete": calculate_percent(completed, total),
+                "percent_complete": percent_complete,
             }
         )
     return rows
@@ -274,6 +296,10 @@ def write_manager_html(
         ("Reviewer Action Needed", action_needed),
         ("Changed Names", by_category(plan.audit_items, "ChangedName")),
         ("Added Epics", by_category(plan.audit_items, "AddedEpic")),
+        (
+            "Multi-FixVersion Epics",
+            [item for item in plan.audit_items if item.category.startswith("MultiFixVersion")],
+        ),
         ("Parent Or Rollup Moves", by_category(plan.audit_items, "RollupMove")),
         ("Completed Since Last Update", by_category(plan.audit_items, "CompletedSinceLastUpdate")),
         ("In Planning", by_category(plan.audit_items, "InPlanning")),
@@ -446,6 +472,8 @@ def summary_grid(plan: RunPlan) -> str:
         ("Epics Excluded", plan.stats.get("epics_excluded", 0)),
         ("Rollup Rows", plan.stats.get("summary_rows", 0)),
         ("Project Keys", len(plan.stats.get("project_keys", []))),
+        ("Planned Epic Rows", plan.stats.get("planned_epic_rows", plan.stats.get("epics_included", 0))),
+        ("Multi-FixVersion Epics", plan.stats.get("multi_fixversion_epics", 0)),
         ("Review Items", len([i for i in plan.audit_items if i.severity in {"Error", "Warning", "Review"}])),
     ]
     cards = "\n".join(
@@ -575,11 +603,15 @@ def render_planned_epics(plan: RunPlan) -> str:
     for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key)):
         rows.append(
             [
+                epic.jira_key or epic.key,
                 epic.key,
                 epic.key_prefix,
                 epic.summary,
                 epic.rollup_mode,
                 epic.rollup_key,
+                epic.row_role,
+                epic.fix_version,
+                "Yes" if epic.drives_schedule else "No",
                 epic.resource_group,
                 epic.percent_complete,
                 "Yes" if epic.in_planning else "No",
@@ -594,10 +626,14 @@ def render_planned_epics(plan: RunPlan) -> str:
         "Planned Epic Rows",
         [
             "Jira Key",
+            "Schedule Key",
             "Project Key",
             "Summary",
             "Rollup Mode",
             "Rollup",
+            "Row Role",
+            "Fix Version",
+            "Drives Schedule",
             "Resource Group",
             "% Complete",
             "In Planning",
@@ -617,16 +653,18 @@ def render_prefix_rollup_map(plan: RunPlan, config: Dict[str, Any]) -> str:
     resource_groups = config.get("resource_groups", {})
     prefixes = sorted(set(resource_groups) | set(configured_modes) | set(plan.stats.get("project_keys", [])))
     for prefix in prefixes:
+        rollup_mode = configured_modes.get(prefix, config.get("rollup_mode", "initiative"))
         rows.append(
             [
                 prefix,
                 resource_groups.get(prefix, ""),
-                configured_modes.get(prefix, config.get("rollup_mode", "initiative")),
+                rollup_mode,
+                multi_fixversion_policy_for_prefix(config, prefix) if rollup_mode == "fixVersion" else "",
             ]
         )
     return render_table(
         "Project Key Rollup Mapping",
-        ["Project Key", "Resource Group", "Rollup Mode"],
+        ["Project Key", "Resource Group", "Rollup Mode", "Multi-FixVersion Policy"],
         rows,
     )
 
@@ -639,6 +677,7 @@ def render_sections(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
                 item.severity,
                 item.category,
                 item.jira_key,
+                item.schedule_key,
                 item.summary,
                 item.field,
                 item.old_value,
@@ -655,6 +694,7 @@ def render_sections(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
                     "Severity",
                     "Category",
                     "Jira Key",
+                    "Schedule Key",
                     "Summary",
                     "Field",
                     "Old",

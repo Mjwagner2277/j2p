@@ -1,3 +1,3 @@
-severity,category,jira_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,CircularDependencySkipped,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,30
-Info,DependencyChange,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,30
+severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
+Warning,CircularDependencySkipped,DATA-3009,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,30
+Info,DependencyChange,DATA-3009,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Predecessors,,DATA-3008,changed_cell,Predecessors changed from '' to 'DATA-3008'.,Review the changed sandbox cell.,30

@@ -102,7 +102,13 @@ rollup_modes:
   TEAM: initiative
   PLAT: fixVersion
   DATA: initiative
+
+multi_fixversion_policy:
+  default: reference
+  OPS: split
 ```
+
+For fixVersion teams, multiple fixVersions are supported. `reference` is the default: the first fixVersion gets the scheduled row and the additional fixVersions get non-driving reference rows. Use `split` only when every listed fixVersion should get its own driving schedule row.
 
 Initiative mode command:
 

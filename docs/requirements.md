@@ -38,6 +38,10 @@ rollup_modes:
   TEAM: initiative
   PLAT: fixVersion
   DATA: initiative
+
+multi_fixversion_policy:
+  default: reference
+  OPS: split
 ```
 
 Initiative mode:
@@ -56,11 +60,24 @@ FixVersion summary task
 
 For a prefix using initiative mode, each epic must have a parent initiative key and that initiative must appear in the Jira CSV.
 
-For a prefix using fixVersion mode, each epic must have exactly one fixVersion by default. Missing or multiple fixVersions are excluded and reported unless configuration is changed later.
+For a prefix using fixVersion mode, each epic must have at least one fixVersion.
+
+If a fixVersion-mode epic has multiple fixVersions, j2p uses `multi_fixversion_policy`. Only two policies are supported:
+
+| Policy | Behavior | Best Use |
+| --- | --- | --- |
+| `reference` | Default. The first Jira fixVersion becomes the primary scheduled row. Each additional fixVersion gets a non-driving reference row. | The same work should be visible under qualification events, shop deliverables, or other commitments without double-counting work. |
+| `split` | Each fixVersion gets a driving Project row with its own stable schedule key. | The team intentionally wants the same Jira epic to drive schedule placement under every listed fixVersion. |
+
+Reference-only rollup summaries keep counted story points at zero to avoid double-counting, but show the referenced epic's percent complete for visibility.
 
 ## Epic Identity
 
-Epics map to Project tasks by Jira key, such as `TEAM-123`.
+Epics map to Project tasks by a stable j2p schedule key.
+
+For ordinary epics, the schedule key is the Jira key, such as `TEAM-123`.
+
+For secondary reference or split rows created from additional fixVersions, the schedule key is a stable composite value based on Jira key plus fixVersion. The original Jira key is still written to the `Jira Key` Project field.
 
 Initiatives map by Jira key.
 
@@ -144,11 +161,16 @@ Epics with unmapped prefixes are excluded and reported.
 | Jira Key Prefix | Text7 |
 | Dependency Review | Text8 |
 | Jira Status | Text9 |
+| j2p Unique Key | Text10 |
+| j2p Row Role | Text11 |
+| Jira Fix Version | Text12 |
+| Primary Schedule Key | Text13 |
 | Total Story Points | Number1 |
 | Completed Story Points | Number2 |
 | In Planning | Flag1 |
 | Unmatched Project Task | Flag2 |
 | Dependency Review Needed | Flag3 |
+| Drives Schedule | Flag4 |
 | Jira Target Start | Date1 |
 | Jira Target End | Date2 |
 

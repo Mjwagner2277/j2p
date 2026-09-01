@@ -62,6 +62,8 @@ py -3.14 -m j2p update `
 
 The main `.mpp` is never modified. The script copies it to a timestamped sandbox run folder, updates the sandbox, colors review cells, and writes a manager report plus audit CSVs.
 
+For fixVersion teams, epics with multiple fixVersions default to `reference`: one driving primary row plus non-driving reference rows. The only alternate policy is `split`, configured per Jira key prefix when every fixVersion should receive a driving schedule row.
+
 ## Pre-Merge Checks
 
 Run the local smoke test before merging or handing off changes:
