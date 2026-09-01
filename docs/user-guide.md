@@ -200,8 +200,8 @@ The state file lets future report-only validation compare against the last saved
 Open `Manager-Review-Report.html` first.
 
 1. Review `Decision Briefing`.
-2. Review `Story Points per 8 Hours`.
-3. Expand `Story Point Rate By Resource Group` when you need the active-work split by team/resource group.
+2. Review `Story Point Ratio`.
+3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
 4. Review `Rollup Status` for initiative/fixVersion progress.
 5. Review `Reviewer Action Needed`.
 6. Review `Review Type Summary` to see counts by issue category.
@@ -212,7 +212,7 @@ Open `Manager-Review-Report.html` first.
 11. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
 12. Open the sandbox `.mpp` and compare colored cells with the report.
 
-The manager report intentionally keeps project-wide story-point rate, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
+The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
 ## Color Key
 
@@ -379,7 +379,7 @@ By default, logged hours are written to the Microsoft Project custom number fiel
 
 If a logged-hours value is present but cannot be parsed, j2p treats it as `0` for calculation and adds an `UnparsedLoggedHours` warning to the manager report so the source CSV can be corrected.
 
-## Story Points Per 8 Hours
+## Story Point Ratio
 
 This metric answers: how many completed story points did the team actually deliver for every configured work block of logged time? The default is:
 
@@ -402,9 +402,9 @@ Interpretation:
 | Below `1.00` | The team completed less than 1 story point per 8 logged hours. |
 | `0` with no completed story points or no completed logged hours | Not applicable yet because there is no completed-work basis. |
 
-By default, this is written to the Microsoft Project custom number field `Number4` and shown with the display name `Story Points per 8 Hours`. Incomplete child work can still contribute to the total `Logged Hours` field, but it does not affect this metric until the child work is in a done status.
+By default, this is written to the Microsoft Project custom number field `Number4` and shown with the display name `Story Point Ratio`. Incomplete child work can still contribute to the total `Logged Hours` field, but it does not affect this metric until the child work is in a done status.
 
-The row-level value is available on each included epic row and in `planned-epics.csv` as `story_points_per_8_hours`. The manager report's `Story Points per 8 Hours` and `Story Point Rate By Resource Group` sections intentionally use only active scheduled epic rows: rows that drive the schedule and have `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
+The row-level value is available on each included epic row and in `planned-epics.csv` as `story_point_ratio`. The manager report's `Story Point Ratio` and `Story Point Ratio By Resource Group` sections intentionally use only active scheduled epic rows: rows that drive the schedule and have `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
 
 ## Dependencies
 
@@ -445,8 +445,8 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 | --- | --- | --- |
 | `Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Self-contained review report with summary sections and review guidance. |
 | `audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
-| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, story-point-rate calculation, and rollup decisions. |
-| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and story points per 8 hours. |
+| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, Story Point Ratio calculation, and rollup decisions. |
+| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and Story Point Ratio. |
 | `dependency-review.csv` | Schedule owners, Jira owners | Dependency-specific review items. |
 | `FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
 | `j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
@@ -497,8 +497,8 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `total_story_points` | Total child story/task points. |
 | `completed_story_points` | Completed child story/task points. |
 | `logged_hours` | Logged hours summed from child story/task rows. |
-| `completed_logged_hours` | Logged hours from completed child story/task rows. Used with completed story points for the story-point-rate metric. |
-| `story_points_per_8_hours` | Completed story points delivered per configured 8-hour logged-time block. |
+| `completed_logged_hours` | Logged hours from completed child story/task rows. Used with completed story points for the Story Point Ratio metric. |
+| `story_point_ratio` | Completed story points delivered per configured 8-hour logged-time block. |
 | `percent_complete` | Calculated epic percent complete. |
 | `in_planning` | `Yes` when no pointed child work exists. |
 | `completed` | `Yes` when the epic itself is in a done status. |
@@ -525,7 +525,7 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `completed_story_points` | Counted completed story points from driving rows only. |
 | `logged_hours` | Logged hours from driving rows. Reference-only rollups show referenced hours for visibility. |
 | `completed_logged_hours` | Logged hours from completed driving rows. Reference-only rollups show referenced completed hours for visibility. |
-| `story_points_per_8_hours` | Completed story points delivered per configured 8-hour logged-time block. |
+| `story_point_ratio` | Completed story points delivered per configured 8-hour logged-time block. |
 | `percent_complete` | Weighted percent complete. Reference-only rollups show visible referenced progress but keep counted points at zero. |
 
 ## Common Review Outcomes

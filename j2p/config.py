@@ -95,7 +95,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "total_story_points": "Number1",
         "completed_story_points": "Number2",
         "logged_hours": "Number3",
-        "story_points_per_8_hours": "Number4",
+        "story_point_ratio": "Number4",
         "in_planning": "Flag1",
         "unmatched_project_task": "Flag2",
         "dependency_review_needed": "Flag3",
@@ -119,7 +119,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "total_story_points": "Total Story Points",
         "completed_story_points": "Completed Story Points",
         "logged_hours": "Logged Hours",
-        "story_points_per_8_hours": "Story Points per 8 Hours",
+        "story_point_ratio": "Story Point Ratio",
         "in_planning": "In Planning",
         "unmatched_project_task": "Unmatched Project Task",
         "dependency_review_needed": "Dependency Review Needed",
@@ -229,23 +229,6 @@ def normalize_config(config: Dict[str, Any]) -> None:
         raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
     metrics["hours_per_story_point"] = hours_per_story_point
     config["metrics"] = metrics
-
-    project_fields = config.get("project_fields", {})
-    if isinstance(project_fields, dict):
-        legacy_hours_accuracy_field = project_fields.pop("hours_accuracy_percent", None)
-        if legacy_hours_accuracy_field:
-            project_fields["story_points_per_8_hours"] = legacy_hours_accuracy_field
-        config["project_fields"] = project_fields
-
-    project_field_names = config.get("project_field_names", {})
-    if isinstance(project_field_names, dict):
-        legacy_hours_accuracy_name = project_field_names.pop("hours_accuracy_percent", None)
-        if legacy_hours_accuracy_name and str(legacy_hours_accuracy_name).strip() not in {
-            "Hours Accuracy %",
-            "hours_accuracy_percent",
-        }:
-            project_field_names["story_points_per_8_hours"] = legacy_hours_accuracy_name
-        config["project_field_names"] = project_field_names
 
     review_table = config.get("review_table", {})
     if review_table is None:

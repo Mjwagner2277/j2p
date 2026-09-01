@@ -86,7 +86,7 @@ project_fields:
   total_story_points: Number1
   completed_story_points: Number2
   logged_hours: Number3
-  story_points_per_8_hours: Number4
+  story_point_ratio: Number4
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3

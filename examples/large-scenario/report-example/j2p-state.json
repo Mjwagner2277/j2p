@@ -23,7 +23,7 @@
       "row_role": "Scheduled",
       "source_row": 17,
       "status": "To Do",
-      "story_points_per_8_hours": 12.44,
+      "story_point_ratio": 12.44,
       "successors": [],
       "summary": "Client Walkthrough - Identity API name before Jira rename",
       "target_end": "2026-03-02",
@@ -53,7 +53,7 @@
       "row_role": "Scheduled",
       "source_row": 18,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [],
       "summary": "Client Walkthrough - Login service progress example",
       "target_end": "2026-03-16",
@@ -83,7 +83,7 @@
       "row_role": "Scheduled",
       "source_row": 19,
       "status": "In Progress",
-      "story_points_per_8_hours": 26.67,
+      "story_point_ratio": 26.67,
       "successors": [],
       "summary": "Client Walkthrough - Access audit completion example",
       "target_end": "2026-03-30",
@@ -113,7 +113,7 @@
       "row_role": "Scheduled",
       "source_row": 20,
       "status": "To Do",
-      "story_points_per_8_hours": 7.53,
+      "story_point_ratio": 7.53,
       "successors": [],
       "summary": "Client Walkthrough - Billing integration rollup move example",
       "target_end": "2026-04-13",
@@ -143,7 +143,7 @@
       "row_role": "Scheduled",
       "source_row": 21,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.0,
+      "story_point_ratio": 11.0,
       "successors": [
         "CORE-1005"
       ],
@@ -177,7 +177,7 @@
       "row_role": "Scheduled",
       "source_row": 22,
       "status": "In Progress",
-      "story_points_per_8_hours": 12.63,
+      "story_point_ratio": 12.63,
       "successors": [],
       "summary": "Client Walkthrough - Payment cutover downstream dependency",
       "target_end": "2026-04-06",
@@ -207,7 +207,7 @@
       "row_role": "Scheduled",
       "source_row": 23,
       "status": "To Do",
-      "story_points_per_8_hours": 4.92,
+      "story_point_ratio": 4.92,
       "successors": [],
       "summary": "Client Walkthrough - Vendor gateway missing dependency example",
       "target_end": "2026-04-20",
@@ -237,7 +237,7 @@
       "row_role": "Scheduled",
       "source_row": 24,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.9,
+      "story_point_ratio": 9.9,
       "successors": [],
       "summary": "Client Walkthrough - Account settings dependency change example",
       "target_end": "2026-05-04",
@@ -267,7 +267,7 @@
       "row_role": "Scheduled",
       "source_row": 170,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.6,
+      "story_point_ratio": 9.6,
       "successors": [
         "CORE-1009"
       ],
@@ -301,7 +301,7 @@
       "row_role": "Scheduled",
       "source_row": 179,
       "status": "To Do",
-      "story_points_per_8_hours": 11.73,
+      "story_point_ratio": 11.73,
       "successors": [
         "CORE-1010"
       ],
@@ -335,7 +335,7 @@
       "row_role": "Scheduled",
       "source_row": 111,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.56,
+      "story_point_ratio": 3.56,
       "successors": [
         "CORE-1011"
       ],
@@ -369,7 +369,7 @@
       "row_role": "Scheduled",
       "source_row": 117,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "CORE-1012"
       ],
@@ -403,7 +403,7 @@
       "row_role": "Scheduled",
       "source_row": 124,
       "status": "To Do",
-      "story_points_per_8_hours": 6.4,
+      "story_point_ratio": 6.4,
       "successors": [
         "CORE-1013"
       ],
@@ -437,7 +437,7 @@
       "row_role": "Scheduled",
       "source_row": 133,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [
         "CORE-1014"
       ],
@@ -471,7 +471,7 @@
       "row_role": "Scheduled",
       "source_row": 142,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [
         "CORE-1015"
       ],
@@ -505,7 +505,7 @@
       "row_role": "Scheduled",
       "source_row": 151,
       "status": "To Do",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "CORE-1016"
       ],
@@ -539,7 +539,7 @@
       "row_role": "Scheduled",
       "source_row": 160,
       "status": "In Progress",
-      "story_points_per_8_hours": 17.78,
+      "story_point_ratio": 17.78,
       "successors": [
         "CORE-1017"
       ],
@@ -573,7 +573,7 @@
       "row_role": "Scheduled",
       "source_row": 169,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.86,
+      "story_point_ratio": 6.86,
       "successors": [
         "CORE-1018"
       ],
@@ -607,7 +607,7 @@
       "row_role": "Scheduled",
       "source_row": 178,
       "status": "To Do",
-      "story_points_per_8_hours": 29.33,
+      "story_point_ratio": 29.33,
       "successors": [
         "CORE-1019"
       ],
@@ -641,7 +641,7 @@
       "row_role": "Scheduled",
       "source_row": 186,
       "status": "In Progress",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "successors": [
         "CORE-1020"
       ],
@@ -675,7 +675,7 @@
       "row_role": "Scheduled",
       "source_row": 116,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.56,
+      "story_point_ratio": 3.56,
       "successors": [
         "CORE-1021"
       ],
@@ -709,7 +709,7 @@
       "row_role": "Scheduled",
       "source_row": 123,
       "status": "To Do",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "CORE-1022"
       ],
@@ -743,7 +743,7 @@
       "row_role": "Scheduled",
       "source_row": 131,
       "status": "In Progress",
-      "story_points_per_8_hours": 128.0,
+      "story_point_ratio": 128.0,
       "successors": [
         "CORE-1023"
       ],
@@ -777,7 +777,7 @@
       "row_role": "Scheduled",
       "source_row": 140,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [
         "CORE-1024"
       ],
@@ -811,7 +811,7 @@
       "row_role": "Scheduled",
       "source_row": 149,
       "status": "To Do",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "CORE-1025"
       ],
@@ -845,7 +845,7 @@
       "row_role": "Scheduled",
       "source_row": 158,
       "status": "In Progress",
-      "story_points_per_8_hours": 12.31,
+      "story_point_ratio": 12.31,
       "successors": [
         "CORE-1026"
       ],
@@ -879,7 +879,7 @@
       "row_role": "Scheduled",
       "source_row": 167,
       "status": "In Progress",
-      "story_points_per_8_hours": 1.45,
+      "story_point_ratio": 1.45,
       "successors": [
         "CORE-1027"
       ],
@@ -913,7 +913,7 @@
       "row_role": "Scheduled",
       "source_row": 176,
       "status": "To Do",
-      "story_points_per_8_hours": 17.6,
+      "story_point_ratio": 17.6,
       "successors": [
         "CORE-1028"
       ],
@@ -947,7 +947,7 @@
       "row_role": "Scheduled",
       "source_row": 184,
       "status": "In Progress",
-      "story_points_per_8_hours": 26.67,
+      "story_point_ratio": 26.67,
       "successors": [
         "CORE-1029"
       ],
@@ -981,7 +981,7 @@
       "row_role": "Scheduled",
       "source_row": 191,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [
         "CORE-1030"
       ],
@@ -1015,7 +1015,7 @@
       "row_role": "Scheduled",
       "source_row": 122,
       "status": "To Do",
-      "story_points_per_8_hours": 3.56,
+      "story_point_ratio": 3.56,
       "successors": [
         "CORE-1031"
       ],
@@ -1049,7 +1049,7 @@
       "row_role": "Scheduled",
       "source_row": 130,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "CORE-1032"
       ],
@@ -1083,7 +1083,7 @@
       "row_role": "Scheduled",
       "source_row": 138,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.4,
+      "story_point_ratio": 6.4,
       "successors": [],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 33",
       "target_end": "2026-05-04",
@@ -1113,7 +1113,7 @@
       "row_role": "Scheduled",
       "source_row": 147,
       "status": "To Do",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 34",
       "target_end": "2026-05-18",
@@ -1143,7 +1143,7 @@
       "row_role": "Scheduled",
       "source_row": 156,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Notification routing wave 35",
       "target_end": "2026-06-01",
@@ -1173,7 +1173,7 @@
       "row_role": "Scheduled",
       "source_row": 165,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Session management wave 36",
       "target_end": "2026-05-11",
@@ -1203,7 +1203,7 @@
       "row_role": "Scheduled",
       "source_row": 174,
       "status": "To Do",
-      "story_points_per_8_hours": 17.78,
+      "story_point_ratio": 17.78,
       "successors": [],
       "summary": "Scale Rows - Core Product - Account recovery wave 37",
       "target_end": "2026-05-25",
@@ -1233,7 +1233,7 @@
       "row_role": "Scheduled",
       "source_row": 182,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.86,
+      "story_point_ratio": 6.86,
       "successors": [],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 38",
       "target_end": "2026-06-08",
@@ -1263,7 +1263,7 @@
       "row_role": "Scheduled",
       "source_row": 189,
       "status": "In Progress",
-      "story_points_per_8_hours": 29.33,
+      "story_point_ratio": 29.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 39",
       "target_end": "2026-06-22",
@@ -1293,7 +1293,7 @@
       "row_role": "Scheduled",
       "source_row": 194,
       "status": "To Do",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "successors": [],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 40",
       "target_end": "2026-07-06",
@@ -1323,7 +1323,7 @@
       "row_role": "Scheduled",
       "source_row": 129,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.43,
+      "story_point_ratio": 11.43,
       "successors": [],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 41",
       "target_end": "2026-06-15",
@@ -1353,7 +1353,7 @@
       "row_role": "Scheduled",
       "source_row": 137,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 42",
       "target_end": "2026-06-29",
@@ -1383,7 +1383,7 @@
       "row_role": "Scheduled",
       "source_row": 145,
       "status": "To Do",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Notification routing wave 43",
       "target_end": "2026-07-13",
@@ -1413,7 +1413,7 @@
       "row_role": "Scheduled",
       "source_row": 154,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Session management wave 44",
       "target_end": "2026-07-27",
@@ -1443,7 +1443,7 @@
       "row_role": "Scheduled",
       "source_row": 163,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [],
       "summary": "Scale Rows - Core Product - Account recovery wave 45",
       "target_end": "2026-08-10",
@@ -1473,7 +1473,7 @@
       "row_role": "Scheduled",
       "source_row": 172,
       "status": "To Do",
-      "story_points_per_8_hours": 12.31,
+      "story_point_ratio": 12.31,
       "successors": [],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 46",
       "target_end": "2026-07-20",
@@ -1503,7 +1503,7 @@
       "row_role": "Scheduled",
       "source_row": 180,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 47",
       "target_end": "2026-08-03",
@@ -1533,7 +1533,7 @@
       "row_role": "Scheduled",
       "source_row": 187,
       "status": "In Progress",
-      "story_points_per_8_hours": 17.6,
+      "story_point_ratio": 17.6,
       "successors": [],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 48",
       "target_end": "2026-08-17",
@@ -1563,7 +1563,7 @@
       "row_role": "Scheduled",
       "source_row": 25,
       "status": "To Do",
-      "story_points_per_8_hours": 7.47,
+      "story_point_ratio": 7.47,
       "successors": [],
       "summary": "Client Walkthrough - Legacy schedule item present only in baseline",
       "target_end": "2026-08-31",
@@ -1593,7 +1593,7 @@
       "row_role": "Scheduled",
       "source_row": 26,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [],
       "summary": "Client Walkthrough - Marketplace experiment missing rollup example",
       "target_end": "2026-09-14",
@@ -1623,7 +1623,7 @@
       "row_role": "Scheduled",
       "source_row": 101,
       "status": "To Do",
-      "story_points_per_8_hours": 44.0,
+      "story_point_ratio": 44.0,
       "successors": [
         "DATA-3001"
       ],
@@ -1657,7 +1657,7 @@
       "row_role": "Scheduled",
       "source_row": 103,
       "status": "In Progress",
-      "story_points_per_8_hours": 12.44,
+      "story_point_ratio": 12.44,
       "successors": [
         "DATA-3002"
       ],
@@ -1691,7 +1691,7 @@
       "row_role": "Scheduled",
       "source_row": 106,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.57,
+      "story_point_ratio": 4.57,
       "successors": [
         "DATA-3003"
       ],
@@ -1725,7 +1725,7 @@
       "row_role": "Scheduled",
       "source_row": 110,
       "status": "To Do",
-      "story_points_per_8_hours": 26.67,
+      "story_point_ratio": 26.67,
       "successors": [
         "DATA-3004"
       ],
@@ -1759,7 +1759,7 @@
       "row_role": "Scheduled",
       "source_row": 115,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.73,
+      "story_point_ratio": 8.73,
       "successors": [
         "DATA-3005"
       ],
@@ -1793,7 +1793,7 @@
       "row_role": "Scheduled",
       "source_row": 121,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.0,
+      "story_point_ratio": 11.0,
       "successors": [
         "DATA-3006"
       ],
@@ -1827,7 +1827,7 @@
       "row_role": "Scheduled",
       "source_row": 128,
       "status": "To Do",
-      "story_points_per_8_hours": 14.0,
+      "story_point_ratio": 14.0,
       "successors": [
         "DATA-3007"
       ],
@@ -1861,7 +1861,7 @@
       "row_role": "Scheduled",
       "source_row": 136,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.92,
+      "story_point_ratio": 4.92,
       "successors": [
         "DATA-3010"
       ],
@@ -1893,7 +1893,7 @@
       "row_role": "Scheduled",
       "source_row": 29,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.89,
+      "story_point_ratio": 8.89,
       "successors": [],
       "summary": "Client Walkthrough - Warehouse migration circular dependency A",
       "target_end": "2026-10-05",
@@ -1923,7 +1923,7 @@
       "row_role": "Scheduled",
       "source_row": 30,
       "status": "To Do",
-      "story_points_per_8_hours": 9.6,
+      "story_point_ratio": 9.6,
       "successors": [],
       "summary": "Client Walkthrough - Warehouse migration circular dependency B",
       "target_end": "2026-10-19",
@@ -1955,7 +1955,7 @@
       "row_role": "Scheduled",
       "source_row": 102,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.62,
+      "story_point_ratio": 8.62,
       "successors": [
         "DATA-3011"
       ],
@@ -1989,7 +1989,7 @@
       "row_role": "Scheduled",
       "source_row": 105,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.36,
+      "story_point_ratio": 4.36,
       "successors": [
         "DATA-3012"
       ],
@@ -2023,7 +2023,7 @@
       "row_role": "Scheduled",
       "source_row": 109,
       "status": "To Do",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "DATA-3013"
       ],
@@ -2057,7 +2057,7 @@
       "row_role": "Scheduled",
       "source_row": 114,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [
         "DATA-3014"
       ],
@@ -2091,7 +2091,7 @@
       "row_role": "Scheduled",
       "source_row": 120,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [
         "DATA-3015"
       ],
@@ -2125,7 +2125,7 @@
       "row_role": "Scheduled",
       "source_row": 127,
       "status": "To Do",
-      "story_points_per_8_hours": 10.0,
+      "story_point_ratio": 10.0,
       "successors": [
         "DATA-3016"
       ],
@@ -2159,7 +2159,7 @@
       "row_role": "Scheduled",
       "source_row": 135,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "DATA-3017"
       ],
@@ -2193,7 +2193,7 @@
       "row_role": "Scheduled",
       "source_row": 144,
       "status": "In Progress",
-      "story_points_per_8_hours": 0.0,
+      "story_point_ratio": 0.0,
       "successors": [
         "DATA-3018"
       ],
@@ -2227,7 +2227,7 @@
       "row_role": "Scheduled",
       "source_row": 153,
       "status": "To Do",
-      "story_points_per_8_hours": 6.86,
+      "story_point_ratio": 6.86,
       "successors": [
         "DATA-3019"
       ],
@@ -2261,7 +2261,7 @@
       "row_role": "Scheduled",
       "source_row": 162,
       "status": "In Progress",
-      "story_points_per_8_hours": 25.6,
+      "story_point_ratio": 25.6,
       "successors": [
         "DATA-3020"
       ],
@@ -2295,7 +2295,7 @@
       "row_role": "Scheduled",
       "source_row": 104,
       "status": "In Progress",
-      "story_points_per_8_hours": 44.0,
+      "story_point_ratio": 44.0,
       "successors": [
         "DATA-3021"
       ],
@@ -2329,7 +2329,7 @@
       "row_role": "Scheduled",
       "source_row": 108,
       "status": "To Do",
-      "story_points_per_8_hours": 12.44,
+      "story_point_ratio": 12.44,
       "successors": [
         "DATA-3022"
       ],
@@ -2363,7 +2363,7 @@
       "row_role": "Scheduled",
       "source_row": 113,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.57,
+      "story_point_ratio": 4.57,
       "successors": [
         "DATA-3023"
       ],
@@ -2397,7 +2397,7 @@
       "row_role": "Scheduled",
       "source_row": 119,
       "status": "In Progress",
-      "story_points_per_8_hours": 26.67,
+      "story_point_ratio": 26.67,
       "successors": [
         "DATA-3024"
       ],
@@ -2431,7 +2431,7 @@
       "row_role": "Scheduled",
       "source_row": 126,
       "status": "To Do",
-      "story_points_per_8_hours": 8.73,
+      "story_point_ratio": 8.73,
       "successors": [
         "DATA-3025"
       ],
@@ -2465,7 +2465,7 @@
       "row_role": "Scheduled",
       "source_row": 134,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.0,
+      "story_point_ratio": 11.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 26",
       "target_end": "2026-07-20",
@@ -2495,7 +2495,7 @@
       "row_role": "Scheduled",
       "source_row": 143,
       "status": "In Progress",
-      "story_points_per_8_hours": 14.0,
+      "story_point_ratio": 14.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Metrics certification wave 27",
       "target_end": "2026-08-03",
@@ -2525,7 +2525,7 @@
       "row_role": "Scheduled",
       "source_row": 152,
       "status": "To Do",
-      "story_points_per_8_hours": 4.92,
+      "story_point_ratio": 4.92,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Forecast data mart wave 28",
       "target_end": "2026-08-17",
@@ -2555,7 +2555,7 @@
       "row_role": "Scheduled",
       "source_row": 161,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.89,
+      "story_point_ratio": 8.89,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Streaming ingestion wave 29",
       "target_end": "2026-08-31",
@@ -2585,7 +2585,7 @@
       "row_role": "Scheduled",
       "source_row": 171,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.6,
+      "story_point_ratio": 9.6,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Retention model update wave 30",
       "target_end": "2026-09-14",
@@ -2615,7 +2615,7 @@
       "row_role": "Scheduled",
       "source_row": 107,
       "status": "To Do",
-      "story_points_per_8_hours": 8.62,
+      "story_point_ratio": 8.62,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Quality rule expansion wave 31",
       "target_end": "2026-08-24",
@@ -2645,7 +2645,7 @@
       "row_role": "Scheduled",
       "source_row": 112,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.56,
+      "story_point_ratio": 3.56,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Analytics contract cleanup wave 32",
       "target_end": "2026-09-07",
@@ -2675,7 +2675,7 @@
       "row_role": "Scheduled",
       "source_row": 118,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Warehouse model refresh wave 33",
       "target_end": "2026-09-21",
@@ -2705,7 +2705,7 @@
       "row_role": "Scheduled",
       "source_row": 125,
       "status": "To Do",
-      "story_points_per_8_hours": 6.4,
+      "story_point_ratio": 6.4,
       "successors": [],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 34",
       "target_end": "2026-10-05",
@@ -2735,7 +2735,7 @@
       "row_role": "Scheduled",
       "source_row": 31,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [],
       "summary": "Client Walkthrough - Forecast refresh invalid date example",
       "target_end": "2026-10-19",
@@ -2765,7 +2765,7 @@
       "row_role": "Scheduled",
       "source_row": 76,
       "status": "To Do",
-      "story_points_per_8_hours": 40.0,
+      "story_point_ratio": 40.0,
       "successors": [
         "OPS-5001"
       ],
@@ -2799,7 +2799,7 @@
       "row_role": "Scheduled",
       "source_row": 81,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.38,
+      "story_point_ratio": 7.38,
       "successors": [
         "OPS-5002"
       ],
@@ -2833,7 +2833,7 @@
       "row_role": "Scheduled",
       "source_row": 85,
       "status": "In Progress",
-      "story_points_per_8_hours": 19.56,
+      "story_point_ratio": 19.56,
       "successors": [
         "OPS-5003"
       ],
@@ -2867,7 +2867,7 @@
       "row_role": "Scheduled",
       "source_row": 88,
       "status": "To Do",
-      "story_points_per_8_hours": 7.38,
+      "story_point_ratio": 7.38,
       "successors": [
         "OPS-5004"
       ],
@@ -2901,7 +2901,7 @@
       "row_role": "Scheduled",
       "source_row": 90,
       "status": "In Progress",
-      "story_points_per_8_hours": 19.56,
+      "story_point_ratio": 19.56,
       "successors": [
         "OPS-5005"
       ],
@@ -2935,7 +2935,7 @@
       "row_role": "Scheduled",
       "source_row": 92,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.22,
+      "story_point_ratio": 6.22,
       "successors": [
         "OPS-5006"
       ],
@@ -2969,7 +2969,7 @@
       "row_role": "Scheduled",
       "source_row": 94,
       "status": "To Do",
-      "story_points_per_8_hours": 19.56,
+      "story_point_ratio": 19.56,
       "successors": [
         "OPS-5007"
       ],
@@ -3003,7 +3003,7 @@
       "row_role": "Scheduled",
       "source_row": 96,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.22,
+      "story_point_ratio": 6.22,
       "successors": [
         "OPS-5008"
       ],
@@ -3037,7 +3037,7 @@
       "row_role": "Scheduled",
       "source_row": 98,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.57,
+      "story_point_ratio": 4.57,
       "successors": [
         "OPS-5009"
       ],
@@ -3071,7 +3071,7 @@
       "row_role": "Scheduled",
       "source_row": 100,
       "status": "To Do",
-      "story_points_per_8_hours": 6.22,
+      "story_point_ratio": 6.22,
       "successors": [
         "OPS-5010"
       ],
@@ -3105,7 +3105,7 @@
       "row_role": "Scheduled",
       "source_row": 80,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [
         "OPS-5011"
       ],
@@ -3139,7 +3139,7 @@
       "row_role": "Scheduled",
       "source_row": 84,
       "status": "In Progress",
-      "story_points_per_8_hours": 20.0,
+      "story_point_ratio": 20.0,
       "successors": [
         "OPS-5012"
       ],
@@ -3173,7 +3173,7 @@
       "row_role": "Scheduled",
       "source_row": 87,
       "status": "To Do",
-      "story_points_per_8_hours": 24.0,
+      "story_point_ratio": 24.0,
       "successors": [
         "OPS-5013"
       ],
@@ -3207,7 +3207,7 @@
       "row_role": "Scheduled",
       "source_row": 89,
       "status": "In Progress",
-      "story_points_per_8_hours": 64.0,
+      "story_point_ratio": 64.0,
       "successors": [
         "OPS-5014"
       ],
@@ -3241,7 +3241,7 @@
       "row_role": "Scheduled",
       "source_row": 91,
       "status": "In Progress",
-      "story_points_per_8_hours": 24.0,
+      "story_point_ratio": 24.0,
       "successors": [
         "OPS-5015"
       ],
@@ -3275,7 +3275,7 @@
       "row_role": "Scheduled",
       "source_row": 93,
       "status": "To Do",
-      "story_points_per_8_hours": 13.54,
+      "story_point_ratio": 13.54,
       "successors": [
         "OPS-5016"
       ],
@@ -3309,7 +3309,7 @@
       "row_role": "Scheduled",
       "source_row": 95,
       "status": "In Progress",
-      "story_points_per_8_hours": 0.0,
+      "story_point_ratio": 0.0,
       "successors": [
         "OPS-5017"
       ],
@@ -3343,7 +3343,7 @@
       "row_role": "Scheduled",
       "source_row": 97,
       "status": "In Progress",
-      "story_points_per_8_hours": 13.54,
+      "story_point_ratio": 13.54,
       "successors": [
         "OPS-5018"
       ],
@@ -3377,7 +3377,7 @@
       "row_role": "Scheduled",
       "source_row": 99,
       "status": "To Do",
-      "story_points_per_8_hours": 12.44,
+      "story_point_ratio": 12.44,
       "successors": [],
       "summary": "Scale Rows - Operations - Support workflow routing wave 19",
       "target_end": "2026-10-05",
@@ -3407,7 +3407,7 @@
       "row_role": "Scheduled",
       "source_row": 34,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.36,
+      "story_point_ratio": 4.36,
       "successors": [],
       "summary": "Client Walkthrough - Shop deliverable split fixVersion example",
       "target_end": "2026-10-19",
@@ -3437,7 +3437,7 @@
       "row_role": "Scheduled",
       "source_row": 132,
       "status": "To Do",
-      "story_points_per_8_hours": 128.0,
+      "story_point_ratio": 128.0,
       "successors": [
         "PLAT-4001"
       ],
@@ -3471,7 +3471,7 @@
       "row_role": "Scheduled",
       "source_row": 141,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [
         "PLAT-4002"
       ],
@@ -3505,7 +3505,7 @@
       "row_role": "Scheduled",
       "source_row": 150,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "PLAT-4003"
       ],
@@ -3539,7 +3539,7 @@
       "row_role": "Scheduled",
       "source_row": 159,
       "status": "To Do",
-      "story_points_per_8_hours": 12.31,
+      "story_point_ratio": 12.31,
       "successors": [
         "PLAT-4004"
       ],
@@ -3573,7 +3573,7 @@
       "row_role": "Scheduled",
       "source_row": 168,
       "status": "In Progress",
-      "story_points_per_8_hours": 1.45,
+      "story_point_ratio": 1.45,
       "successors": [
         "PLAT-4005"
       ],
@@ -3607,7 +3607,7 @@
       "row_role": "Scheduled",
       "source_row": 177,
       "status": "In Progress",
-      "story_points_per_8_hours": 17.6,
+      "story_point_ratio": 17.6,
       "successors": [
         "PLAT-4006"
       ],
@@ -3641,7 +3641,7 @@
       "row_role": "Scheduled",
       "source_row": 185,
       "status": "To Do",
-      "story_points_per_8_hours": 26.67,
+      "story_point_ratio": 26.67,
       "successors": [
         "PLAT-4007"
       ],
@@ -3675,7 +3675,7 @@
       "row_role": "Scheduled",
       "source_row": 192,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [
         "PLAT-4008"
       ],
@@ -3709,7 +3709,7 @@
       "row_role": "Scheduled",
       "source_row": 196,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [
         "PLAT-4009"
       ],
@@ -3743,7 +3743,7 @@
       "row_role": "Scheduled",
       "source_row": 199,
       "status": "To Do",
-      "story_points_per_8_hours": 24.0,
+      "story_point_ratio": 24.0,
       "successors": [
         "PLAT-4010"
       ],
@@ -3777,7 +3777,7 @@
       "row_role": "Scheduled",
       "source_row": 139,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.4,
+      "story_point_ratio": 6.4,
       "successors": [
         "PLAT-4011"
       ],
@@ -3811,7 +3811,7 @@
       "row_role": "Scheduled",
       "source_row": 148,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [
         "PLAT-4012"
       ],
@@ -3845,7 +3845,7 @@
       "row_role": "Scheduled",
       "source_row": 157,
       "status": "To Do",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [
         "PLAT-4013"
       ],
@@ -3879,7 +3879,7 @@
       "row_role": "Scheduled",
       "source_row": 166,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "PLAT-4014"
       ],
@@ -3913,7 +3913,7 @@
       "row_role": "Scheduled",
       "source_row": 175,
       "status": "In Progress",
-      "story_points_per_8_hours": 17.78,
+      "story_point_ratio": 17.78,
       "successors": [
         "PLAT-4015"
       ],
@@ -3947,7 +3947,7 @@
       "row_role": "Scheduled",
       "source_row": 183,
       "status": "To Do",
-      "story_points_per_8_hours": 6.86,
+      "story_point_ratio": 6.86,
       "successors": [
         "PLAT-4016"
       ],
@@ -3981,7 +3981,7 @@
       "row_role": "Scheduled",
       "source_row": 190,
       "status": "In Progress",
-      "story_points_per_8_hours": 29.33,
+      "story_point_ratio": 29.33,
       "successors": [
         "PLAT-4017"
       ],
@@ -4015,7 +4015,7 @@
       "row_role": "Scheduled",
       "source_row": 195,
       "status": "In Progress",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "successors": [
         "PLAT-4018"
       ],
@@ -4049,7 +4049,7 @@
       "row_role": "Scheduled",
       "source_row": 198,
       "status": "To Do",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [
         "PLAT-4019"
       ],
@@ -4083,7 +4083,7 @@
       "row_role": "Scheduled",
       "source_row": 200,
       "status": "In Progress",
-      "story_points_per_8_hours": 20.0,
+      "story_point_ratio": 20.0,
       "successors": [
         "PLAT-4020"
       ],
@@ -4117,7 +4117,7 @@
       "row_role": "Scheduled",
       "source_row": 146,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "PLAT-4021"
       ],
@@ -4151,7 +4151,7 @@
       "row_role": "Scheduled",
       "source_row": 155,
       "status": "To Do",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [
         "PLAT-4022"
       ],
@@ -4185,7 +4185,7 @@
       "row_role": "Scheduled",
       "source_row": 164,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "PLAT-4023"
       ],
@@ -4219,7 +4219,7 @@
       "row_role": "Scheduled",
       "source_row": 173,
       "status": "In Progress",
-      "story_points_per_8_hours": 12.31,
+      "story_point_ratio": 12.31,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Deployment guardrails wave 24",
       "target_end": "2026-10-05",
@@ -4249,7 +4249,7 @@
       "row_role": "Scheduled",
       "source_row": 181,
       "status": "To Do",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Kubernetes platform upgrade wave 25",
       "target_end": "2026-10-19",
@@ -4279,7 +4279,7 @@
       "row_role": "Scheduled",
       "source_row": 188,
       "status": "In Progress",
-      "story_points_per_8_hours": 17.6,
+      "story_point_ratio": 17.6,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Build runner rotation wave 26",
       "target_end": "2026-09-28",
@@ -4309,7 +4309,7 @@
       "row_role": "Scheduled",
       "source_row": 193,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.47,
+      "story_point_ratio": 7.47,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Secrets management wave 27",
       "target_end": "2026-10-12",
@@ -4339,7 +4339,7 @@
       "row_role": "Scheduled",
       "source_row": 197,
       "status": "To Do",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [],
       "summary": "Scale Rows - Platform Services - Shared logging wave 28",
       "target_end": "2026-10-26",
@@ -4369,7 +4369,7 @@
       "row_role": "Scheduled",
       "source_row": 32,
       "status": "In Progress",
-      "story_points_per_8_hours": 13.33,
+      "story_point_ratio": 13.33,
       "successors": [],
       "summary": "Client Walkthrough - Qualification software reference example",
       "target_end": "2026-11-09",
@@ -4399,7 +4399,7 @@
       "row_role": "Scheduled",
       "source_row": 33,
       "status": "In Progress",
-      "story_points_per_8_hours": 24.0,
+      "story_point_ratio": 24.0,
       "successors": [],
       "summary": "Client Walkthrough - Deployment runner fixVersion example",
       "target_end": "2026-11-23",
@@ -4429,7 +4429,7 @@
       "row_role": "Scheduled",
       "source_row": 36,
       "status": "To Do",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [
         "WEB-2001"
       ],
@@ -4463,7 +4463,7 @@
       "row_role": "Scheduled",
       "source_row": 37,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.0,
+      "story_point_ratio": 11.0,
       "successors": [
         "WEB-2002"
       ],
@@ -4497,7 +4497,7 @@
       "row_role": "Scheduled",
       "source_row": 40,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [
         "WEB-2003"
       ],
@@ -4531,7 +4531,7 @@
       "row_role": "Scheduled",
       "source_row": 44,
       "status": "To Do",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "WEB-2004"
       ],
@@ -4565,7 +4565,7 @@
       "row_role": "Scheduled",
       "source_row": 49,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.33,
+      "story_point_ratio": 9.33,
       "successors": [
         "WEB-2005"
       ],
@@ -4599,7 +4599,7 @@
       "row_role": "Scheduled",
       "source_row": 54,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "WEB-2006"
       ],
@@ -4633,7 +4633,7 @@
       "row_role": "Scheduled",
       "source_row": 59,
       "status": "To Do",
-      "story_points_per_8_hours": 40.0,
+      "story_point_ratio": 40.0,
       "successors": [
         "WEB-2007"
       ],
@@ -4667,7 +4667,7 @@
       "row_role": "Scheduled",
       "source_row": 64,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "WEB-2009"
       ],
@@ -4699,7 +4699,7 @@
       "row_role": "Scheduled",
       "source_row": 27,
       "status": "In Progress",
-      "story_points_per_8_hours": 40.0,
+      "story_point_ratio": 40.0,
       "successors": [],
       "summary": "Client Walkthrough - Web launch self dependency example",
       "target_end": "2026-05-18",
@@ -4731,7 +4731,7 @@
       "row_role": "Scheduled",
       "source_row": 72,
       "status": "To Do",
-      "story_points_per_8_hours": 7.38,
+      "story_point_ratio": 7.38,
       "successors": [
         "WEB-2011"
       ],
@@ -4763,7 +4763,7 @@
       "row_role": "Scheduled",
       "source_row": 28,
       "status": "To Do",
-      "story_points_per_8_hours": 0.0,
+      "story_point_ratio": 0.0,
       "successors": [],
       "summary": "Client Walkthrough - Design system discovery with no pointed child work",
       "target_end": "2026-05-11",
@@ -4795,7 +4795,7 @@
       "row_role": "Scheduled",
       "source_row": 39,
       "status": "In Progress",
-      "story_points_per_8_hours": 8.0,
+      "story_point_ratio": 8.0,
       "successors": [
         "WEB-2012"
       ],
@@ -4829,7 +4829,7 @@
       "row_role": "Scheduled",
       "source_row": 43,
       "status": "To Do",
-      "story_points_per_8_hours": 8.8,
+      "story_point_ratio": 8.8,
       "successors": [
         "WEB-2013"
       ],
@@ -4863,7 +4863,7 @@
       "row_role": "Scheduled",
       "source_row": 48,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [
         "WEB-2014"
       ],
@@ -4897,7 +4897,7 @@
       "row_role": "Scheduled",
       "source_row": 53,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.0,
+      "story_point_ratio": 6.0,
       "successors": [
         "WEB-2015"
       ],
@@ -4931,7 +4931,7 @@
       "row_role": "Scheduled",
       "source_row": 58,
       "status": "To Do",
-      "story_points_per_8_hours": 7.0,
+      "story_point_ratio": 7.0,
       "successors": [
         "WEB-2016"
       ],
@@ -4965,7 +4965,7 @@
       "row_role": "Scheduled",
       "source_row": 63,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [
         "WEB-2017"
       ],
@@ -4999,7 +4999,7 @@
       "row_role": "Scheduled",
       "source_row": 68,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [
         "WEB-2018"
       ],
@@ -5033,7 +5033,7 @@
       "row_role": "Scheduled",
       "source_row": 71,
       "status": "To Do",
-      "story_points_per_8_hours": 5.33,
+      "story_point_ratio": 5.33,
       "successors": [
         "WEB-2019"
       ],
@@ -5067,7 +5067,7 @@
       "row_role": "Scheduled",
       "source_row": 75,
       "status": "In Progress",
-      "story_points_per_8_hours": 20.0,
+      "story_point_ratio": 20.0,
       "successors": [
         "WEB-2020"
       ],
@@ -5101,7 +5101,7 @@
       "row_role": "Scheduled",
       "source_row": 38,
       "status": "In Progress",
-      "story_points_per_8_hours": 6.4,
+      "story_point_ratio": 6.4,
       "successors": [
         "WEB-2021"
       ],
@@ -5135,7 +5135,7 @@
       "row_role": "Scheduled",
       "source_row": 42,
       "status": "To Do",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "WEB-2022"
       ],
@@ -5169,7 +5169,7 @@
       "row_role": "Scheduled",
       "source_row": 47,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.6,
+      "story_point_ratio": 5.6,
       "successors": [
         "WEB-2023"
       ],
@@ -5203,7 +5203,7 @@
       "row_role": "Scheduled",
       "source_row": 52,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [
         "WEB-2024"
       ],
@@ -5237,7 +5237,7 @@
       "row_role": "Scheduled",
       "source_row": 57,
       "status": "To Do",
-      "story_points_per_8_hours": 5.6,
+      "story_point_ratio": 5.6,
       "successors": [
         "WEB-2025"
       ],
@@ -5271,7 +5271,7 @@
       "row_role": "Scheduled",
       "source_row": 62,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [
         "WEB-2026"
       ],
@@ -5305,7 +5305,7 @@
       "row_role": "Scheduled",
       "source_row": 67,
       "status": "In Progress",
-      "story_points_per_8_hours": 5.6,
+      "story_point_ratio": 5.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 27",
       "target_end": "2026-09-07",
@@ -5335,7 +5335,7 @@
       "row_role": "Scheduled",
       "source_row": 70,
       "status": "To Do",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 28",
       "target_end": "2026-09-21",
@@ -5365,7 +5365,7 @@
       "row_role": "Scheduled",
       "source_row": 74,
       "status": "In Progress",
-      "story_points_per_8_hours": 13.33,
+      "story_point_ratio": 13.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 29",
       "target_end": "2026-10-05",
@@ -5395,7 +5395,7 @@
       "row_role": "Scheduled",
       "source_row": 79,
       "status": "In Progress",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 30",
       "target_end": "2026-10-19",
@@ -5425,7 +5425,7 @@
       "row_role": "Scheduled",
       "source_row": 41,
       "status": "To Do",
-      "story_points_per_8_hours": 42.67,
+      "story_point_ratio": 42.67,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Localization pass wave 31",
       "target_end": "2026-09-28",
@@ -5455,7 +5455,7 @@
       "row_role": "Scheduled",
       "source_row": 46,
       "status": "In Progress",
-      "story_points_per_8_hours": 16.0,
+      "story_point_ratio": 16.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 32",
       "target_end": "2026-10-12",
@@ -5485,7 +5485,7 @@
       "row_role": "Scheduled",
       "source_row": 51,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.73,
+      "story_point_ratio": 11.73,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 33",
       "target_end": "2026-10-26",
@@ -5515,7 +5515,7 @@
       "row_role": "Scheduled",
       "source_row": 56,
       "status": "To Do",
-      "story_points_per_8_hours": 80.0,
+      "story_point_ratio": 80.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 34",
       "target_end": "2026-11-09",
@@ -5545,7 +5545,7 @@
       "row_role": "Scheduled",
       "source_row": 61,
       "status": "In Progress",
-      "story_points_per_8_hours": 11.73,
+      "story_point_ratio": 11.73,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 35",
       "target_end": "2026-06-01",
@@ -5575,7 +5575,7 @@
       "row_role": "Scheduled",
       "source_row": 66,
       "status": "In Progress",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 36",
       "target_end": "2026-05-11",
@@ -5605,7 +5605,7 @@
       "row_role": "Scheduled",
       "source_row": 69,
       "status": "To Do",
-      "story_points_per_8_hours": 4.0,
+      "story_point_ratio": 4.0,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 37",
       "target_end": "2026-05-25",
@@ -5635,7 +5635,7 @@
       "row_role": "Scheduled",
       "source_row": 73,
       "status": "In Progress",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 38",
       "target_end": "2026-06-08",
@@ -5665,7 +5665,7 @@
       "row_role": "Scheduled",
       "source_row": 77,
       "status": "In Progress",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Localization pass wave 39",
       "target_end": "2026-06-22",
@@ -5695,7 +5695,7 @@
       "row_role": "Scheduled",
       "source_row": 82,
       "status": "To Do",
-      "story_points_per_8_hours": 3.2,
+      "story_point_ratio": 3.2,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 40",
       "target_end": "2026-07-06",
@@ -5725,7 +5725,7 @@
       "row_role": "Scheduled",
       "source_row": 45,
       "status": "In Progress",
-      "story_points_per_8_hours": 9.6,
+      "story_point_ratio": 9.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 41",
       "target_end": "2026-06-15",
@@ -5755,7 +5755,7 @@
       "row_role": "Scheduled",
       "source_row": 50,
       "status": "In Progress",
-      "story_points_per_8_hours": 29.33,
+      "story_point_ratio": 29.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 42",
       "target_end": "2026-06-29",
@@ -5785,7 +5785,7 @@
       "row_role": "Scheduled",
       "source_row": 55,
       "status": "To Do",
-      "story_points_per_8_hours": 9.6,
+      "story_point_ratio": 9.6,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 43",
       "target_end": "2026-07-13",
@@ -5815,7 +5815,7 @@
       "row_role": "Scheduled",
       "source_row": 60,
       "status": "In Progress",
-      "story_points_per_8_hours": 29.33,
+      "story_point_ratio": 29.33,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 44",
       "target_end": "2026-07-27",
@@ -5845,7 +5845,7 @@
       "row_role": "Scheduled",
       "source_row": 65,
       "status": "In Progress",
-      "story_points_per_8_hours": 7.47,
+      "story_point_ratio": 7.47,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Content publishing wave 45",
       "target_end": "2026-08-10",
@@ -5869,7 +5869,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 17.45,
+      "story_point_ratio": 17.45,
       "summary_id": "fixVersion:Operations Q1",
       "total_story_points": 209.0
     },
@@ -5885,7 +5885,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 10.07,
+      "story_point_ratio": 10.07,
       "summary_id": "fixVersion:Operations Q2",
       "total_story_points": 190.0
     },
@@ -5901,7 +5901,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 8.62,
+      "story_point_ratio": 8.62,
       "summary_id": "fixVersion:Platform Q1",
       "total_story_points": 209.0
     },
@@ -5917,7 +5917,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 9.47,
+      "story_point_ratio": 9.47,
       "summary_id": "fixVersion:Platform Q2",
       "total_story_points": 184.0
     },
@@ -5933,7 +5933,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 13.33,
+      "story_point_ratio": 13.33,
       "summary_id": "fixVersion:Qualification Event 1",
       "total_story_points": 19.0
     },
@@ -5949,7 +5949,7 @@
       "project_key": "OPS",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 4.36,
+      "story_point_ratio": 4.36,
       "summary_id": "fixVersion:Qualification Event 2",
       "total_story_points": 19.0
     },
@@ -5965,7 +5965,7 @@
       "project_key": "PLAT",
       "reference_epic_count": 0,
       "rollup_mode": "fixVersion",
-      "story_points_per_8_hours": 11.66,
+      "story_point_ratio": 11.66,
       "summary_id": "fixVersion:Shared Services 2026",
       "total_story_points": 215.0
     },
@@ -5981,7 +5981,7 @@
       "project_key": "MULTIPLE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 9.91,
+      "story_point_ratio": 9.91,
       "summary_id": "initiative:INIT-100",
       "total_story_points": 591.0
     },
@@ -5997,7 +5997,7 @@
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 8.95,
+      "story_point_ratio": 8.95,
       "summary_id": "initiative:INIT-1200",
       "total_story_points": 313.0
     },
@@ -6013,7 +6013,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 11.62,
+      "story_point_ratio": 11.62,
       "summary_id": "initiative:INIT-1500",
       "total_story_points": 229.0
     },
@@ -6029,7 +6029,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 8.72,
+      "story_point_ratio": 8.72,
       "summary_id": "initiative:INIT-200",
       "total_story_points": 326.0
     },
@@ -6045,7 +6045,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 11.24,
+      "story_point_ratio": 11.24,
       "summary_id": "initiative:INIT-300",
       "total_story_points": 253.0
     },
@@ -6061,7 +6061,7 @@
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 9.05,
+      "story_point_ratio": 9.05,
       "summary_id": "initiative:INIT-500",
       "total_story_points": 312.0
     },
@@ -6077,7 +6077,7 @@
       "project_key": "DATA",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 8.56,
+      "story_point_ratio": 8.56,
       "summary_id": "initiative:INIT-600",
       "total_story_points": 249.0
     },
@@ -6093,7 +6093,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 10.18,
+      "story_point_ratio": 10.18,
       "summary_id": "initiative:INIT-700",
       "total_story_points": 233.0
     },
@@ -6109,7 +6109,7 @@
       "project_key": "CORE",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_points_per_8_hours": 11.84,
+      "story_point_ratio": 11.84,
       "summary_id": "initiative:INIT-800",
       "total_story_points": 243.0
     }

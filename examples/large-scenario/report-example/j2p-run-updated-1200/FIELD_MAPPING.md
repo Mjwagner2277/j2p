@@ -31,7 +31,7 @@ Custom task fields used by j2p:
 | `rollup_key` | `Text5` | Rollup Key |
 | `rollup_mode` | `Text4` | Rollup Mode |
 | `row_role` | `Text11` | j2p Row Role |
-| `story_points_per_8_hours` | `Number4` | Story Points per 8 Hours |
+| `story_point_ratio` | `Number4` | Story Point Ratio |
 | `total_story_points` | `Number1` | Total Story Points |
 | `unmatched_project_task` | `Flag2` | Unmatched Project Task |
 

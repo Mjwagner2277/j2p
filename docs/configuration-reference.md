@@ -116,7 +116,7 @@ project_fields:
   total_story_points: Number1
   completed_story_points: Number2
   logged_hours: Number3
-  story_points_per_8_hours: Number4
+  story_point_ratio: Number4
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3
@@ -376,7 +376,7 @@ metrics:
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| `hours_per_story_point` | `8` | Defines the logged-time block used for `Story Points per 8 Hours`. With the default, j2p reports completed story points delivered per 8 completed logged hours. |
+| `hours_per_story_point` | `8` | Defines the logged-time block used for `Story Point Ratio`. With the default, j2p reports completed story points delivered per 8 completed logged hours. |
 
 ## `review_table`
 
@@ -451,7 +451,7 @@ Supported friendly names for `exposed_columns`:
 | `total_story_points` | Rolled-up total story points. |
 | `completed_story_points` | Rolled-up completed story points. |
 | `logged_hours` | Rolled-up logged hours. |
-| `story_points_per_8_hours` or `hours_accuracy_percent` | Completed story points delivered per configured 8-hour logged-time block. The old `hours_accuracy_percent` alias is accepted for existing configs. |
+| `story_point_ratio` | Completed story points delivered per configured 8-hour logged-time block. |
 | `in_planning` | In-planning marker. |
 | `unmatched_project_task` | Existing Project task missing from Jira plan. |
 | `dependency_review_needed` | Dependency-review-needed flag. |
@@ -477,7 +477,7 @@ project_fields:
   j2p_key: Text10
   total_story_points: Number1
   logged_hours: Number3
-  story_points_per_8_hours: Number4
+  story_point_ratio: Number4
   in_planning: Flag1
   jira_target_start: Date1
 ```
@@ -501,7 +501,7 @@ Supported fields:
 | `total_story_points` | `Number1` | Total child story/task points. |
 | `completed_story_points` | `Number2` | Completed child story/task points. |
 | `logged_hours` | `Number3` | Logged hours summed from child story/task rows. |
-| `story_points_per_8_hours` | `Number4` | Completed story points delivered per configured 8-hour logged-time block. Existing configs may still use the legacy key `hours_accuracy_percent`. |
+| `story_point_ratio` | `Number4` | Completed story points delivered per configured 8-hour logged-time block. |
 | `in_planning` | `Flag1` | Marks included epics with no pointed child work. |
 | `unmatched_project_task` | `Flag2` | Marks Project tasks not matched to the current Jira plan. |
 | `dependency_review_needed` | `Flag3` | Marks rows needing dependency review. |

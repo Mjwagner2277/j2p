@@ -265,12 +265,12 @@ Confirm these high-level expectations:
 | Dependency Items | Changed, missing, skipped, or circular dependency cases |
 | Completed Epics | Epics that became done since the comparison baseline |
 | Logged Hours | Child story/task worklog hours rolled up to the scheduled epic rows |
-| Story Points per 8 Hours | Completed story points delivered per 8 completed logged hours, limited to active scheduled epic rows |
+| Story Point Ratio | Completed story points delivered per 8 completed logged hours, limited to active scheduled epic rows |
 
 Then read sections in this order:
 
-1. `Story Points per 8 Hours`
-2. Expand `Story Point Rate By Resource Group` for the active-work split by team/resource group.
+1. `Story Point Ratio`
+2. Expand `Story Point Ratio By Resource Group` for the active-work split by team/resource group.
 3. `Rollup Status`
 4. `Reviewer Action Needed`
 5. `Review Type Summary`
@@ -281,19 +281,19 @@ Then read sections in this order:
 10. Expand `Full Planned Epic Rows` only when you want to inspect every planned schedule row.
 11. Expand `CSV Column Mapping Used` only when you want to confirm how the Jira CSV headers were interpreted.
 
-The large planned-epic table is intentionally collapsed so managers see project-wide story-point rate, rollup status, and required-review items before the full detail.
+The large planned-epic table is intentionally collapsed so managers see project-wide Story Point Ratio, rollup status, and required-review items before the full detail.
 
 Logged hours appear in three places:
 
 | Where | What To Look For |
 | --- | --- |
 | `Decision Briefing` | Total logged hours across driving scheduled epic rows. |
-| `Story Points per 8 Hours` | Completed story points delivered per 8 completed logged hours across active scheduled epic rows only. |
-| `Story Point Rate By Resource Group` | The same active-work story-point rate split by resource group. |
-| `Rollup Status` | Logged hours and story points per 8 hours grouped by initiative or fixVersion. |
-| `Full Planned Epic Rows` and `planned-epics.csv` | Logged hours and `story_points_per_8_hours` on each included epic row. |
+| `Story Point Ratio` | Completed story points delivered per 8 completed logged hours across active scheduled epic rows only. |
+| `Story Point Ratio By Resource Group` | The same active-work Story Point Ratio split by resource group. |
+| `Rollup Status` | Logged hours and Story Point Ratio grouped by initiative or fixVersion. |
+| `Full Planned Epic Rows` and `planned-epics.csv` | Logged hours and `story_point_ratio` on each included epic row. |
 
-In the authored rows, `CORE-1001` is the easiest logged-hours example. Its updated child stories have additional logged time, so the follow-on report shows progress movement, a `Logged Hours` changed-cell item, and a `Story Points per 8 Hours` changed-cell item.
+In the authored rows, `CORE-1001` is the easiest logged-hours example. Its updated child stories have additional logged time, so the follow-on report shows progress movement, a `Logged Hours` changed-cell item, and a `Story Point Ratio` changed-cell item.
 
 ## Color And Review Cases In This Scenario
 
@@ -307,7 +307,7 @@ examples\large-scenario\expected-review-cases.csv
 | --- | --- | --- | --- |
 | Green | Changed Jira value | updated row 17, `CORE-1000` | The Jira summary changed, so the sandbox task name is updated and logged |
 | Green | Percent/date changes | updated row 18, `CORE-1001` | Child story completion changes percent complete; Jira target dates can also change |
-| Green | Logged hours and story-point rate changed | updated row 18, `CORE-1001` | Child story worklog hours roll up to the epic and changed logged-hour and story-point-rate cells are highlighted |
+| Green | Logged hours and Story Point Ratio changed | updated row 18, `CORE-1001` | Child story worklog hours roll up to the epic and changed logged-hour and Story Point Ratio cells are highlighted |
 | Green | New epic | updated row 25, `CORE-1980` | A new valid epic is added to the sandbox and appears in `Added Epics` |
 | Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
 | Red | Critical-path root finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
