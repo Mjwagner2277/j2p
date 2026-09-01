@@ -154,8 +154,7 @@ py -3.14 -m j2p create `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output\large-scenario-project `
   --run-id baseline-project `
-  --output-project-name Large-Scenario-Baseline-Source.mpp `
-  --visible
+  --output-project-name Large-Scenario-Baseline-Source.mpp
 ```
 
 Expected baseline Project file:
@@ -176,9 +175,10 @@ py -3.14 -m j2p update `
   --main-project .\review-output\large-scenario-project\j2p-run-baseline-project\Large-Scenario-Baseline-Source.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output\large-scenario-project `
-  --run-id updated-project-review `
-  --visible
+  --run-id updated-project-review
 ```
+
+j2p prints timestamped progress messages in the terminal during the run. Use `--debug-visible` only when troubleshooting with a technical reviewer and you intentionally want Microsoft Project to show its window while automation is running.
 
 Expected sandbox Project file:
 

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
-from j2p.cli import main
+from j2p.cli import build_parser, main
 from j2p.config import ConfigError, load_config
 from j2p.core import (
     J2PError,
@@ -156,20 +158,26 @@ class J2PPlanningTests(unittest.TestCase):
 
     def test_validate_cli_writes_manager_and_audit_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            exit_code = main(
-                [
-                    "validate",
-                    "--jira-csv",
-                    str(EXAMPLES / "project-wide-jira-update.csv"),
-                    "--config",
-                    str(EXAMPLES / "config.example.yaml"),
-                    "--output-dir",
-                    temp,
-                    "--run-id",
-                    "unit",
-                ]
-            )
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(
+                    [
+                        "validate",
+                        "--jira-csv",
+                        str(EXAMPLES / "project-wide-jira-update.csv"),
+                        "--config",
+                        str(EXAMPLES / "config.example.yaml"),
+                        "--output-dir",
+                        temp,
+                        "--run-id",
+                        "unit",
+                    ]
+                )
             self.assertEqual(exit_code, 0)
+            output = buffer.getvalue()
+            self.assertIn("[j2p]", output)
+            self.assertIn("Reading Jira CSV and building review plan", output)
+            self.assertIn("Writing manager report and audit CSV files", output)
             run_dir = Path(temp) / "j2p-run-unit"
             self.assertTrue((run_dir / "Manager-Review-Report.html").exists())
             self.assertTrue((run_dir / "audit-detail.csv").exists())
@@ -193,6 +201,17 @@ class J2PPlanningTests(unittest.TestCase):
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
             self.assertIn("schedule_key", audit_header)
+
+    def test_debug_visible_replaces_visible_in_help(self) -> None:
+        parser = build_parser()
+        help_text = parser.format_help()
+        self.assertNotIn("--visible", help_text)
+        self.assertNotIn("--debug-visible", help_text)
+
+        subparsers_action = next(action for action in parser._actions if getattr(action, "choices", None))
+        update_help = subparsers_action.choices["update"].format_help()
+        self.assertIn("--debug-visible", update_help)
+        self.assertNotIn("--visible ", update_help)
 
     def test_circular_dependencies_are_skipped_and_reported(self) -> None:
         csv_text = "\n".join(
@@ -409,6 +428,17 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertEqual(session.app.close_ex_calls, [(0, True, False)])
 
+    def test_save_as_passes_absolute_path_to_project(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            session = object.__new__(MicrosoftProjectSession)
+            session.app = FakeProjectApp()
+            output_path = Path(temp) / "nested" / "demo.mpp"
+
+            MicrosoftProjectSession.save_as(session, output_path)
+
+            self.assertTrue(output_path.parent.exists())
+            self.assertEqual(session.app.save_as_paths, [str(output_path.resolve())])
+
     def test_application_visibility_is_best_effort(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeVisibilityRejectingApp()
@@ -450,9 +480,13 @@ class J2PPlanningTests(unittest.TestCase):
 class FakeProjectApp:
     def __init__(self) -> None:
         self.close_ex_calls = []
+        self.save_as_paths = []
 
     def FileCloseEx(self, Save: int, NoAuto: bool, CheckIn: bool) -> None:
         self.close_ex_calls.append((Save, NoAuto, CheckIn))
+
+    def FileSaveAs(self, Name: str) -> None:
+        self.save_as_paths.append(Name)
 
 
 class FakeVisibilityRejectingApp:

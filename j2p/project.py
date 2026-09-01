@@ -20,6 +20,8 @@ class ProjectAutomationError(RuntimeError):
 
 
 def prepare_sandbox_copy(main_project: Path, run_dir: Path, run_id: str) -> Path:
+    main_project = main_project.expanduser().resolve()
+    run_dir = run_dir.expanduser().resolve()
     if not main_project.exists():
         raise ProjectAutomationError(f"Main Project file does not exist: {main_project}")
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -115,7 +117,13 @@ class MicrosoftProjectSession:
             pass
 
     def open(self, path: Path) -> None:
-        self.app.FileOpen(str(path))
+        path = path.expanduser().resolve()
+        if not path.exists():
+            raise ProjectAutomationError(f"Project file does not exist: {path}")
+        try:
+            self.app.FileOpen(Name=str(path))
+        except Exception:
+            self.app.FileOpen(str(path))
         self.project = self.app.ActiveProject
         self.app.ViewApply(Name="&Gantt Chart")
 
@@ -129,8 +137,12 @@ class MicrosoftProjectSession:
         self.saved_successfully = True
 
     def save_as(self, path: Path) -> None:
+        path = path.expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
-        self.app.FileSaveAs(str(path))
+        try:
+            self.app.FileSaveAs(Name=str(path))
+        except Exception:
+            self.app.FileSaveAs(str(path))
         self.saved_successfully = True
 
     def close_project(self, save_changes: bool) -> None:

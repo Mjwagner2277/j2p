@@ -81,9 +81,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Previous sandbox MPP used when --comparison-source previous-sandbox is selected.",
     )
     update.add_argument(
+        "--debug-visible",
+        action="store_true",
+        help="Debug only: ask Microsoft Project to show its window while automation runs.",
+    )
+    update.add_argument(
         "--visible",
         action="store_true",
-        help="Leave Microsoft Project visible while automation runs.",
+        help=argparse.SUPPRESS,
     )
 
     create = subparsers.add_parser(
@@ -97,9 +102,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initial Project filename created inside the timestamped run folder.",
     )
     create.add_argument(
+        "--debug-visible",
+        action="store_true",
+        help="Debug only: ask Microsoft Project to show its window while automation runs.",
+    )
+    create.add_argument(
         "--visible",
         action="store_true",
-        help="Leave Microsoft Project visible while automation runs.",
+        help=argparse.SUPPRESS,
     )
     return parser
 
@@ -128,12 +138,15 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
 
 def run_validate(args: argparse.Namespace) -> int:
     context = make_context(args)
+    progress("Reading Jira CSV and building review plan")
     baseline = snapshots_from_state(context["state_path"]) if args.compare_state else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
     state_after_path = context["run_dir"] / "j2p-state.after.json"
+    progress("Writing report state")
     write_json(state_after_path, run_plan_to_state(plan))
     if args.write_state or context["config"].get("behavior", {}).get("write_state_on_validate"):
         write_json(context["state_path"], run_plan_to_state(plan))
+    progress("Writing manager report and audit CSV files")
     paths = write_reports(
         plan,
         context["run_dir"],
@@ -147,12 +160,19 @@ def run_validate(args: argparse.Namespace) -> int:
 
 def run_update(args: argparse.Namespace) -> int:
     context = make_context(args)
+    debug_visible = get_debug_visible(args)
+    progress("Copying source-of-truth MPP to a timestamped sandbox")
     sandbox_path = prepare_sandbox_copy(args.main_project, context["run_dir"], context["run_id"])
+    progress(f"Loading comparison baseline from {args.comparison_source}")
     baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
+    progress("Reading Jira CSV and building update plan")
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
-    apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=args.visible)
+    progress("Opening sandbox MPP and applying Jira updates")
+    apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=debug_visible)
+    progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
     write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
+    progress("Writing manager report and audit CSV files")
     paths = write_reports(plan, context["run_dir"], context["config"], sandbox_path, context["state_path"])
     print_run_result("Sandbox update complete.", context, paths, sandbox_path)
     return 0
@@ -160,12 +180,17 @@ def run_update(args: argparse.Namespace) -> int:
 
 def run_create(args: argparse.Namespace) -> int:
     context = make_context(args)
+    debug_visible = get_debug_visible(args)
+    progress("Reading Jira CSV and building initial Project plan")
     baseline = snapshots_from_state(context["state_path"]) if context["state_path"].exists() else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
     output_project = context["run_dir"] / args.output_project_name
-    create_project_from_plan(output_project, plan, context["config"], visible=args.visible)
+    progress("Creating initial sandbox MPP")
+    create_project_from_plan(output_project, plan, context["config"], visible=debug_visible)
+    progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
     write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
+    progress("Writing manager report and audit CSV files")
     paths = write_reports(plan, context["run_dir"], context["config"], output_project, context["state_path"])
     print_run_result("Initial Project file created.", context, paths, output_project)
     return 0
@@ -197,11 +222,11 @@ def load_update_baseline(
     state_path: Path,
 ) -> Dict[str, Any]:
     if args.comparison_source == "main":
-        return snapshot_project_file(sandbox_path, config, visible=args.visible)
+        return snapshot_project_file(sandbox_path, config, visible=get_debug_visible(args))
     if args.comparison_source == "previous-sandbox":
         if not args.previous_sandbox:
             raise J2PError("--previous-sandbox is required when --comparison-source previous-sandbox is used.")
-        return snapshot_project_file(args.previous_sandbox, config, visible=args.visible)
+        return snapshot_project_file(args.previous_sandbox, config, visible=get_debug_visible(args))
     return snapshots_from_state(state_path)
 
 
@@ -221,6 +246,14 @@ def print_run_result(
     print(f"Dependency review CSV: {paths['dependency_review']}")
     print(f"Per-project-key CSVs: {paths['by_project_key']}")
     print(f"Field mapping: {paths['field_mapping']}")
+
+
+def get_debug_visible(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "debug_visible", False) or getattr(args, "visible", False))
+
+
+def progress(message: str) -> None:
+    print(f"[j2p] {datetime.now().strftime('%H:%M:%S')} {message}...", flush=True)
 
 
 if __name__ == "__main__":

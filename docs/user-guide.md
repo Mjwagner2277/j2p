@@ -145,7 +145,7 @@ Common arguments:
 | Argument | Required | Meaning |
 | --- | --- | --- |
 | `--output-project-name` | No | Name of the initial `.mpp` created inside the run folder. |
-| `--visible` | No | Leave Microsoft Project visible during automation. |
+| `--debug-visible` | No | Debug only. Ask Microsoft Project to show its window while automation runs. Normal users should omit this. |
 
 `update` arguments:
 
@@ -154,7 +154,9 @@ Common arguments:
 | `--main-project` | Yes | Source-of-truth `.mpp` copied into a timestamped sandbox. |
 | `--comparison-source` | No | Baseline for change reporting. Allowed values are `main`, `previous-sandbox`, and `state`. Default is `main`. |
 | `--previous-sandbox` | Required only with `--comparison-source previous-sandbox` | Prior sandbox `.mpp` used for iterative review comparison. |
-| `--visible` | No | Leave Microsoft Project visible during automation. |
+| `--debug-visible` | No | Debug only. Ask Microsoft Project to show its window while automation runs. Normal users should omit this. |
+
+During normal runs, j2p prints timestamped progress messages in the terminal so users can see that the run is still moving through CSV parsing, Project automation, state writing, and report generation.
 
 ## Output Folder
 
