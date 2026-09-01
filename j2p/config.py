@@ -65,6 +65,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "hide_completed_epics": True,
         "write_state_on_validate": False,
     },
+    "review_table": {
+        "exposed_columns": "all",
+        "include_audit_columns": True,
+    },
     "project_fields": {
         "jira_key": "Text1",
         "jira_issue_id": "Text2",
@@ -215,6 +219,21 @@ def normalize_config(config: Dict[str, Any]) -> None:
         raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
     metrics["hours_per_story_point"] = hours_per_story_point
     config["metrics"] = metrics
+
+    review_table = config.get("review_table", {})
+    if review_table is None:
+        review_table = {}
+    if not isinstance(review_table, dict):
+        raise ConfigError("review_table must be a YAML mapping.")
+    exposed_columns = review_table.get("exposed_columns", "all")
+    if isinstance(exposed_columns, str):
+        if exposed_columns.strip().lower() != "all":
+            raise ConfigError("review_table.exposed_columns must be 'all' or a list of column names.")
+        review_table["exposed_columns"] = "all"
+    else:
+        review_table["exposed_columns"] = [str(v).strip() for v in ensure_list(exposed_columns) if str(v).strip()]
+    review_table["include_audit_columns"] = bool(review_table.get("include_audit_columns", True))
+    config["review_table"] = review_table
 
 
 def ensure_list(value: Any) -> List[Any]:

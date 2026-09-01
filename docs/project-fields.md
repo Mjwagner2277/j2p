@@ -99,6 +99,7 @@ Review coloring:
 
 - `project_column_for_audit_field()` maps audit fields to the Project column that should be colored.
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
+- `review_table.exposed_columns` can prune the standard review table columns. Keep `include_audit_columns` enabled when reviewer-visible cell coloring is required for changed fields that are not part of the standard exposed list.
 - Red `cascade_root` coloring applies to native `Finish` after Project scheduling analysis.
 - Green changed-cell coloring applies to the changed native/custom field.
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.
@@ -114,7 +115,7 @@ When adding a Project field, update all relevant locations:
 | Defaults | `j2p/config.py` | Add `project_fields` ID and `project_field_names` display name. |
 | Planning model | `j2p/core.py` | Add dataclass attributes, calculations, baseline snapshots, and changed-field audit rows. |
 | Project write path | `j2p/project.py` | Write the field to summary/epic tasks, read it in snapshots, and map audit fields for coloring. |
-| Review table | `j2p/project.py` | Add the field to `review_table_columns()` if it should be visible and colorable. |
+| Review table | `j2p/project.py` | Add the field to `review_table_standard_columns()` if it should be available through `review_table.exposed_columns`. |
 | Reports | `j2p/reports.py` | Add report/CSV columns and manager HTML sections as needed. |
 | Product docs | `docs/user-guide.md`, `docs/configuration-reference.md` | Explain what users see and what they can configure. |
 | Developer docs | `docs/project-fields.md` | Explain what the field enables and any interactions. |

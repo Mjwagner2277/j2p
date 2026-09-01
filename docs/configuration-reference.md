@@ -137,6 +137,7 @@ project_fields:
 | `columns` | Recommended | Built-in defaults | Mapping of logical j2p fields to one or more CSV headers | Lets j2p read different Jira export header names. |
 | `behavior` | No | Built-in defaults | Mapping | Operational guardrails. |
 | `metrics` | No | Built-in defaults | Mapping | Controls conversion rates such as hours per story point. |
+| `review_table` | No | Built-in defaults | `all` or list of exposed columns | Controls which columns are shown in the Microsoft Project `j2p Review` table. |
 | `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
 | `colors` | No | Built-in defaults | Hex colors | Controls cell highlight colors. Usually omitted. |
@@ -376,6 +377,77 @@ metrics:
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `hours_per_story_point` | `8` | Converts completed story points to expected completed hours for `Hours Accuracy %`. |
+
+## `review_table`
+
+Controls which columns appear in the Microsoft Project `j2p Review` table.
+
+Default:
+
+```yaml
+review_table:
+  exposed_columns: all
+  include_audit_columns: true
+```
+
+Use `all` during trial runs and training. This exposes every standard j2p review column.
+
+To make the Project review table smaller, provide a list:
+
+```yaml
+review_table:
+  exposed_columns:
+    - jira_key
+    - summary
+    - resource_group
+    - dependency_review
+    - finish
+    - jira_target_end
+    - percent_complete
+    - logged_hours
+    - hours_accuracy_percent
+    - predecessors
+  include_audit_columns: true
+```
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `exposed_columns` | `all` | Standard columns to show in the `j2p Review` table. Use `all` or a YAML list. |
+| `include_audit_columns` | `true` | Automatically adds changed/review fields for the run even if they were not listed in `exposed_columns`. |
+
+Supported friendly names for `exposed_columns`:
+
+| Name | Shows |
+| --- | --- |
+| `name` or `summary` | Project task name. |
+| `jira_key` | Jira key custom field. |
+| `j2p_key` | Stable j2p schedule row key. |
+| `jira_issue_type` | Jira issue type. |
+| `rollup_mode` | Initiative or fixVersion mode. |
+| `rollup_key` | Initiative key or fixVersion value. |
+| `jira_key_prefix` | Jira project key prefix. |
+| `resource_group` | Native Project Resource Group. |
+| `dependency_review` | Human-readable dependency review notes. |
+| `jira_status` or `status` | Jira status. |
+| `start` | Project scheduled start. |
+| `finish` | Project scheduled finish. |
+| `jira_target_start` or `target_start` | Jira target start. |
+| `jira_target_end` or `target_end` | Jira target end. |
+| `percent_complete` | Native Project `% Complete`. |
+| `total_story_points` | Rolled-up total story points. |
+| `completed_story_points` | Rolled-up completed story points. |
+| `logged_hours` | Rolled-up logged hours. |
+| `hours_accuracy_percent` | Logged-hours accuracy against completed story points. |
+| `in_planning` | In-planning marker. |
+| `unmatched_project_task` | Existing Project task missing from Jira plan. |
+| `dependency_review_needed` | Dependency-review-needed flag. |
+| `row_role` | Scheduled, Primary, Reference, or Split. |
+| `fix_version` | Jira fixVersion represented by the row. |
+| `drives_schedule` | Whether the row drives schedule logic. |
+| `primary_schedule_key` | Primary row for reference/split rows. |
+| `predecessors` | Native Project predecessors. |
+
+You may also list raw Project field IDs such as `Text1`, `Number3`, `Date2`, `Flag3`, or native field names such as `Finish` and `Predecessors`.
 
 ## `project_fields`
 

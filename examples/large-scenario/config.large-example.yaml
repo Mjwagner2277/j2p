@@ -75,6 +75,10 @@ behavior:
   hide_completed_epics: true
   write_state_on_validate: false
 
+review_table:
+  exposed_columns: all
+  include_audit_columns: true
+
 project_fields:
   jira_key: Text1
   jira_issue_id: Text2

@@ -238,6 +238,10 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(config["multi_fixversion_policy"]["default"], "reference")
         self.assertEqual(config["multi_fixversion_policy"]["OPS"], "split")
 
+    def test_review_table_exposed_columns_rejects_scalar_other_than_all(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "review_table.exposed_columns"):
+            load_config(None, {"review_table": {"exposed_columns": "finish"}})
+
     def test_validate_cli_writes_manager_and_audit_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             buffer = StringIO()
@@ -647,6 +651,35 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Predecessors", columns)
         self.assertIn("Resource Group", columns)
 
+    def test_review_table_columns_can_be_pruned_by_config(self) -> None:
+        config = load_config(
+            FIXTURES / "mixed-config.yaml",
+            {
+                "review_table": {
+                    "exposed_columns": ["jira_key", "finish", "logged_hours"],
+                }
+            },
+        )
+
+        columns = review_table_columns(config, ["Flag2"])
+
+        self.assertEqual(columns, ["Name", "Text1", "Finish", "Number3", "Flag2"])
+
+    def test_review_table_columns_can_hide_audit_columns(self) -> None:
+        config = load_config(
+            None,
+            {
+                "review_table": {
+                    "exposed_columns": ["Jira Key", "Number3"],
+                    "include_audit_columns": False,
+                }
+            },
+        )
+
+        columns = review_table_columns(config, ["Flag2", "Predecessors"])
+
+        self.assertEqual(columns, ["Name", "Text1", "Number3"])
+
     def test_prepare_formatting_view_creates_and_applies_review_table(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
         session = object.__new__(MicrosoftProjectSession)
@@ -713,19 +746,26 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(session.app.select_calls, [("field", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
 
-    def test_project_adapter_does_not_call_font32ex(self) -> None:
-        source = (ROOT / "j2p" / "project.py").read_text(encoding="utf-8")
-
-        self.assertNotIn("Font32Ex", source)
-
-    def test_color_project_cell_reports_error_without_font_dialog_fallback(self) -> None:
+    def test_color_project_cell_does_not_call_font32ex_when_property_write_works(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
-        session.app = FakeFontPromptRiskFormattingApp()
+        session.app = FakeUnexpectedFont32ExApp()
         task = FakeTask()
         task.ID = 8
 
-        self.assertFalse(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
         self.assertEqual(session.app.font32_calls, 0)
+
+    def test_color_project_cell_uses_safe_font32ex_fallback(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeFont32ExFallbackFormattingApp()
+        task = FakeTask()
+        task.ID = 9
+
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertEqual(session.app.font32_calls, 1)
+        self.assertEqual(len(session.app.font32_args), 10)
+        self.assertFalse(session.app.font32_args[6])
+        self.assertEqual(session.app.font32_args[8], 1)
 
     def test_select_project_cell_treats_false_return_as_failure(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -1333,15 +1373,34 @@ class FakeRejectingCell:
         raise AttributeError("CellColorEx cannot be set")
 
 
-class FakeFontPromptRiskFormattingApp(FakeFormattingApp):
+class FakeUnexpectedFont32ExApp(FakeFormattingApp):
     def __init__(self) -> None:
         super().__init__()
-        self.ActiveCell = FakeRejectingCell()
         self.font32_calls = 0
 
     def Font32Ex(self, *args: object, **kwargs: object) -> None:
         self.font32_calls += 1
-        raise AssertionError("Font32Ex can open Project's Font dialog and must not be called")
+        raise AssertionError("Font32Ex should not be called when ActiveCell.CellColorEx works")
+
+
+class FakeFont32ExFallbackFormattingApp(FakeFormattingApp):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ActiveCell = FakeRejectingCell()
+        self.font32_calls = 0
+        self.font32_args: Tuple[object, ...] = tuple()
+
+    def Font32Ex(self, *args: object, **kwargs: object) -> bool:
+        self.font32_calls += 1
+        if kwargs:
+            raise AssertionError("Font32Ex fallback should prefer the full positional call")
+        if len(args) != 10:
+            raise AssertionError("Font32Ex fallback must pass every argument to avoid the Font dialog")
+        color = int(args[7])
+        self.font32_args = args
+        self.ActiveCell = FakeCell()
+        self.ActiveCell.CellColorEx = color
+        return True
 
 
 class FakeAssignment:

@@ -1889,6 +1889,15 @@ class MicrosoftProjectSession:
             active_cell = self.app.ActiveCell
         except Exception as exc:
             return f"ActiveCell was unavailable after selecting the Project cell: {exc}"
+        property_error = self.color_active_cell_with_property(active_cell, color)
+        if not property_error:
+            return ""
+        fallback_error = self.color_selected_cells_with_font32ex(color)
+        if not fallback_error:
+            return ""
+        return f"{property_error} Font32Ex selected-cell fallback failed: {fallback_error}"
+
+    def color_active_cell_with_property(self, active_cell: Any, color: int) -> str:
         try:
             active_cell.CellColorEx = color
         except Exception as exc:
@@ -1897,6 +1906,60 @@ class MicrosoftProjectSession:
             active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
         except Exception:
             pass
+        return self.active_cell_color_readback_error(color)
+
+    def color_selected_cells_with_font32ex(self, color: int) -> str:
+        missing = project_com_missing_value()
+        attempts = (
+            (
+                "Font32Ex positional",
+                lambda: self.app.Font32Ex(
+                    missing,
+                    missing,
+                    missing,
+                    missing,
+                    missing,
+                    missing,
+                    False,
+                    color,
+                    PROJECT_SOLID_FILL_PATTERN,
+                    missing,
+                ),
+            ),
+            (
+                "Font32Ex named",
+                lambda: self.app.Font32Ex(
+                    Name=missing,
+                    Size=missing,
+                    Bold=missing,
+                    Italic=missing,
+                    Underline=missing,
+                    Color=missing,
+                    Reset=False,
+                    CellColor=color,
+                    Pattern=PROJECT_SOLID_FILL_PATTERN,
+                    Strikethrough=missing,
+                ),
+            ),
+        )
+        errors: List[str] = []
+        for method_name, formatter in attempts:
+            try:
+                result = formatter()
+            except Exception as exc:
+                errors.append(f"{method_name} failed: {exc}")
+                continue
+            if project_call_failed(result):
+                errors.append(f"{method_name} returned False.")
+                continue
+            return self.active_cell_color_readback_error(color)
+        return " ".join(errors) or "Application.Font32Ex was unavailable."
+
+    def active_cell_color_readback_error(self, color: int) -> str:
+        try:
+            active_cell = self.app.ActiveCell
+        except Exception:
+            return ""
         try:
             readback = int(active_cell.CellColorEx)
             if readback != color:
@@ -1938,37 +2001,122 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
 
 
 def review_table_columns(config: Dict[str, Any], audit_columns: List[str]) -> List[str]:
+    standard_columns = review_table_standard_columns(config)
+    visible_columns = exposed_review_table_columns(config, standard_columns)
+    if config.get("review_table", {}).get("include_audit_columns", True):
+        visible_columns.extend(audit_columns)
+    return unique_columns(visible_columns)
+
+
+def review_table_standard_columns(config: Dict[str, Any]) -> List[Tuple[str, str]]:
     fields = config.get("project_fields", {})
-    standard_columns = [
-        "Name",
-        fields.get("jira_key", "Text1"),
-        fields.get("j2p_key", "Text10"),
-        fields.get("jira_issue_type", "Text3"),
-        fields.get("rollup_mode", "Text4"),
-        fields.get("rollup_key", "Text5"),
-        fields.get("jira_key_prefix", "Text7"),
-        "Resource Group",
-        fields.get("dependency_review", "Text8"),
-        fields.get("jira_status", "Text9"),
-        "Start",
-        "Finish",
-        fields.get("jira_target_start", "Date1"),
-        fields.get("jira_target_end", "Date2"),
-        "% Complete",
-        fields.get("total_story_points", "Number1"),
-        fields.get("completed_story_points", "Number2"),
-        fields.get("logged_hours", "Number3"),
-        fields.get("hours_accuracy_percent", "Number4"),
-        fields.get("in_planning", "Flag1"),
-        fields.get("unmatched_project_task", "Flag2"),
-        fields.get("dependency_review_needed", "Flag3"),
-        fields.get("row_role", "Text11"),
-        fields.get("fix_version", "Text12"),
-        fields.get("drives_schedule", "Flag4"),
-        fields.get("primary_schedule_key", "Text13"),
-        "Predecessors",
+    return [
+        ("name", "Name"),
+        ("jira_key", fields.get("jira_key", "Text1")),
+        ("j2p_key", fields.get("j2p_key", "Text10")),
+        ("jira_issue_type", fields.get("jira_issue_type", "Text3")),
+        ("rollup_mode", fields.get("rollup_mode", "Text4")),
+        ("rollup_key", fields.get("rollup_key", "Text5")),
+        ("jira_key_prefix", fields.get("jira_key_prefix", "Text7")),
+        ("resource_group", "Resource Group"),
+        ("dependency_review", fields.get("dependency_review", "Text8")),
+        ("jira_status", fields.get("jira_status", "Text9")),
+        ("start", "Start"),
+        ("finish", "Finish"),
+        ("jira_target_start", fields.get("jira_target_start", "Date1")),
+        ("jira_target_end", fields.get("jira_target_end", "Date2")),
+        ("percent_complete", "% Complete"),
+        ("total_story_points", fields.get("total_story_points", "Number1")),
+        ("completed_story_points", fields.get("completed_story_points", "Number2")),
+        ("logged_hours", fields.get("logged_hours", "Number3")),
+        ("hours_accuracy_percent", fields.get("hours_accuracy_percent", "Number4")),
+        ("in_planning", fields.get("in_planning", "Flag1")),
+        ("unmatched_project_task", fields.get("unmatched_project_task", "Flag2")),
+        ("dependency_review_needed", fields.get("dependency_review_needed", "Flag3")),
+        ("row_role", fields.get("row_role", "Text11")),
+        ("fix_version", fields.get("fix_version", "Text12")),
+        ("drives_schedule", fields.get("drives_schedule", "Flag4")),
+        ("primary_schedule_key", fields.get("primary_schedule_key", "Text13")),
+        ("predecessors", "Predecessors"),
     ]
-    return unique_columns(standard_columns + audit_columns)
+
+
+def exposed_review_table_columns(
+    config: Dict[str, Any],
+    standard_columns: List[Tuple[str, str]],
+) -> List[str]:
+    exposed_columns = config.get("review_table", {}).get("exposed_columns", "all")
+    if exposed_columns == "all":
+        return [column for _key, column in standard_columns]
+    requested_columns = [str(column) for column in exposed_columns]
+    if any(review_table_column_key(column) == "all" for column in requested_columns):
+        return [column for _key, column in standard_columns]
+    lookup = review_table_column_lookup(config, standard_columns)
+    selected = ["Name"]
+    for requested_column in requested_columns:
+        column = lookup.get(review_table_column_key(requested_column), requested_column.strip())
+        selected.append(column)
+    return selected
+
+
+def review_table_column_lookup(
+    config: Dict[str, Any],
+    standard_columns: List[Tuple[str, str]],
+) -> Dict[str, str]:
+    lookup: Dict[str, str] = {}
+    alias_overrides = {
+        "summary": "name",
+        "task_name": "name",
+        "jira_key_prefix": "jira_key_prefix",
+        "key_prefix": "jira_key_prefix",
+        "prefix": "jira_key_prefix",
+        "resource_names": "resource_group",
+        "status": "jira_status",
+        "percent_complete": "percent_complete",
+        "complete": "percent_complete",
+        "completion": "percent_complete",
+        "target_start": "jira_target_start",
+        "target_end": "jira_target_end",
+        "story_points": "total_story_points",
+        "points": "total_story_points",
+        "completed_points": "completed_story_points",
+        "accuracy": "hours_accuracy_percent",
+        "hours_accuracy": "hours_accuracy_percent",
+        "dependency": "dependency_review",
+        "dependency_needed": "dependency_review_needed",
+    }
+    standard_by_key = {key: column for key, column in standard_columns}
+    for key, column in standard_columns:
+        aliases = unique_columns(
+            [
+                key,
+                column,
+                project_column_title(column, config),
+                *project_native_field_aliases(column),
+            ]
+        )
+        for alias in aliases:
+            lookup[review_table_column_key(alias)] = column
+    for alias, key in alias_overrides.items():
+        column = standard_by_key.get(key)
+        if column:
+            lookup[alias] = column
+    return lookup
+
+
+def review_table_column_key(column: str) -> str:
+    text = normalize_project_column_name(column)
+    text = text.replace("%", "percent")
+    cleaned = []
+    previous_separator = False
+    for character in text:
+        if character.isalnum():
+            cleaned.append(character)
+            previous_separator = False
+        elif not previous_separator:
+            cleaned.append("_")
+            previous_separator = True
+    return "".join(cleaned).strip("_")
 
 
 def unique_columns(columns: List[str]) -> List[str]:
@@ -2220,3 +2368,12 @@ def project_color(hex_color: str) -> int:
     green = int(cleaned[2:4], 16)
     blue = int(cleaned[4:6], 16)
     return (blue << 16) + (green << 8) + red
+
+
+def project_com_missing_value() -> Any:
+    try:
+        import pythoncom  # type: ignore
+
+        return pythoncom.Missing
+    except Exception:
+        return None

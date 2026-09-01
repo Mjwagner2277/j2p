@@ -306,6 +306,11 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
     lines.extend(
         [
             "",
+            "Review table visibility:",
+            "",
+            f"- Exposed columns: {format_review_table_exposed_columns(config)}",
+            f"- Auto-include changed/review columns: {format_bool(config.get('review_table', {}).get('include_audit_columns', True))}",
+            "",
             "Color key:",
             "",
             "- Green: changed cell",
@@ -317,6 +322,17 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
         ]
     )
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def format_review_table_exposed_columns(config: Dict[str, Any]) -> str:
+    exposed_columns = config.get("review_table", {}).get("exposed_columns", "all")
+    if exposed_columns == "all":
+        return "`all`"
+    return ", ".join(f"`{column}`" for column in exposed_columns)
+
+
+def format_bool(value: Any) -> str:
+    return "yes" if bool(value) else "no"
 
 
 def write_manager_html(

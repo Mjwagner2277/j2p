@@ -35,6 +35,11 @@ Custom task fields used by j2p:
 | `total_story_points` | `Number1` | Total Story Points |
 | `unmatched_project_task` | `Flag2` | Unmatched Project Task |
 
+Review table visibility:
+
+- Exposed columns: `all`
+- Auto-include changed/review columns: yes
+
 Color key:
 
 - Green: changed cell
