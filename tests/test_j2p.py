@@ -5,6 +5,7 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from typing import Dict, Tuple
 
 from j2p.cli import build_parser, main
 from j2p.config import ConfigError, load_config
@@ -709,7 +710,7 @@ class J2PPlanningTests(unittest.TestCase):
         task.ID = 7
 
         self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text1", "#C6EFCE"))
-        self.assertEqual(session.app.select_calls, [("cell", 7, "Text1", False)])
+        self.assertEqual(session.app.select_calls, [("field", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
 
     def test_project_adapter_does_not_call_font32ex(self) -> None:
@@ -738,7 +739,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(error, "")
         self.assertEqual(
             session.app.select_calls,
-            [("cell", 9, "Text2", False), ("field", 9, "Text2", False)],
+            [("field", 9, "Text2", False)],
         )
 
     def test_select_project_cell_tries_column_aliases(self) -> None:
@@ -755,14 +756,9 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertTrue(selected)
         self.assertEqual(error, "")
-        self.assertEqual(
-            session.app.select_calls,
-            [
-                ("cell", 10, "Text1", False),
-                ("field", 10, "Text1", False),
-                ("cell", 10, "Jira Key", False),
-            ],
-        )
+        self.assertIn(("field", 10, "Text1", False), session.app.select_calls)
+        self.assertIn(("cell", 10, "Text1", False), session.app.select_calls)
+        self.assertEqual(session.app.select_calls[-1], ("field", 10, "Jira Key", False))
 
     def test_select_project_cell_falls_back_to_numeric_column_position(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -797,8 +793,37 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertTrue(selected)
         self.assertEqual(error, "")
-        self.assertEqual(session.app.select_cell_calls, [("cell", 12, 6, False)])
-        self.assertEqual(session.app.select_task_cell_calls[0], ("cell", 12, "Text9", False))
+        self.assertIn(("cell", 12, 6, False), session.app.select_cell_calls)
+        self.assertEqual(session.app.select_task_cell_calls[-1], ("field", 12, "Text9", False))
+
+    def test_select_project_cell_tries_offset_select_range_column(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeOffsetSelectRangeApp(target_column=7, selected_field_name="Text9")
+        task = FakeTask()
+        task.ID = 13
+
+        selected, error = MicrosoftProjectSession.select_project_cell(
+            session,
+            task,
+            ["Text9", "Status"],
+            column_position=6,
+        )
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertIn(("range", 13, 7, False, 0, 0, False, False), session.app.select_range_calls)
+
+    def test_select_project_cell_uses_extended_task_field_args(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeExtendedTaskFieldApp()
+        task = FakeTask()
+        task.ID = 14
+
+        selected, error = MicrosoftProjectSession.select_project_cell(session, task, ["Finish"])
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertIn(("field-extended", 14, "Finish", False, 0, 0, False, False), session.app.select_calls)
 
     def test_write_project_predecessors_uses_fs_ids_and_verifies_readback(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -1236,6 +1261,66 @@ class FakeSelectCellFallbackApp(FakeFormattingApp):
         self.select_task_cell_calls.append(("field", Row, Column, RowRelative))
         self.ActiveCell = FakeNamedCell(Column)
         return True
+
+
+class FakeOffsetSelectRangeApp(FakeFormattingApp):
+    def __init__(self, target_column: int, selected_field_name: str) -> None:
+        super().__init__()
+        self.ActiveCell = FakeNamedCell("Name")
+        self.target_column = target_column
+        self.selected_field_name = selected_field_name
+        self.select_cell_calls = []
+        self.select_range_calls = []
+
+    def SelectCell(self, *args: object, **kwargs: object) -> bool:
+        row, column, row_relative = selection_call_parts(args, kwargs)
+        self.select_cell_calls.append(("cell", row, column, row_relative))
+        return False
+
+    def SelectRange(self, *args: object, **kwargs: object) -> bool:
+        row, column, row_relative = selection_call_parts(args, kwargs)
+        width = int(kwargs.get("Width", args[3] if len(args) > 3 else 0))
+        height = int(kwargs.get("Height", args[4] if len(args) > 4 else 0))
+        extend = bool(kwargs.get("Extend", args[5] if len(args) > 5 else False))
+        add = bool(kwargs.get("Add", args[6] if len(args) > 6 else False))
+        self.select_range_calls.append(("range", row, column, row_relative, width, height, extend, add))
+        if column != self.target_column:
+            return False
+        self.ActiveCell = FakeNamedCell(self.selected_field_name)
+        return True
+
+
+class FakeExtendedTaskFieldApp(FakeFormattingApp):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ActiveCell = FakeNamedCell("Name")
+
+    def SelectTaskField(self, *args: object, **kwargs: object) -> bool:
+        row, column, row_relative = selection_call_parts(args, kwargs)
+        is_extended = len(args) >= 7 or {"Width", "Height", "Extend", "Add"}.issubset(kwargs)
+        if not is_extended:
+            self.select_calls.append(("field-basic", row, column, row_relative))
+            raise RuntimeError("the argument is not valid")
+        width = int(kwargs.get("Width", args[3] if len(args) > 3 else 0))
+        height = int(kwargs.get("Height", args[4] if len(args) > 4 else 0))
+        extend = bool(kwargs.get("Extend", args[5] if len(args) > 5 else False))
+        add = bool(kwargs.get("Add", args[6] if len(args) > 6 else False))
+        self.select_calls.append(("field-extended", row, column, row_relative, width, height, extend, add))
+        self.ActiveCell = FakeNamedCell(str(column))
+        return True
+
+    def SelectTaskCell(self, *args: object, **kwargs: object) -> bool:
+        row, column, row_relative = selection_call_parts(args, kwargs)
+        self.select_calls.append(("cell", row, column, row_relative))
+        raise RuntimeError("the argument is not valid")
+
+
+def selection_call_parts(args: object, kwargs: Dict[str, object]) -> Tuple[int, object, bool]:
+    args_tuple = tuple(args) if isinstance(args, tuple) else tuple()
+    row = kwargs.get("Row", args_tuple[0] if len(args_tuple) > 0 else 0)
+    column = kwargs.get("Column", args_tuple[1] if len(args_tuple) > 1 else "")
+    row_relative = kwargs.get("RowRelative", args_tuple[2] if len(args_tuple) > 2 else False)
+    return int(row), column, bool(row_relative)
 
 
 class FakeRejectingCell:

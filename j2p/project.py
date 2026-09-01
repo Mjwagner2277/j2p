@@ -1747,42 +1747,124 @@ class MicrosoftProjectSession:
         else:
             candidate_columns = [str(column) for column in columns if str(column or "").strip()]
         errors: List[str] = []
-        if column_position and column_position > 0:
-            try:
-                result = self.app.SelectCell(Row=row, Column=column_position, RowRelative=False)
-                if project_call_failed(result):
-                    errors.append(f"SelectCell returned False for column position {column_position}.")
-                else:
-                    selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
-                    if not selected_field_error:
-                        return True, ""
-                    errors.append(
-                        f"SelectCell selected column position {column_position}, but {selected_field_error}"
-                    )
-            except Exception as exc:
-                errors.append(f"SelectCell failed for column position {column_position}: {exc}")
+        for candidate_position in project_selection_column_numbers(column_position):
+            selected, error = self.select_project_cell_by_position(row, candidate_position, candidate_columns)
+            if selected:
+                return True, ""
+            if error:
+                errors.append(error)
         for column in unique_columns(candidate_columns):
-            for method_name, selector in (
-                (
-                    "SelectTaskCell",
-                    lambda value=column: self.app.SelectTaskCell(Row=row, Column=value, RowRelative=False),
+            selected, error = self.select_project_cell_by_name(row, column, candidate_columns)
+            if selected:
+                return True, ""
+            if error:
+                errors.append(error)
+        return False, " ".join(errors)
+
+    def select_project_cell_by_position(
+        self,
+        row: int,
+        column_position: int,
+        candidate_columns: List[str],
+    ) -> Tuple[bool, str]:
+        errors: List[str] = []
+        selectors = (
+            (
+                "SelectCell",
+                lambda: self.app.SelectCell(Row=row, Column=column_position, RowRelative=False),
+            ),
+            (
+                "SelectCell positional",
+                lambda: self.app.SelectCell(row, column_position, False),
+            ),
+            (
+                "SelectRange",
+                lambda: self.app.SelectRange(
+                    Row=row,
+                    Column=column_position,
+                    RowRelative=False,
+                    Width=0,
+                    Height=0,
+                    Extend=False,
+                    Add=False,
                 ),
-                (
-                    "SelectTaskField",
-                    lambda value=column: self.app.SelectTaskField(Row=row, Column=value, RowRelative=False),
+            ),
+            (
+                "SelectRange positional",
+                lambda: self.app.SelectRange(row, column_position, False, 0, 0, False, False),
+            ),
+        )
+        for method_name, selector in selectors:
+            try:
+                result = selector()
+            except Exception as exc:
+                errors.append(f"{method_name} failed for column position {column_position}: {exc}")
+                continue
+            if project_call_failed(result):
+                errors.append(f"{method_name} returned False for column position {column_position}.")
+                continue
+            selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
+            if not selected_field_error:
+                return True, ""
+            errors.append(
+                f"{method_name} selected column position {column_position}, but {selected_field_error}"
+            )
+        return False, " ".join(errors)
+
+    def select_project_cell_by_name(
+        self,
+        row: int,
+        column: str,
+        candidate_columns: List[str],
+    ) -> Tuple[bool, str]:
+        errors: List[str] = []
+        selectors = (
+            (
+                "SelectTaskField",
+                lambda: self.app.SelectTaskField(Row=row, Column=column, RowRelative=False),
+            ),
+            (
+                "SelectTaskField positional",
+                lambda: self.app.SelectTaskField(row, column, False),
+            ),
+            (
+                "SelectTaskField extended",
+                lambda: self.app.SelectTaskField(
+                    Row=row,
+                    Column=column,
+                    RowRelative=False,
+                    Width=0,
+                    Height=0,
+                    Extend=False,
+                    Add=False,
                 ),
-            ):
-                try:
-                    result = selector()
-                    if project_call_failed(result):
-                        errors.append(f"{method_name} returned False for {column}.")
-                        continue
-                    selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
-                    if not selected_field_error:
-                        return True, ""
-                    errors.append(f"{method_name} selected {column}, but {selected_field_error}")
-                except Exception as exc:
-                    errors.append(f"{method_name} failed for {column}: {exc}")
+            ),
+            (
+                "SelectTaskField extended positional",
+                lambda: self.app.SelectTaskField(row, column, False, 0, 0, False, False),
+            ),
+            (
+                "SelectTaskCell",
+                lambda: self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False),
+            ),
+            (
+                "SelectTaskCell positional",
+                lambda: self.app.SelectTaskCell(row, column, False),
+            ),
+        )
+        for method_name, selector in selectors:
+            try:
+                result = selector()
+            except Exception as exc:
+                errors.append(f"{method_name} failed for {column}: {exc}")
+                continue
+            if project_call_failed(result):
+                errors.append(f"{method_name} returned False for {column}.")
+                continue
+            selected_field_error = self.selected_cell_field_mismatch(candidate_columns)
+            if not selected_field_error:
+                return True, ""
+            errors.append(f"{method_name} selected {column}, but {selected_field_error}")
         return False, " ".join(errors)
 
     def selected_cell_field_mismatch(self, candidate_columns: List[str]) -> str:
@@ -1943,6 +2025,12 @@ def first_project_column_position(column_positions: Dict[str, int], candidate_co
         if position:
             return position
     return None
+
+
+def project_selection_column_numbers(column_position: Optional[int]) -> List[int]:
+    if not column_position or column_position <= 0:
+        return []
+    return [column_position, column_position + 1]
 
 
 def normalize_project_column_name(column: str) -> str:
