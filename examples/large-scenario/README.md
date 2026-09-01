@@ -238,6 +238,7 @@ Use this quick check:
 | You see HTML/CSV reports but no `.mpp`. | You ran `validate`. | Run `create` or `update`. |
 | `update` failed before writing a sandbox. | `--main-project` did not point to an existing `.mpp`. | Create the baseline `.mpp` first or point to a real source-of-truth `.mpp`. |
 | Microsoft Project did not open. | The machine is missing Microsoft Project desktop or `pywin32`. | Install with `py -3.14 -m pip install -e ".[project]"` and run on Windows with Project installed. |
+| Microsoft Project shows a Font dialog while j2p is running. | An older j2p build used a Project font-formatting fallback that can open a modal dialog when Project is visible. | Update to the latest j2p, close the Font dialog, close Project, use Task Manager to end any `WINPROJ.EXE` process if needed, then rerun. |
 | You opened the source file and do not see updates. | j2p updated the sandbox copy, not the source file. | Open the `.sandbox.updated-project-review.mpp` file in the update run folder. |
 
 ## Step 6: Walk The Manager Report

@@ -889,9 +889,7 @@ class MicrosoftProjectSession:
         color = project_color(hex_color)
         if not self.select_project_cell(task, column):
             return False
-        if self.color_active_cell(color):
-            return True
-        return self.font32_cell_color(color)
+        return self.color_active_cell(color)
 
     def select_project_cell(self, task: Any, column: str) -> bool:
         row = int(safe_get(task, "ID") or 0)
@@ -912,25 +910,6 @@ class MicrosoftProjectSession:
         try:
             active_cell = self.app.ActiveCell
             active_cell.CellColorEx = color
-            return True
-        except Exception:
-            return False
-
-    def font32_cell_color(self, color: int) -> bool:
-        try:
-            missing = getattr(getattr(self, "pythoncom", None), "Missing", None)
-            self.app.Font32Ex(
-                missing,
-                missing,
-                missing,
-                missing,
-                missing,
-                missing,
-                False,
-                color,
-                missing,
-                missing,
-            )
             return True
         except Exception:
             return False

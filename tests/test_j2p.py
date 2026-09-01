@@ -527,14 +527,14 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(session.app.select_calls, [("cell", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
 
-    def test_color_project_cell_can_fall_back_to_font32ex(self) -> None:
+    def test_color_project_cell_does_not_open_font_dialog_fallback(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
-        session.app = FakeFontFallbackFormattingApp()
+        session.app = FakeFontPromptRiskFormattingApp()
         task = FakeTask()
         task.ID = 8
 
-        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
-        self.assertEqual(session.app.font32_colors, [13551615])
+        self.assertFalse(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertEqual(session.app.font32_calls, 0)
 
 
 class FakeProjectApp:
@@ -666,26 +666,15 @@ class FakeRejectingCell:
         raise AttributeError("CellColorEx cannot be set")
 
 
-class FakeFontFallbackFormattingApp(FakeFormattingApp):
+class FakeFontPromptRiskFormattingApp(FakeFormattingApp):
     def __init__(self) -> None:
         super().__init__()
         self.ActiveCell = FakeRejectingCell()
-        self.font32_colors = []
+        self.font32_calls = 0
 
-    def Font32Ex(
-        self,
-        _name: object,
-        _size: object,
-        _bold: object,
-        _italic: object,
-        _underline: object,
-        _color: object,
-        _reset: object,
-        cell_color: int,
-        _pattern: object,
-        _strikethrough: object,
-    ) -> None:
-        self.font32_colors.append(cell_color)
+    def Font32Ex(self, *_args: object) -> None:
+        self.font32_calls += 1
+        raise AssertionError("Font32Ex can open Project's Font dialog and must not be called")
 
 
 class FakeAssignment:

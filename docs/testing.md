@@ -93,6 +93,7 @@ Review the generated sandbox `.mpp` and confirm:
 - changed cells are green
 - dependency review cells are blue
 - unmatched review cells are amber
+- no Microsoft Project Font formatting dialog appears, including when `--debug-visible` is used
 - critical-path root finish change is red when applicable
 - completed epics are inactive and have hidden Gantt bars when Project permits it
 - `Manager-Review-Report.html` and audit CSVs match visible sandbox changes
