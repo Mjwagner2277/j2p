@@ -9,8 +9,6 @@ Developers changing Microsoft Project field behavior should also read `docs/proj
 ## Minimal Example
 
 ```yaml
-rollup_mode: initiative
-
 rollup_modes:
   TEAM: initiative
   PLAT: fixVersion
@@ -32,8 +30,6 @@ multi_fixversion_policy:
 ## Full Example
 
 ```yaml
-rollup_mode: initiative
-
 rollup_modes:
   TEAM: initiative
   PLAT: fixVersion
@@ -129,8 +125,7 @@ project_fields:
 
 | Field | Required | Default | Allowed Values | Purpose |
 | --- | --- | --- | --- | --- |
-| `rollup_mode` | No | `initiative` | `initiative`, `fixVersion` | Default rollup behavior for prefixes not listed in `rollup_modes`. |
-| `rollup_modes` | Recommended | `{}` | Mapping of Jira key prefix to `initiative` or `fixVersion` | Lets each team use its own rollup model in one project-wide Jira CSV. |
+| `rollup_modes` | Yes for included epics | `{}` | Mapping of Jira key prefix to `initiative` or `fixVersion` | Defines the rollup model for each allowed Jira key prefix. Every `resource_groups` prefix must appear here. |
 | `done_statuses` | Recommended | `Done` | List of Jira statuses | Statuses that count child story/task points as completed. |
 | `resource_groups` | Yes for included epics | `{}` | Mapping of Jira key prefix to Project resource group name | Controls which Jira prefixes are included and what resource group each epic receives. |
 | `multi_fixversion_policy` | No | `reference` | `reference`, `split` | Controls how fixVersion-mode epics with multiple fixVersions are represented. |
@@ -142,23 +137,9 @@ project_fields:
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
 | `colors` | No | Built-in defaults | Hex colors | Controls cell highlight colors. Usually omitted. |
 
-## `rollup_mode`
-
-Sets the default rollup model.
-
-```yaml
-rollup_mode: initiative
-```
-
-Use `initiative` when most teams organize epics under Jira initiatives.
-
-Use `fixVersion` when most teams organize epics under fixVersions.
-
-If a prefix appears in `rollup_modes`, that prefix-specific value wins.
-
 ## `rollup_modes`
 
-Maps Jira key prefixes to rollup models.
+Maps each allowed Jira key prefix to its rollup model.
 
 ```yaml
 rollup_modes:
@@ -170,9 +151,11 @@ rollup_modes:
 Rules:
 
 - Prefixes are case-insensitive in configuration and normalized to uppercase.
+- Every prefix in `resource_groups` must appear in `rollup_modes`.
+- Every prefix in `rollup_modes` must also appear in `resource_groups`.
 - `initiative` means each epic must have a parent initiative key.
 - `fixVersion` means each epic must have at least one fixVersion.
-- Prefixes not listed here use `rollup_mode`.
+- There is no global/default rollup mode. This prevents one team's missing mapping from silently being treated as another team's schedule model.
 
 Example Jira keys:
 

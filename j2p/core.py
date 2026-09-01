@@ -64,7 +64,7 @@ def build_run_plan(
     audit: List[AuditItem] = []
     baseline = baseline or {}
     required = ["jira_key", "issue_type", "summary", "epic_link", "story_points", "status"]
-    configured_rollup_modes = {str(config["rollup_mode"])} | set(config.get("rollup_modes", {}).values())
+    configured_rollup_modes = set(config.get("rollup_modes", {}).values())
     if "initiative" in configured_rollup_modes:
         required.append("parent")
     if "fixVersion" in configured_rollup_modes:

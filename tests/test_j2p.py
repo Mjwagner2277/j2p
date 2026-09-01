@@ -234,6 +234,30 @@ class J2PPlanningTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "multiple_fix_versions is no longer supported"):
             load_config(None, {"behavior": {"multiple_fix_versions": "exclude"}})
 
+    def test_top_level_rollup_mode_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "Top-level rollup_mode is no longer supported"):
+            load_config(None, {"rollup_mode": "initiative"})
+
+    def test_resource_groups_require_prefix_rollup_modes(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "Missing: TEAM"):
+            load_config(
+                None,
+                {
+                    "resource_groups": {"TEAM": "Product Delivery"},
+                    "rollup_modes": {},
+                },
+            )
+
+    def test_rollup_modes_must_match_resource_groups(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "not in resource_groups.*OPS"):
+            load_config(
+                None,
+                {
+                    "resource_groups": {"TEAM": "Product Delivery"},
+                    "rollup_modes": {"TEAM": "initiative", "OPS": "fixVersion"},
+                },
+            )
+
     def test_multi_fixversion_policy_normalizes_case_and_whitespace(self) -> None:
         config = load_config(None, {"multi_fixversion_policy": {"default": " Reference ", "ops": "SPLIT"}})
 

@@ -1,5 +1,3 @@
-rollup_mode: fixVersion
-
 rollup_modes:
   TEAM: fixVersion
   PLAT: fixVersion

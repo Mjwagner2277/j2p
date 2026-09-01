@@ -27,13 +27,11 @@ Used as summary rollup parents in initiative mode:
 
 ## Rollup Modes
 
-j2p supports a default rollup mode and optional per-prefix overrides. This lets one project-wide Jira CSV include teams that use initiative rollups and teams that use fixVersion rollups.
+j2p uses Jira key prefixes to choose each team's rollup mode. This lets one project-wide Jira CSV include teams that use initiative rollups and teams that use fixVersion rollups without relying on a global default.
 
 Example:
 
 ```yaml
-rollup_mode: initiative
-
 rollup_modes:
   TEAM: initiative
   PLAT: fixVersion

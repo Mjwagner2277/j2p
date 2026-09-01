@@ -1,5 +1,3 @@
-rollup_mode: initiative
-
 rollup_modes:
   CORE: initiative
   WEB: initiative

@@ -148,11 +148,6 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         type=Path,
         help="Persistent state JSON path. Default: <output-dir>/j2p-state.json",
     )
-    parser.add_argument(
-        "--rollup-mode",
-        choices=["initiative", "fixVersion"],
-        help="Override rollup_mode from config.",
-    )
     parser.add_argument("--run-id", help="Override timestamped run id; useful for repeatable tests.")
 
 
@@ -231,10 +226,7 @@ def run_create(args: argparse.Namespace) -> int:
 
 
 def make_context(args: argparse.Namespace) -> Dict[str, Any]:
-    overrides: Dict[str, Any] = {}
-    if args.rollup_mode:
-        overrides["rollup_mode"] = args.rollup_mode
-    config = load_config(args.config, overrides)
+    config = load_config(args.config)
     run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = args.output_dir
     run_dir = output_dir / f"j2p-run-{run_id}"

@@ -1,5 +1,3 @@
-rollup_mode: initiative
-
 rollup_modes:
   TEAM: initiative
   PLAT: fixVersion

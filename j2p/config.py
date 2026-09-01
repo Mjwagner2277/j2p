@@ -15,7 +15,6 @@ from typing import Any, Dict, Iterable, List, Optional
 
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "rollup_mode": "initiative",
     "rollup_modes": {},
     "done_statuses": ["Done"],
     "issue_types": {
@@ -165,17 +164,11 @@ def read_yaml_file(path: Path) -> Dict[str, Any]:
 
 
 def normalize_config(config: Dict[str, Any]) -> None:
-    if config.get("rollup_mode") not in {"initiative", "fixVersion"}:
-        raise ConfigError("rollup_mode must be either 'initiative' or 'fixVersion'.")
-
-    rollup_modes = {}
-    for prefix, rollup_mode in config.get("rollup_modes", {}).items():
-        if rollup_mode not in {"initiative", "fixVersion"}:
-            raise ConfigError(
-                f"rollup_modes.{prefix} must be either 'initiative' or 'fixVersion'."
-            )
-        rollup_modes[str(prefix).upper()] = str(rollup_mode)
-    config["rollup_modes"] = rollup_modes
+    if "rollup_mode" in config:
+        raise ConfigError(
+            "Top-level rollup_mode is no longer supported. "
+            "Use rollup_modes.<JIRA_KEY_PREFIX> for every prefix in resource_groups."
+        )
 
     for key, value in list(config.get("columns", {}).items()):
         config["columns"][key] = ensure_list(value)
@@ -188,6 +181,34 @@ def normalize_config(config: Dict[str, Any]) -> None:
     config["resource_groups"] = {
         str(k).upper(): str(v) for k, v in config.get("resource_groups", {}).items()
     }
+
+    raw_rollup_modes = config.get("rollup_modes", {})
+    if raw_rollup_modes is None:
+        raw_rollup_modes = {}
+    if not isinstance(raw_rollup_modes, dict):
+        raise ConfigError("rollup_modes must be a YAML mapping from Jira key prefix to rollup type.")
+    rollup_modes = {}
+    for prefix, rollup_mode in raw_rollup_modes.items():
+        prefix_text = str(prefix).strip().upper()
+        rollup_mode_text = str(rollup_mode).strip()
+        if rollup_mode_text not in {"initiative", "fixVersion"}:
+            raise ConfigError(
+                f"rollup_modes.{prefix} must be either 'initiative' or 'fixVersion'."
+            )
+        rollup_modes[prefix_text] = rollup_mode_text
+    missing_rollup_modes = sorted(set(config["resource_groups"]) - set(rollup_modes))
+    if missing_rollup_modes:
+        raise ConfigError(
+            "rollup_modes must include every configured resource_groups prefix. "
+            f"Missing: {', '.join(missing_rollup_modes)}."
+        )
+    extra_rollup_modes = sorted(set(rollup_modes) - set(config["resource_groups"]))
+    if extra_rollup_modes:
+        raise ConfigError(
+            "rollup_modes contains prefix entries that are not in resource_groups. "
+            f"Remove or add resource_groups entries for: {', '.join(extra_rollup_modes)}."
+        )
+    config["rollup_modes"] = rollup_modes
 
     policy_config = config.get("multi_fixversion_policy", {})
     if policy_config is None:

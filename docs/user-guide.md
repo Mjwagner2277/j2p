@@ -132,7 +132,6 @@ Common arguments:
 | `--config` | `validate`, `create`, `update` | Recommended | Path to YAML configuration. If omitted, built-in defaults are used. |
 | `--output-dir` | `validate`, `create`, `update` | No | Base folder for reports, state, and timestamped run folders. Default is `review-output`. |
 | `--state-path` | `validate`, `create`, `update` | No | Custom path for persistent state JSON. Default is `<output-dir>\j2p-state.json`. |
-| `--rollup-mode` | `validate`, `create`, `update` | No | Temporarily overrides `rollup_mode` from YAML. |
 | `--run-id` | `validate`, `create`, `update` | No | Overrides timestamp naming. Useful for repeatable tests or examples. |
 
 `validate` arguments:
@@ -265,8 +264,6 @@ j2p supports mixed rollup models in one Jira CSV by using Jira key prefixes.
 Example:
 
 ```yaml
-rollup_mode: initiative
-
 rollup_modes:
   CORE: initiative
   WEB: initiative

@@ -1085,7 +1085,7 @@ def render_prefix_rollup_map(plan: RunPlan, config: Dict[str, Any]) -> str:
     resource_groups = config.get("resource_groups", {})
     prefixes = sorted(set(resource_groups) | set(configured_modes) | set(plan.stats.get("project_keys", [])))
     for prefix in prefixes:
-        rollup_mode = configured_modes.get(prefix, config.get("rollup_mode", "initiative"))
+        rollup_mode = configured_modes.get(prefix, "")
         rows.append(
             [
                 prefix,

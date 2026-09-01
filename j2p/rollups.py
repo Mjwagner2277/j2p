@@ -7,7 +7,7 @@ import re
 from typing import Any, Dict, List, Sequence, Tuple
 
 from .metrics import calculate_percent, calculate_story_point_ratio
-from .models import AuditItem, JiraIssue, PlanEpic, PlanSummary, RollupAssignment
+from .models import AuditItem, J2PError, JiraIssue, PlanEpic, PlanSummary, RollupAssignment
 
 
 def resolve_rollup_assignments(
@@ -167,7 +167,13 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
 
 
 def rollup_mode_for_prefix(config: Dict[str, Any], prefix: str) -> str:
-    return str(config.get("rollup_modes", {}).get(prefix.upper(), config.get("rollup_mode", "initiative")))
+    prefix_text = prefix.upper()
+    rollup_mode = config.get("rollup_modes", {}).get(prefix_text)
+    if not rollup_mode:
+        raise J2PError(
+            f"rollup_modes.{prefix_text} is required because {prefix_text} is configured in resource_groups."
+        )
+    return str(rollup_mode)
 
 
 def multi_fixversion_policy_for_prefix(config: Dict[str, Any], prefix: str) -> str:
@@ -191,4 +197,9 @@ def describe_rollup_modes(epics: Dict[str, PlanEpic], config: Dict[str, Any]) ->
         return modes[0]
     if len(modes) > 1:
         return "mixed"
-    return str(config.get("rollup_mode", "initiative"))
+    configured_modes = sorted(set(config.get("rollup_modes", {}).values()))
+    if len(configured_modes) == 1:
+        return configured_modes[0]
+    if len(configured_modes) > 1:
+        return "mixed"
+    return ""
