@@ -1383,20 +1383,109 @@ class MicrosoftProjectSession:
         except Exception:
             pass
         errors.extend(self.create_review_table(columns, config))
-        try:
-            result = self.app.TableApply(Name=J2P_REVIEW_TABLE_NAME)
-            if project_call_failed(result):
-                errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
-        except Exception as exc:
-            try:
-                result = self.app.TableApply(J2P_REVIEW_TABLE_NAME)
-                if project_call_failed(result):
-                    errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
-            except Exception as fallback_exc:
-                errors.append(f"TableApply failed: {exc}; fallback failed: {fallback_exc}")
+        table_apply_error = self.apply_project_table(J2P_REVIEW_TABLE_NAME)
+        if table_apply_error:
+            errors.append(table_apply_error)
+        missing_columns = self.missing_review_table_columns(columns, config)
+        if missing_columns:
+            errors.append(
+                f"{J2P_REVIEW_TABLE_NAME} is missing expected review column(s) after setup: "
+                f"{', '.join(missing_columns[:20])}."
+            )
         return errors
 
     def create_review_table(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
+        object_model_errors = self.recreate_review_table_with_table_fields(columns, config)
+        if not object_model_errors:
+            return []
+        table_edit_errors = self.create_review_table_with_table_edit(columns, config)
+        if not table_edit_errors:
+            return []
+        return [
+            f"TaskTables/TableFields setup failed: {' | '.join(object_model_errors[:5])}",
+            f"TableEditEx fallback failed: {' | '.join(table_edit_errors[:5])}",
+        ]
+
+    def recreate_review_table_with_table_fields(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        project = getattr(self, "project", None) or safe_get(self.app, "ActiveProject")
+        task_tables = safe_get(project, "TaskTables")
+        if not task_tables:
+            return ["ActiveProject.TaskTables was unavailable."]
+
+        existing_table = self.project_task_table(J2P_REVIEW_TABLE_NAME)
+        if existing_table is not None:
+            self.apply_project_table("Entry", record_error=False)
+            try:
+                existing_table.Delete()
+                project_progress(f"Deleted existing {J2P_REVIEW_TABLE_NAME} table before rebuilding it")
+            except Exception as exc:
+                errors.append(f"Could not delete existing {J2P_REVIEW_TABLE_NAME} table: {exc}")
+                return errors
+
+        name_field_id, name_field_error = self.project_field_constant("Name")
+        if name_field_error:
+            return [name_field_error]
+        try:
+            table = task_tables.Add(Name=J2P_REVIEW_TABLE_NAME, Field=name_field_id, Task=True)
+        except Exception as exc:
+            try:
+                table = task_tables.Add(J2P_REVIEW_TABLE_NAME, name_field_id, True)
+            except Exception as fallback_exc:
+                return [f"TaskTables.Add failed: {exc}; fallback failed: {fallback_exc}"]
+        try:
+            table.ShowInMenu = True
+        except Exception:
+            pass
+        try:
+            table.RowHeight = 1
+        except Exception:
+            pass
+        errors.extend(self.add_fields_to_review_table_object(table, columns, config, ["Name"]))
+        return errors
+
+    def add_fields_to_review_table_object(
+        self,
+        table: Any,
+        columns: List[str],
+        config: Dict[str, Any],
+        existing_columns: List[str],
+    ) -> List[str]:
+        table_fields = safe_get(table, "TableFields")
+        if not table_fields:
+            return [f"{J2P_REVIEW_TABLE_NAME}.TableFields was unavailable."]
+        errors: List[str] = []
+        existing = {normalize_project_column_name(column) for column in existing_columns}
+        for column in columns:
+            aliases = self.project_selection_aliases(column, config)
+            if any(normalize_project_column_name(alias) in existing for alias in aliases):
+                continue
+            title = project_column_title(column, config)
+            field_errors: List[str] = []
+            added = False
+            for field_name in aliases:
+                field_id, field_error = self.project_field_constant(field_name)
+                if field_error:
+                    field_errors.append(field_error)
+                    continue
+                try:
+                    table_fields.Add(Field=field_id, Width=18, Title=title, Before=-1, AutoWrap=True)
+                except Exception as exc:
+                    try:
+                        table_fields.Add(field_id, 0, 18, title, 0, -1, True)
+                    except Exception as fallback_exc:
+                        field_errors.append(
+                            f"TableFields.Add rejected {field_name}: {exc}; fallback failed: {fallback_exc}"
+                        )
+                        continue
+                added = True
+                existing.update(normalize_project_column_name(alias) for alias in aliases)
+                break
+            if not added:
+                errors.append(f"Could not add {column} to {J2P_REVIEW_TABLE_NAME}: {' | '.join(field_errors[:3])}")
+        return errors
+
+    def create_review_table_with_table_edit(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
         errors: List[str] = []
         created_from_entry = False
         try:
@@ -1427,6 +1516,47 @@ class MicrosoftProjectSession:
         if column_errors:
             errors.extend(column_errors)
         return errors
+
+    def apply_project_table(self, table_name: str, record_error: bool = True) -> str:
+        candidate_names = unique_columns([table_name, f"&{table_name}"])
+        errors: List[str] = []
+        for candidate_name in candidate_names:
+            try:
+                result = self.app.TableApply(Name=candidate_name)
+                if not project_call_failed(result):
+                    return ""
+                errors.append(f"TableApply returned False for {candidate_name}.")
+            except Exception as exc:
+                try:
+                    result = self.app.TableApply(candidate_name)
+                    if not project_call_failed(result):
+                        return ""
+                    errors.append(f"TableApply returned False for {candidate_name}.")
+                except Exception as fallback_exc:
+                    errors.append(f"TableApply failed for {candidate_name}: {exc}; fallback failed: {fallback_exc}")
+        return " | ".join(errors) if record_error else ""
+
+    def missing_review_table_columns(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
+        table = self.project_task_table(J2P_REVIEW_TABLE_NAME)
+        if table is None:
+            return []
+        positions = self.project_table_column_positions(J2P_REVIEW_TABLE_NAME, config)
+        if not positions:
+            return []
+        missing: List[str] = []
+        for column in columns:
+            aliases = self.project_selection_aliases(column, config)
+            if not first_project_column_position(positions, aliases):
+                missing.append(column)
+        return missing
+
+    def project_field_constant(self, field_name: str) -> Tuple[Any, str]:
+        if not field_name:
+            return None, "No Project field name was provided."
+        try:
+            return self.app.FieldNameToFieldConstant(field_name), ""
+        except Exception as exc:
+            return None, f"FieldNameToFieldConstant rejected {field_name}: {exc}"
 
     def add_columns_to_table(
         self,
