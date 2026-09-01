@@ -90,11 +90,7 @@ class MicrosoftProjectSession:
 
     def __enter__(self) -> "MicrosoftProjectSession":
         self.app = self.win32com.Dispatch("MSProject.Application")
-        self.app.Visible = self.visible
-        try:
-            self.app.DisplayAlerts = False
-        except Exception:
-            pass
+        self.configure_application_window()
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
@@ -103,7 +99,20 @@ class MicrosoftProjectSession:
                 self.close_project(save_changes=exc_type is None and self.saved_successfully)
         finally:
             if self.app is not None and not self.visible:
-                self.app.Quit()
+                try:
+                    self.app.Quit()
+                except Exception:
+                    pass
+
+    def configure_application_window(self) -> None:
+        try:
+            self.app.Visible = self.visible
+        except Exception:
+            pass
+        try:
+            self.app.DisplayAlerts = False
+        except Exception:
+            pass
 
     def open(self, path: Path) -> None:
         self.app.FileOpen(str(path))

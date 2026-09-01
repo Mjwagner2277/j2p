@@ -409,6 +409,15 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertEqual(session.app.close_ex_calls, [(0, True, False)])
 
+    def test_application_visibility_is_best_effort(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeVisibilityRejectingApp()
+        session.visible = False
+
+        MicrosoftProjectSession.configure_application_window(session)
+
+        self.assertFalse(session.app.display_alerts)
+
     def test_append_resource_name_preserves_existing_names(self) -> None:
         self.assertEqual(
             append_resource_name("Jane Smith, Product Delivery", "Platform Engineering"),
@@ -444,6 +453,27 @@ class FakeProjectApp:
 
     def FileCloseEx(self, Save: int, NoAuto: bool, CheckIn: bool) -> None:
         self.close_ex_calls.append((Save, NoAuto, CheckIn))
+
+
+class FakeVisibilityRejectingApp:
+    def __init__(self) -> None:
+        self.display_alerts = True
+
+    @property
+    def Visible(self) -> bool:
+        return False
+
+    @Visible.setter
+    def Visible(self, _value: bool) -> None:
+        raise AttributeError("Property 'MSProject.Application.Visible' can not be set")
+
+    @property
+    def DisplayAlerts(self) -> bool:
+        return self.display_alerts
+
+    @DisplayAlerts.setter
+    def DisplayAlerts(self, value: bool) -> None:
+        self.display_alerts = value
 
 
 class FakeCell:
