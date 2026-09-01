@@ -556,6 +556,7 @@ def write_manager_html(
   </header>
   <main>
     {decision_briefing(plan)}
+    {render_hours_accuracy_breakdown(plan)}
     {render_rollup_status(plan)}
     {render_sections([("Reviewer Action Needed", action_needed)])}
     {render_review_type_summary(plan)}
@@ -583,6 +584,7 @@ def decision_briefing(plan: RunPlan) -> str:
     completed_items = by_category(plan.audit_items, "CompletedSinceLastUpdate")
     in_progress_rollups = sum(1 for summary in plan.summaries.values() if 0 < summary.percent_complete < 100)
     completed_rollups = sum(1 for summary in plan.summaries.values() if summary.percent_complete >= 100)
+    accuracy_summary = project_wide_accuracy_summary(plan)
     metrics = [
         ("Needs Review", len(action_items), "Warnings and review decisions"),
         ("Rollups In Progress", in_progress_rollups, f"{completed_rollups} complete"),
@@ -590,11 +592,15 @@ def decision_briefing(plan: RunPlan) -> str:
         ("Completed Epics", len(completed_items), "Completed since comparison baseline"),
         ("Logged Hours", format_number(plan.stats.get("logged_hours", 0)), "Rolled up from child work"),
         (
-            "Hours Accuracy %",
-            f"{format_number(plan.stats.get('hours_accuracy_percent', 0))}%",
-            f"1 story point = {format_number(plan.stats.get('hours_per_story_point', 8))} hours",
+            "Project-Wide Accuracy",
+            f"{format_number(accuracy_summary['hours_accuracy_percent'])}%",
+            pluralize(accuracy_summary["epic_count"], "in-progress row", "in-progress rows"),
         ),
     ]
+    return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{render_metric_cards(metrics)}</div></section>"
+
+
+def render_metric_cards(metrics: Sequence[Sequence[Any]]) -> str:
     cards = "\n".join(
         (
             "<div class=\"briefing-item\">"
@@ -605,7 +611,143 @@ def decision_briefing(plan: RunPlan) -> str:
         )
         for label, value, note in metrics
     )
-    return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{cards}</div></section>"
+    return cards
+
+
+def render_hours_accuracy_breakdown(plan: RunPlan) -> str:
+    summary = project_wide_accuracy_summary(plan)
+    metrics = [
+        (
+            "Hours Accuracy %",
+            f"{format_number(summary['hours_accuracy_percent'])}%",
+            "In-progress scheduled epic rows only",
+        ),
+        (
+            "In-Progress Epic Rows",
+            summary["epic_count"],
+            "Driving rows with 1-99% complete",
+        ),
+        (
+            "Completed / Total Points",
+            (
+                f"{format_number(summary['completed_story_points'])} / "
+                f"{format_number(summary['total_story_points'])}"
+            ),
+            "Only rows counted in this view",
+        ),
+        (
+            "Completed Logged Hours",
+            format_number(summary["completed_logged_hours"]),
+            f"Expected {format_number(summary['expected_completed_hours'])}",
+        ),
+        (
+            "Total Logged Hours",
+            format_number(summary["logged_hours"]),
+            "All child logs under active epics",
+        ),
+        (
+            "Hours Per Point",
+            format_number(summary["hours_per_story_point"]),
+            "Configured in YAML",
+        ),
+    ]
+    section = (
+        "<section><h2>Project-Wide Hours Accuracy</h2>"
+        f"<div class=\"briefing-grid\">{render_metric_cards(metrics)}</div>"
+        "<p class=\"muted\">"
+        "This section excludes completed, not-started, in-planning, and reference-only rows."
+        "</p></section>"
+    )
+    resource_rows = resource_group_accuracy_rows(plan)
+    table_rows = [
+        [
+            row["resource_group"],
+            row["project_keys"],
+            row["epic_count"],
+            f"{format_number(row['completed_story_points'])} / {format_number(row['total_story_points'])}",
+            format_number(row["completed_logged_hours"]),
+            format_number(row["expected_completed_hours"]),
+            format_number(row["logged_hours"]),
+            f"{format_number(row['hours_accuracy_percent'])}%",
+        ]
+        for row in resource_rows
+    ]
+    resource_table = render_table(
+        "Resource Group Accuracy",
+        [
+            "Resource Group",
+            "Project Keys",
+            "In-Progress Rows",
+            "Completed / Total Points",
+            "Completed Logged Hours",
+            "Expected Completed Hours",
+            "Total Logged Hours",
+            "Hours Accuracy %",
+        ],
+        table_rows,
+    )
+    group_count = len(resource_rows)
+    summary_note = (
+        pluralize(group_count, "resource group with in-progress work.", "resource groups with in-progress work.")
+        if group_count
+        else "No in-progress scheduled epic rows found."
+    )
+    return section + render_collapsible("Accuracy By Resource Group", resource_table, summary_note)
+
+
+def project_wide_accuracy_summary(plan: RunPlan) -> Dict[str, Any]:
+    return hours_accuracy_summary(report_accuracy_epics(plan), plan)
+
+
+def resource_group_accuracy_rows(plan: RunPlan) -> List[Dict[str, Any]]:
+    buckets: Dict[str, List[Any]] = {}
+    for epic in report_accuracy_epics(plan):
+        buckets.setdefault(epic.resource_group or "Unassigned", []).append(epic)
+
+    rows = []
+    for resource_group, epics in sorted(buckets.items()):
+        summary = hours_accuracy_summary(epics, plan)
+        summary["resource_group"] = resource_group
+        summary["project_keys"] = ", ".join(sorted({epic.key_prefix for epic in epics if epic.key_prefix}))
+        rows.append(summary)
+    return rows
+
+
+def report_accuracy_epics(plan: RunPlan) -> List[Any]:
+    return [
+        epic
+        for epic in plan.epics.values()
+        if epic.drives_schedule and 0 < epic.percent_complete < 100
+    ]
+
+
+def hours_accuracy_summary(epics: Iterable[Any], plan: RunPlan) -> Dict[str, Any]:
+    epic_list = list(epics)
+    hours_per_story_point = float(plan.stats.get("hours_per_story_point", 8.0))
+    completed_story_points = round(sum(epic.completed_story_points for epic in epic_list), 2)
+    total_story_points = round(sum(epic.total_story_points for epic in epic_list), 2)
+    logged_hours = round(sum(epic.logged_hours for epic in epic_list), 2)
+    completed_logged_hours = round(sum(epic.completed_logged_hours for epic in epic_list), 2)
+    expected_completed_hours = round(completed_story_points * hours_per_story_point, 2)
+    return {
+        "epic_count": len(epic_list),
+        "total_story_points": total_story_points,
+        "completed_story_points": completed_story_points,
+        "logged_hours": logged_hours,
+        "completed_logged_hours": completed_logged_hours,
+        "expected_completed_hours": expected_completed_hours,
+        "hours_accuracy_percent": calculate_hours_accuracy_percent(
+            completed_logged_hours,
+            completed_story_points,
+            hours_per_story_point,
+        ),
+        "hours_per_story_point": hours_per_story_point,
+    }
+
+
+def pluralize(count: int, singular: str, plural: Optional[str] = None) -> str:
+    label = singular if count == 1 else (plural or f"{singular}s")
+    return f"{count} {label}"
 
 
 def render_report_context(

@@ -5413,7 +5413,7 @@
       "total_story_points": 21.0
     }
   },
-  "generated_at": "2026-09-01T12:23:47",
+  "generated_at": "2026-09-01T12:35:48",
   "jira_csv": "examples/large-scenario/project-wide-jira-updated-1200.csv",
   "rollup_mode": "mixed",
   "summaries": {

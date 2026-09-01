@@ -195,17 +195,19 @@ The state file lets future report-only validation compare against the last saved
 Open `Manager-Review-Report.html` first.
 
 1. Review `Decision Briefing`.
-2. Review `Rollup Status` for initiative/fixVersion progress.
-3. Review `Reviewer Action Needed`.
-4. Review `Review Type Summary` to see counts by issue category.
-5. Review `Project Key Rollup Mapping`.
-6. Review `Color Key` and `Color Case Examples`.
-7. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
-8. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
-9. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
-10. Open the sandbox `.mpp` and compare colored cells with the report.
+2. Review `Project-Wide Hours Accuracy`.
+3. Expand `Accuracy By Resource Group` when you need the active-work accuracy split by team/resource group.
+4. Review `Rollup Status` for initiative/fixVersion progress.
+5. Review `Reviewer Action Needed`.
+6. Review `Review Type Summary` to see counts by issue category.
+7. Review `Project Key Rollup Mapping`.
+8. Review `Color Key` and `Color Case Examples`.
+9. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
+10. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
+11. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
+12. Open the sandbox `.mpp` and compare colored cells with the report.
 
-The manager report intentionally keeps rollup status and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
+The manager report intentionally keeps project-wide accuracy, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
 ## Color Key
 
@@ -394,6 +396,8 @@ Interpretation:
 | `0%` with no completed story points | Not applicable yet because there is no completed-point denominator. |
 
 By default, this is written to the Microsoft Project custom number field `Number4` and shown with the display name `Hours Accuracy %`. Incomplete child work can still contribute to the total `Logged Hours` field, but it does not affect `Hours Accuracy %` until the child work is in a done status.
+
+The row-level `Hours Accuracy %` value is available on each included epic row. The manager report's `Project-Wide Hours Accuracy` and `Accuracy By Resource Group` sections intentionally use only active scheduled epic rows: rows that drive the schedule and have `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate accuracy views.
 
 ## Dependencies
 

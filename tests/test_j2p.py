@@ -30,7 +30,7 @@ from j2p.project import (
     project_predecessor_ids,
     review_table_columns,
 )
-from j2p.reports import write_reports
+from j2p.reports import project_wide_accuracy_summary, resource_group_accuracy_rows, write_reports
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -352,12 +352,34 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertNotIn("<script src=", report)
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)
+            self.assertIn("Project-Wide Hours Accuracy", report)
+            self.assertIn("Accuracy By Resource Group", report)
+            self.assertIn("Resource Group Accuracy", report)
             field_mapping = paths["field_mapping"].read_text(encoding="utf-8")
             self.assertIn("Native Project fields used by j2p", field_mapping)
             self.assertIn("| Resource Group | Resource Group |", field_mapping)
             self.assertIn("Jira Status", field_mapping)
             self.assertIn("Logged Hours", field_mapping)
             self.assertNotIn("| `resource_group` | `Text6` |", field_mapping)
+
+    def test_manager_accuracy_breakdown_uses_in_progress_scheduled_epics_only(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+        plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config)
+
+        project_accuracy = project_wide_accuracy_summary(plan)
+        self.assertEqual(project_accuracy["epic_count"], 1)
+        self.assertEqual(project_accuracy["total_story_points"], 8)
+        self.assertEqual(project_accuracy["completed_story_points"], 3)
+        self.assertEqual(project_accuracy["logged_hours"], 7.25)
+        self.assertEqual(project_accuracy["completed_logged_hours"], 3.25)
+        self.assertEqual(project_accuracy["expected_completed_hours"], 24)
+        self.assertEqual(project_accuracy["hours_accuracy_percent"], 13.5)
+
+        resource_rows = resource_group_accuracy_rows(plan)
+        self.assertEqual(len(resource_rows), 1)
+        self.assertEqual(resource_rows[0]["resource_group"], "Product Delivery")
+        self.assertEqual(resource_rows[0]["project_keys"], "TEAM")
+        self.assertEqual(resource_rows[0]["hours_accuracy_percent"], 13.5)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
         config = load_config(EXAMPLES / "config.example.yaml")

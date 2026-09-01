@@ -41,6 +41,7 @@ Expected:
 - Story/task rows are used for percent complete and are not Project work rows.
 - Logged Hours values on story/task rows roll up to their parent epic and summary rows.
 - Hours Accuracy % compares completed child logged hours to completed story points at 8 hours per point.
+- The manager report's project-wide and resource-group accuracy sections include only active scheduled epics, meaning rows with `% Complete` from 1 to 99.
 
 Per-project-key CSVs are written under:
 
@@ -98,7 +99,7 @@ review-output\j2p-run-follow-on-demo\by-project-key\TEAM\planned-epics.csv
 review-output\j2p-run-follow-on-demo\by-project-key\PLAT\planned-epics.csv
 ```
 
-In the follow-on export, `TEAM-101` has two completed child stories with `4.5` and `9h 30m` logged. The planned epic row shows `14` logged hours and `13.5%` hours accuracy because `13` completed story points equals `104` expected hours at 8 hours per point. `TEAM-102` has `7.25` total logged hours, but only `3.25` of those hours are on completed child work, so its hours accuracy is based on `3.25 / 24`.
+In the follow-on export, `TEAM-101` has two completed child stories with `4.5` and `9h 30m` logged. The planned epic row shows `14` logged hours and `13.5%` hours accuracy because `13` completed story points equals `104` expected hours at 8 hours per point. `TEAM-102` has `7.25` total logged hours, but only `3.25` of those hours are on completed child work, so its hours accuracy is based on `3.25 / 24`. Because `TEAM-102` is the only active scheduled epic in the small follow-on sample, it is also the only row included in the manager report's `Project-Wide Hours Accuracy` and `Accuracy By Resource Group` aggregate views.
 
 ## Step 3: Run fixVersion Mode
 

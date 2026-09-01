@@ -107,6 +107,8 @@ completed child logged hours / (completed child story points * hours_per_story_p
 
 The default conversion is 8 hours per story point and is configurable in YAML.
 
+Manager report project-wide and resource-group accuracy views must use only active scheduled epic rows. For this purpose, active means the row drives the schedule and has `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
+
 ## Dependencies
 
 Only epic-level dependencies are written to Project.

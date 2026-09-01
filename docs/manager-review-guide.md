@@ -5,18 +5,20 @@ Open `Manager-Review-Report.html` first. It is self-contained and can be emailed
 ## Review Order
 
 1. Review `Decision Briefing`.
-2. Review `Rollup Status`.
-3. Review `Reviewer Action Needed`.
-4. Review `Review Type Summary`.
-5. Check `Project Key Rollup Mapping`.
-6. Check `Color Key` and `Color Case Examples`.
-7. Expand `Detailed Review Sections` only when you need the category-level tables.
-8. Expand `Full Planned Epic Rows` only when you need every planned schedule row.
-9. Open the sandbox `.mpp`.
-10. Review red finish-date cells first, then changed green cells, amber review cells, blue dependency cells, and in-planning rows.
-11. Use `audit-detail.csv` only when you need row-level evidence outside the HTML report.
+2. Review `Project-Wide Hours Accuracy`.
+3. Expand `Accuracy By Resource Group` when you need the active-work accuracy split by team/resource group.
+4. Review `Rollup Status`.
+5. Review `Reviewer Action Needed`.
+6. Review `Review Type Summary`.
+7. Check `Project Key Rollup Mapping`.
+8. Check `Color Key` and `Color Case Examples`.
+9. Expand `Detailed Review Sections` only when you need the category-level tables.
+10. Expand `Full Planned Epic Rows` only when you need every planned schedule row.
+11. Open the sandbox `.mpp`.
+12. Review red finish-date cells first, then changed green cells, amber review cells, blue dependency cells, and in-planning rows.
+13. Use `audit-detail.csv` only when you need row-level evidence outside the HTML report.
 
-Large detail tables are collapsed by default so manager-level status and required-review items stay at the top of the report.
+Large detail tables are collapsed by default so manager-level accuracy, status, and required-review items stay at the top of the report.
 
 ## Report Files
 
@@ -88,3 +90,4 @@ Hours accuracy:
 - `100%` means completed work logged exactly the expected hours.
 - Values below or above `100%` show that completed work logged fewer or more hours than expected.
 - `0%` with no completed story points means the ratio is not applicable yet.
+- Project-wide and resource-group accuracy sections use only active scheduled epic rows: rows that drive the schedule and have `% Complete` from 1 to 99.

@@ -256,27 +256,31 @@ Confirm these high-level expectations:
 | Dependency Items | Changed, missing, skipped, or circular dependency cases |
 | Completed Epics | Epics that became done since the comparison baseline |
 | Logged Hours | Child story/task worklog hours rolled up to the scheduled epic rows |
-| Hours Accuracy % | Completed child logged hours compared to completed story points at 8 hours per point |
+| Project-Wide Accuracy | Completed child logged hours compared to completed story points at 8 hours per point, limited to active scheduled epic rows |
 
 Then read sections in this order:
 
-1. `Rollup Status`
-2. `Reviewer Action Needed`
-3. `Review Type Summary`
-4. `Project Key Rollup Mapping`
-5. Expand `Report Context` only when you want file paths, CSV row counts, and raw processing totals.
-6. `Color Case Examples`
-7. Expand `Detailed Review Sections` for `Changed Names`, `Added Epics`, `Multi-FixVersion Epics`, `Parent Or Rollup Moves`, `Completed Since Last Update`, `In Planning`, `Dependency Review`, `Date Review`, `Unmatched Project Tasks`, and `Excluded Items`.
-8. Expand `Full Planned Epic Rows` only when you want to inspect every planned schedule row.
-9. Expand `CSV Column Mapping Used` only when you want to confirm how the Jira CSV headers were interpreted.
+1. `Project-Wide Hours Accuracy`
+2. Expand `Accuracy By Resource Group` for the active-work accuracy split by team/resource group.
+3. `Rollup Status`
+4. `Reviewer Action Needed`
+5. `Review Type Summary`
+6. `Project Key Rollup Mapping`
+7. Expand `Report Context` only when you want file paths, CSV row counts, and raw processing totals.
+8. `Color Case Examples`
+9. Expand `Detailed Review Sections` for `Changed Names`, `Added Epics`, `Multi-FixVersion Epics`, `Parent Or Rollup Moves`, `Completed Since Last Update`, `In Planning`, `Dependency Review`, `Date Review`, `Unmatched Project Tasks`, and `Excluded Items`.
+10. Expand `Full Planned Epic Rows` only when you want to inspect every planned schedule row.
+11. Expand `CSV Column Mapping Used` only when you want to confirm how the Jira CSV headers were interpreted.
 
-The large planned-epic table is intentionally collapsed so managers see rollup status and required-review items before the full detail.
+The large planned-epic table is intentionally collapsed so managers see project-wide accuracy, rollup status, and required-review items before the full detail.
 
 Logged hours appear in three places:
 
 | Where | What To Look For |
 | --- | --- |
 | `Decision Briefing` | Total logged hours across driving scheduled epic rows. |
+| `Project-Wide Hours Accuracy` | Accuracy across active scheduled epic rows only. |
+| `Accuracy By Resource Group` | The same active-work accuracy split by resource group. |
 | `Rollup Status` | Logged hours and hours accuracy grouped by initiative or fixVersion. |
 | `Full Planned Epic Rows` and `planned-epics.csv` | Logged hours and hours accuracy on each included epic row. |
 
