@@ -374,6 +374,7 @@ For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 - `CORE-1004` has a target-end date change and blocks `CORE-1005`.
 - `CORE-1005` is the downstream dependent epic.
 - In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports every changed finish with changed downstream successors as red. Changed finish dates with no changed downstream successor remain green.
+- The generated `Manager-Review-Report.html` includes `Schedule Cascade Review`, which presents those changed dates as branch cards plus a collapsible old/new date table.
 
 ## Step 9: Manager Decisions
 

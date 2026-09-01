@@ -202,16 +202,19 @@ Open `Manager-Review-Report.html` first.
 2. Review `Story Point Ratio`.
 3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
 4. Review `Rollup Status` for initiative/fixVersion progress.
-5. Review `Reviewer Action Needed`.
-6. Review `Review Type Summary` to see counts by issue category.
-7. Review `Project Key Rollup Mapping`.
-8. Review `Color Key` and `Color Case Examples`.
-9. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
-10. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
-11. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
-12. Open the sandbox `.mpp` and compare colored cells with the report.
+5. Review `Schedule Cascade Review` for date-change branches after Microsoft Project recalculates the sandbox.
+6. Review `Reviewer Action Needed`.
+7. Review `Review Type Summary` to see counts by issue category.
+8. Review `Project Key Rollup Mapping`.
+9. Review `Color Key` and `Color Case Examples`.
+10. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
+11. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
+12. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
+13. Open the sandbox `.mpp` and compare colored cells with the report.
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
+
+`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
 
 ## Color Key
 
@@ -431,6 +434,7 @@ The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `
 - If Project auto-scheduling shifts finish dates, every changed finish with changed downstream successors is colored red.
 - Changed finish dates with no changed downstream successor remain green.
 - If a Project scheduled finish does not match Jira `Target end`, the mismatch is reported.
+- The manager report adds a `Schedule Cascade Review` visual that groups those finish changes into dependency branches.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
 

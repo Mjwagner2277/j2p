@@ -34,7 +34,12 @@ from j2p.project import (
     project_predecessor_ids,
     review_table_columns,
 )
-from j2p.reports import project_wide_story_point_ratio_summary, resource_group_story_point_ratio_rows, write_reports
+from j2p.reports import (
+    project_wide_story_point_ratio_summary,
+    render_schedule_cascade_review,
+    resource_group_story_point_ratio_rows,
+    write_reports,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -554,6 +559,14 @@ class J2PPlanningTests(unittest.TestCase):
         }
         self.assertEqual(red_keys, {"TEAM-A", "TEAM-B"})
         self.assertEqual(green_keys, {"TEAM-C", "TEAM-D", "TEAM-E"})
+
+        html = render_schedule_cascade_review(plan, project_update_run=True)
+        self.assertIn("Schedule Cascade Review", html)
+        self.assertIn("Red Branch Drivers", html)
+        self.assertIn("TEAM-A", html)
+        self.assertIn("TEAM-B", html)
+        self.assertIn("Nested branch driver", html)
+        self.assertIn("Changed Downstream Successors", html)
 
     def test_resource_group_uses_project_resource_assignment(self) -> None:
         session = object.__new__(MicrosoftProjectSession)

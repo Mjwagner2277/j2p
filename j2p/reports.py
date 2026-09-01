@@ -472,6 +472,73 @@ def write_manager_html(
       text-transform: uppercase;
       letter-spacing: 0;
     }}
+    .cascade-review {{
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--cascade);
+      padding: 12px 14px;
+      background: #ffffff;
+      margin-bottom: 18px;
+    }}
+    .cascade-help {{
+      margin: 0 0 12px;
+      color: var(--muted);
+    }}
+    .cascade-flow {{
+      display: grid;
+      gap: 12px;
+      margin: 12px 0;
+    }}
+    .cascade-branch {{
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #ffffff;
+    }}
+    .cascade-node {{
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--changed);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: #ffffff;
+      min-width: 220px;
+    }}
+    .cascade-node.driver {{
+      border-left-color: var(--cascade);
+      background: #fffafa;
+    }}
+    .cascade-node.changed {{
+      border-left-color: var(--changed);
+      background: #fbfffb;
+    }}
+    .cascade-node-title {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: baseline;
+      justify-content: space-between;
+      font-weight: 600;
+    }}
+    .cascade-node-title span {{
+      color: var(--muted);
+      font-weight: normal;
+      font-size: 12px;
+    }}
+    .cascade-node-summary {{
+      margin-top: 4px;
+      font-size: 13px;
+    }}
+    .cascade-node-dates {{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }}
+    .cascade-children {{
+      border-left: 2px solid var(--border);
+      margin: 8px 0 0 16px;
+      padding-left: 14px;
+      display: grid;
+      gap: 8px;
+    }}
     .table-wrap {{
       width: 100%;
       overflow-x: auto;
@@ -570,6 +637,7 @@ def write_manager_html(
     {decision_briefing(plan)}
     {render_story_point_ratio_breakdown(plan)}
     {render_rollup_status(plan)}
+    {render_schedule_cascade_review(plan, project_update_run=sandbox_path is not None)}
     {render_sections([("Reviewer Action Needed", action_needed)])}
     {render_review_type_summary(plan)}
     {render_prefix_rollup_map(plan, config)}
@@ -624,6 +692,166 @@ def render_metric_cards(metrics: Sequence[Sequence[Any]]) -> str:
         for label, value, note in metrics
     )
     return cards
+
+
+def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = False) -> str:
+    cascade_items = schedule_cascade_change_items(plan)
+    if not cascade_items:
+        message = (
+            "No Project auto-schedule finish-date changes were detected in this update run."
+            if project_update_run
+            else (
+                "No Project auto-schedule finish-date changes were evaluated in this report. "
+                "This section is populated during create/update runs after Microsoft Project recalculates the sandbox."
+            )
+        )
+        return f"<section><h2>Schedule Cascade Review</h2><p class=\"empty\">{html_escape(message)}</p></section>"
+
+    changed_keys = set(cascade_items)
+    driver_keys = {
+        key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
+    }
+    leaf_keys = changed_keys - driver_keys
+    roots = cascade_root_keys(plan, changed_keys)
+    branch_roots = [
+        key for key in roots if key in driver_keys or changed_successors(plan, key, changed_keys)
+    ]
+    metrics = [
+        ("Finish Changes", len(changed_keys), "Changed after Project recalculated the sandbox"),
+        ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
+        ("Green Finish Changes", len(leaf_keys), "Changed leaves or independent rows"),
+    ]
+    branch_html = "".join(
+        f"<div class=\"cascade-branch\">{render_cascade_node(plan, cascade_items, root_key, set())}</div>"
+        for root_key in branch_roots
+    )
+    if not branch_html:
+        branch_html = "<p class=\"empty\">No cascade branches were detected. Finish changes appear independent or leaf-only.</p>"
+    detail_table = render_collapsible(
+        "Schedule Cascade Detail",
+        render_schedule_cascade_table(plan, cascade_items),
+        f"{len(changed_keys)} finish-date change(s). Open for old/new dates and changed downstream successors.",
+    )
+    return (
+        "<section><h2>Schedule Cascade Review</h2>"
+        "<div class=\"cascade-review\">"
+        f"<div class=\"briefing-grid\">{render_metric_cards(metrics)}</div>"
+        "<p class=\"cascade-help\">"
+        "Red cards are changed finish dates that also have changed downstream successors. "
+        "Green cards are changed finish dates with no changed downstream successor. "
+        "Nested branches follow the Jira dependency links written to Project as predecessor relationships."
+        "</p>"
+        f"<div class=\"cascade-flow\">{branch_html}</div>"
+        "</div></section>"
+        f"{detail_table}"
+    )
+
+
+def schedule_cascade_change_items(plan: RunPlan) -> Dict[str, AuditItem]:
+    items: Dict[str, AuditItem] = {}
+    for item in plan.audit_items:
+        if item.category not in {"CascadeBranchDriver", "CascadingDateChange"}:
+            continue
+        key = (item.schedule_key or item.jira_key).upper()
+        if key:
+            items[key] = item
+    return items
+
+
+def cascade_root_keys(plan: RunPlan, changed_keys: set[str]) -> List[str]:
+    changed_with_changed_predecessor: set[str] = set()
+    for key in changed_keys:
+        epic = plan.epics.get(key)
+        if not epic:
+            continue
+        for successor_key in epic.successors:
+            if successor_key in changed_keys:
+                changed_with_changed_predecessor.add(successor_key)
+    return sorted(changed_keys - changed_with_changed_predecessor)
+
+
+def changed_successors(plan: RunPlan, key: str, changed_keys: set[str]) -> List[str]:
+    epic = plan.epics.get(key)
+    if not epic:
+        return []
+    return sorted(successor_key for successor_key in epic.successors if successor_key in changed_keys)
+
+
+def render_cascade_node(
+    plan: RunPlan,
+    cascade_items: Dict[str, AuditItem],
+    key: str,
+    path: set[str],
+) -> str:
+    item = cascade_items[key]
+    is_driver = item.category == "CascadeBranchDriver"
+    epic = plan.epics.get(key)
+    jira_key = item.jira_key or (epic.jira_key if epic else "") or key
+    schedule_key = item.schedule_key or key
+    summary = item.summary or (epic.summary if epic else "")
+    changed_keys = set(cascade_items)
+    successor_keys = [] if key in path else changed_successors(plan, key, changed_keys)
+    label = "Driver" if is_driver else "Changed"
+    node_html = (
+        f"<div class=\"cascade-node {'driver' if is_driver else 'changed'}\">"
+        "<div class=\"cascade-node-title\">"
+        f"{html_escape(jira_key)} <span>{html_escape(label)}</span>"
+        "</div>"
+        f"<div class=\"cascade-node-summary\">{html_escape(summary)}</div>"
+        f"<div class=\"cascade-node-dates\">Finish: {html_escape(item.old_value or 'blank')} -> {html_escape(item.new_value or 'blank')}</div>"
+    )
+    if schedule_key != jira_key:
+        node_html += f"<div class=\"cascade-node-dates\">Schedule row: {html_escape(schedule_key)}</div>"
+    node_html += "</div>"
+    if successor_keys:
+        child_path = set(path)
+        child_path.add(key)
+        children = "".join(
+            render_cascade_node(plan, cascade_items, successor_key, child_path)
+            for successor_key in successor_keys
+        )
+        node_html += f"<div class=\"cascade-children\">{children}</div>"
+    return node_html
+
+
+def render_schedule_cascade_table(plan: RunPlan, cascade_items: Dict[str, AuditItem]) -> str:
+    changed_keys = set(cascade_items)
+    rows = []
+    for key, item in sorted(
+        cascade_items.items(),
+        key=lambda entry: (entry[1].category != "CascadeBranchDriver", entry[1].new_value, entry[0]),
+    ):
+        epic = plan.epics.get(key)
+        successor_labels = [
+            cascade_items[successor_key].jira_key or successor_key
+            for successor_key in changed_successors(plan, key, changed_keys)
+        ]
+        rows.append(
+            [
+                "Red" if item.category == "CascadeBranchDriver" else "Green",
+                item.jira_key or (epic.jira_key if epic else "") or key,
+                item.schedule_key or key,
+                item.summary or (epic.summary if epic else ""),
+                item.old_value,
+                item.new_value,
+                ", ".join(successor_labels),
+                item.reviewer_action,
+            ]
+        )
+    return render_table(
+        "Schedule Cascade Detail",
+        [
+            "Color",
+            "Jira Key",
+            "Schedule Key",
+            "Summary",
+            "Old Finish",
+            "New Finish",
+            "Changed Downstream Successors",
+            "Reviewer Action",
+        ],
+        rows,
+    )
 
 
 def render_story_point_ratio_breakdown(plan: RunPlan) -> str:
