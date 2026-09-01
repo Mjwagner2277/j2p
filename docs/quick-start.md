@@ -9,7 +9,7 @@ This is the short path. For the full product-user write-up, including YAML field
 - The source-of-truth `.mpp` is not modified.
 - `update` copies the source-of-truth `.mpp` to a timestamped sandbox and updates the sandbox only.
 - Only epics become Project work rows.
-- Stories, tasks, bugs, and sub-tasks are used only for epic percent-complete and logged-hours math.
+- Stories, tasks, bugs, and sub-tasks are used only for epic percent-complete, logged-hours, and hours-accuracy math.
 - Epics without the required initiative or fixVersion rollup are excluded and reported.
 - Epics with unmapped Jira key prefixes are excluded and reported.
 - Standard Jira blocker links are mapped to Finish-to-Start predecessor links.

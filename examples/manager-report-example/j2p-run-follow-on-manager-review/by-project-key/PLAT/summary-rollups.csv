@@ -1,2 +1,2 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,percent_complete
-Portal 2026,PLAT,Portal 2026,fixVersion,1,1,0,8.0,8.0,10.0,100
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,completed_logged_hours,hours_accuracy_percent,percent_complete
+Portal 2026,PLAT,Portal 2026,fixVersion,1,1,0,8.0,8.0,10.0,10.0,15.6,100

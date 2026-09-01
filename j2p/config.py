@@ -57,6 +57,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "multi_fixversion_policy": {
         "default": "reference",
     },
+    "metrics": {
+        "hours_per_story_point": 8.0,
+    },
     "behavior": {
         "unknown_prefix": "exclude",
         "hide_completed_epics": True,
@@ -78,6 +81,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "total_story_points": "Number1",
         "completed_story_points": "Number2",
         "logged_hours": "Number3",
+        "hours_accuracy_percent": "Number4",
         "in_planning": "Flag1",
         "unmatched_project_task": "Flag2",
         "dependency_review_needed": "Flag3",
@@ -101,6 +105,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "total_story_points": "Total Story Points",
         "completed_story_points": "Completed Story Points",
         "logged_hours": "Logged Hours",
+        "hours_accuracy_percent": "Hours Accuracy %",
         "in_planning": "In Planning",
         "unmatched_project_task": "Unmatched Project Task",
         "dependency_review_needed": "Dependency Review Needed",
@@ -195,6 +200,21 @@ def normalize_config(config: Dict[str, Any]) -> None:
             "behavior.multiple_fix_versions is no longer supported. "
             "Use multi_fixversion_policy with 'reference' or 'split'."
         )
+
+    metrics = config.get("metrics", {})
+    if metrics is None:
+        metrics = {}
+    if not isinstance(metrics, dict):
+        raise ConfigError("metrics must be a YAML mapping.")
+    hours_per_story_point = metrics.get("hours_per_story_point", 8.0)
+    try:
+        hours_per_story_point = float(hours_per_story_point)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("metrics.hours_per_story_point must be a positive number.") from exc
+    if hours_per_story_point <= 0:
+        raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
+    metrics["hours_per_story_point"] = hours_per_story_point
+    config["metrics"] = metrics
 
 
 def ensure_list(value: Any) -> List[Any]:

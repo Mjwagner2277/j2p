@@ -73,6 +73,8 @@ class PlanEpic:
     total_story_points: float
     completed_story_points: float
     logged_hours: float
+    completed_logged_hours: float
+    hours_accuracy_percent: float
     percent_complete: int
     in_planning: bool
     completed: bool
@@ -99,6 +101,8 @@ class PlanSummary:
     total_story_points: float
     completed_story_points: float
     logged_hours: float
+    completed_logged_hours: float
+    hours_accuracy_percent: float
     percent_complete: int
     child_epic_count: int
     driving_epic_count: int = 0
@@ -119,6 +123,7 @@ class ProjectTaskSnapshot:
     total_story_points: float = 0.0
     completed_story_points: float = 0.0
     logged_hours: float = 0.0
+    hours_accuracy_percent: float = 0.0
     percent_complete: int = 0
     status: str = ""
     target_start: str = ""
@@ -261,16 +266,18 @@ def build_run_plan(
         points = story.story_points or 0.0
         bucket = story_rollup_by_epic.setdefault(
             story.epic_link,
-            {"total": 0.0, "completed": 0.0, "logged_hours": 0.0},
+            {"total": 0.0, "completed": 0.0, "logged_hours": 0.0, "completed_logged_hours": 0.0},
         )
         bucket["total"] += points
         bucket["logged_hours"] += story.logged_hours
         if story.status.strip().lower() in done_statuses:
             bucket["completed"] += points
+            bucket["completed_logged_hours"] += story.logged_hours
 
     planned_epics: Dict[str, PlanEpic] = {}
     excluded_count = 0
     resource_groups = config.get("resource_groups", {})
+    hours_per_story_point = float(config.get("metrics", {}).get("hours_per_story_point", 8.0))
     if not resource_groups:
         audit.append(
             AuditItem(
@@ -323,12 +330,21 @@ def build_run_plan(
             )
             continue
 
-        point_bucket = story_rollup_by_epic.get(epic.key, {"total": 0.0, "completed": 0.0, "logged_hours": 0.0})
+        point_bucket = story_rollup_by_epic.get(
+            epic.key,
+            {"total": 0.0, "completed": 0.0, "logged_hours": 0.0, "completed_logged_hours": 0.0},
+        )
         total_points = round(point_bucket["total"], 2)
         completed_points = round(point_bucket["completed"], 2)
         logged_hours = round(point_bucket["logged_hours"], 2)
+        completed_logged_hours = round(point_bucket["completed_logged_hours"], 2)
         in_planning = total_points <= 0
         percent_complete = calculate_percent(completed_points, total_points)
+        hours_accuracy_percent = calculate_hours_accuracy_percent(
+            completed_logged_hours,
+            completed_points,
+            hours_per_story_point,
+        )
         completed = epic.status.strip().lower() in done_statuses
 
         if in_planning:
@@ -362,6 +378,8 @@ def build_run_plan(
                 total_story_points=total_points,
                 completed_story_points=completed_points,
                 logged_hours=logged_hours,
+                completed_logged_hours=completed_logged_hours,
+                hours_accuracy_percent=hours_accuracy_percent,
                 percent_complete=percent_complete,
                 in_planning=in_planning,
                 completed=completed,
@@ -377,8 +395,12 @@ def build_run_plan(
         add_multi_fixversion_audit(audit, epic, assignments, rollup_mode)
 
     apply_dependencies(planned_epics, epics, audit)
-    summaries = build_summaries(planned_epics)
+    summaries = build_summaries(planned_epics, config)
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
+    driving_epics = [epic for epic in planned_epics.values() if epic.drives_schedule]
+    driving_logged_hours = round(sum(epic.logged_hours for epic in driving_epics), 2)
+    driving_completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
+    driving_completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
 
     stats = {
         "csv_rows_read": len(table.rows),
@@ -392,7 +414,14 @@ def build_run_plan(
         "summary_rows": len(summaries),
         "audit_items": len(audit),
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
-        "logged_hours": round(sum(epic.logged_hours for epic in planned_epics.values() if epic.drives_schedule), 2),
+        "logged_hours": driving_logged_hours,
+        "completed_logged_hours": driving_completed_logged_hours,
+        "hours_accuracy_percent": calculate_hours_accuracy_percent(
+            driving_completed_logged_hours,
+            driving_completed_points,
+            hours_per_story_point,
+        ),
+        "hours_per_story_point": hours_per_story_point,
         "rollup_modes_by_prefix": config.get("rollup_modes", {}),
         "multi_fixversion_epics": len(
             {
@@ -706,7 +735,8 @@ def apply_dependencies(
             )
 
 
-def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
+def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[str, PlanSummary]:
+    hours_per_story_point = float(config.get("metrics", {}).get("hours_per_story_point", 8.0))
     buckets: Dict[str, List[PlanEpic]] = {}
     for epic in epics.values():
         buckets.setdefault(summary_id(epic.rollup_mode, epic.rollup_key), []).append(epic)
@@ -717,13 +747,22 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
         total = round(sum(child.total_story_points for child in driving_children), 2)
         completed = round(sum(child.completed_story_points for child in driving_children), 2)
         logged_hours = round(sum(child.logged_hours for child in driving_children), 2)
+        completed_logged_hours = round(sum(child.completed_logged_hours for child in driving_children), 2)
+        accuracy_completed = completed
         if driving_children:
             percent_complete = calculate_percent(completed, total)
         else:
             reference_total = round(sum(child.total_story_points for child in reference_children), 2)
             reference_completed = round(sum(child.completed_story_points for child in reference_children), 2)
             logged_hours = round(sum(child.logged_hours for child in reference_children), 2)
+            completed_logged_hours = round(sum(child.completed_logged_hours for child in reference_children), 2)
             percent_complete = calculate_percent(reference_completed, reference_total)
+            accuracy_completed = reference_completed
+        hours_accuracy_percent = calculate_hours_accuracy_percent(
+            completed_logged_hours,
+            accuracy_completed,
+            hours_per_story_point,
+        )
         project_keys = sorted({child.key_prefix for child in children})
         summaries[bucket_id] = PlanSummary(
             summary_id=bucket_id,
@@ -734,6 +773,8 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
             total_story_points=total,
             completed_story_points=completed,
             logged_hours=logged_hours,
+            completed_logged_hours=completed_logged_hours,
+            hours_accuracy_percent=hours_accuracy_percent,
             percent_complete=percent_complete,
             child_epic_count=len(children),
             driving_epic_count=len(driving_children),
@@ -793,6 +834,14 @@ def compare_with_baseline(
             "Logged Hours",
             format_number(existing.logged_hours),
             format_number(epic.logged_hours),
+            "ChangedField",
+        )
+        compare_field(
+            audit,
+            epic,
+            "Hours Accuracy %",
+            format_number(existing.hours_accuracy_percent),
+            format_number(epic.hours_accuracy_percent),
             "ChangedField",
         )
         compare_field(audit, epic, "Jira Target Start", existing.target_start, epic.target_start, "ChangedField")
@@ -864,6 +913,7 @@ def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -
         ("Total Story Points", format_number(epic.total_story_points)),
         ("Completed Story Points", format_number(epic.completed_story_points)),
         ("Logged Hours", format_number(epic.logged_hours)),
+        ("Hours Accuracy %", format_number(epic.hours_accuracy_percent)),
         ("Jira Target Start", epic.target_start),
         ("Jira Target End", epic.target_end),
         ("Predecessors", ",".join(epic.predecessors)),
@@ -955,6 +1005,17 @@ def calculate_percent(completed: float, total: float) -> int:
     if total <= 0:
         return 0
     return int(round((completed / total) * 100))
+
+
+def calculate_hours_accuracy_percent(
+    logged_hours: float,
+    completed_story_points: float,
+    hours_per_story_point: float = 8.0,
+) -> float:
+    expected_hours = completed_story_points * hours_per_story_point
+    if expected_hours <= 0:
+        return 0.0
+    return round((logged_hours / expected_hours) * 100, 1)
 
 
 def parse_number(value: str) -> Optional[float]:
@@ -1158,6 +1219,7 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
             total_story_points=float(epic.get("total_story_points") or 0),
             completed_story_points=float(epic.get("completed_story_points") or 0),
             logged_hours=float(epic.get("logged_hours") or 0),
+            hours_accuracy_percent=float(epic.get("hours_accuracy_percent") or 0),
             percent_complete=int(epic.get("percent_complete") or 0),
             status=epic.get("status", ""),
             target_start=epic.get("target_start", ""),

@@ -17,6 +17,7 @@ Custom task fields used by j2p:
 | `dependency_review_needed` | `Flag3` | Dependency Review Needed |
 | `drives_schedule` | `Flag4` | Drives Schedule |
 | `fix_version` | `Text12` | Jira Fix Version |
+| `hours_accuracy_percent` | `Number4` | Hours Accuracy % |
 | `in_planning` | `Flag1` | In Planning |
 | `j2p_key` | `Text10` | j2p Unique Key |
 | `jira_issue_id` | `Text2` | Jira Issue ID |

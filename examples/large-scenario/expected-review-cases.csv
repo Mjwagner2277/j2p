@@ -1,7 +1,7 @@
 color,case,jira_key,baseline_csv_row,updated_csv_row,expected_category,expected_report_section,reviewer_lesson
 Green,Changed Jira summary,CORE-1000,17,17,ChangedName,Changed Names,The sandbox task name follows Jira and the changed cell is highlighted.
 Green,Percent and Jira target date changes,CORE-1001,18,18,ChangedField,Date Review,Child story completion changes percent complete and target dates are logged.
-Green,Logged hours changed,CORE-1001,18,18,ChangedField,Changed Fields,Child story worklog hours roll up to the epic and changed logged-hour cells are highlighted.
+Green,Logged hours and hours accuracy changed,CORE-1001,18,18,ChangedField,Changed Fields,Child story worklog hours roll up to the epic and changed logged-hour and accuracy cells are highlighted.
 Green,New included epic,CORE-1980,,25,AddedEpic,Added Epics,A new valid epic is added to the sandbox and listed for review.
 Green,Valid dependency change,CORE-1007,24,24,DependencyChange,Dependency Review,A new valid predecessor is written as a changed predecessor cell.
 Red,Project auto-schedule cascade root,CORE-1004,21,21,CriticalPathCascadeRoot,Date Review,Red appears only during Windows Microsoft Project update when this finish-date shift is selected as the root driver.

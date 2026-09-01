@@ -18,6 +18,9 @@ resource_groups:
 multi_fixversion_policy:
   default: reference
 
+metrics:
+  hours_per_story_point: 8
+
 columns:
   jira_key:
     - Issue key
@@ -83,6 +86,7 @@ project_fields:
   total_story_points: Number1
   completed_story_points: Number2
   logged_hours: Number3
+  hours_accuracy_percent: Number4
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3

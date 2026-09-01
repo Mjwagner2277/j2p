@@ -95,6 +95,9 @@ behavior:
   hide_completed_epics: true
   write_state_on_validate: false
 
+metrics:
+  hours_per_story_point: 8
+
 project_fields:
   jira_key: Text1
   jira_issue_id: Text2
@@ -110,6 +113,8 @@ project_fields:
   primary_schedule_key: Text13
   total_story_points: Number1
   completed_story_points: Number2
+  logged_hours: Number3
+  hours_accuracy_percent: Number4
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3
@@ -129,6 +134,7 @@ project_fields:
 | `multi_fixversion_policy` | No | `reference` | `reference`, `split` | Controls how fixVersion-mode epics with multiple fixVersions are represented. |
 | `columns` | Recommended | Built-in defaults | Mapping of logical j2p fields to one or more CSV headers | Lets j2p read different Jira export header names. |
 | `behavior` | No | Built-in defaults | Mapping | Operational guardrails. |
+| `metrics` | No | Built-in defaults | Mapping | Controls conversion rates such as hours per story point. |
 | `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
 | `colors` | No | Built-in defaults | Hex colors | Controls cell highlight colors. Usually omitted. |
@@ -356,6 +362,19 @@ Current guardrail:
 - `unknown_prefix` should remain `exclude` for product use.
 - Completed epics remain in the sandbox and reports even when their Gantt bars are hidden.
 
+## `metrics`
+
+Controls derived calculations.
+
+```yaml
+metrics:
+  hours_per_story_point: 8
+```
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `hours_per_story_point` | `8` | Converts completed story points to expected completed hours for `Hours Accuracy %`. |
+
 ## `project_fields`
 
 Maps j2p values to Microsoft Project task custom fields.
@@ -370,6 +389,7 @@ project_fields:
   j2p_key: Text10
   total_story_points: Number1
   logged_hours: Number3
+  hours_accuracy_percent: Number4
   in_planning: Flag1
   jira_target_start: Date1
 ```
@@ -393,6 +413,7 @@ Supported fields:
 | `total_story_points` | `Number1` | Total child story/task points. |
 | `completed_story_points` | `Number2` | Completed child story/task points. |
 | `logged_hours` | `Number3` | Logged hours summed from child story/task rows. |
+| `hours_accuracy_percent` | `Number4` | Completed logged hours divided by expected hours from completed story points. |
 | `in_planning` | `Flag1` | Marks included epics with no pointed child work. |
 | `unmatched_project_task` | `Flag2` | Marks Project tasks not matched to the current Jira plan. |
 | `dependency_review_needed` | `Flag3` | Marks rows needing dependency review. |

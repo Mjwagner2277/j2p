@@ -256,6 +256,7 @@ Confirm these high-level expectations:
 | Dependency Items | Changed, missing, skipped, or circular dependency cases |
 | Completed Epics | Epics that became done since the comparison baseline |
 | Logged Hours | Child story/task worklog hours rolled up to the scheduled epic rows |
+| Hours Accuracy % | Completed child logged hours compared to completed story points at 8 hours per point |
 
 Then read sections in this order:
 
@@ -276,10 +277,10 @@ Logged hours appear in three places:
 | Where | What To Look For |
 | --- | --- |
 | `Decision Briefing` | Total logged hours across driving scheduled epic rows. |
-| `Rollup Status` | Logged hours grouped by initiative or fixVersion. |
-| `Full Planned Epic Rows` and `planned-epics.csv` | Logged hours on each included epic row. |
+| `Rollup Status` | Logged hours and hours accuracy grouped by initiative or fixVersion. |
+| `Full Planned Epic Rows` and `planned-epics.csv` | Logged hours and hours accuracy on each included epic row. |
 
-In the authored rows, `CORE-1001` is the easiest logged-hours example. Its updated child stories have additional logged time, so the follow-on report shows both progress movement and a `Logged Hours` changed-cell item.
+In the authored rows, `CORE-1001` is the easiest logged-hours example. Its updated child stories have additional logged time, so the follow-on report shows progress movement, a `Logged Hours` changed-cell item, and a `Hours Accuracy %` changed-cell item.
 
 ## Color And Review Cases In This Scenario
 
@@ -293,7 +294,7 @@ examples\large-scenario\expected-review-cases.csv
 | --- | --- | --- | --- |
 | Green | Changed Jira value | updated row 17, `CORE-1000` | The Jira summary changed, so the sandbox task name is updated and logged |
 | Green | Percent/date changes | updated row 18, `CORE-1001` | Child story completion changes percent complete; Jira target dates can also change |
-| Green | Logged hours changed | updated row 18, `CORE-1001` | Child story worklog hours roll up to the epic and changed logged-hour cells are highlighted |
+| Green | Logged hours and hours accuracy changed | updated row 18, `CORE-1001` | Child story worklog hours roll up to the epic and changed logged-hour and accuracy cells are highlighted |
 | Green | New epic | updated row 25, `CORE-1980` | A new valid epic is added to the sandbox and appears in `Added Epics` |
 | Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
 | Red | Critical-path root finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |

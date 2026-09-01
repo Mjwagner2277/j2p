@@ -1,4 +1,4 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,percent_complete
-INIT-1500,DATA,Forecasting Program,initiative,11,11,0,231.0,85.0,181.5,37
-INIT-300,DATA,Data Foundations,initiative,12,12,0,261.0,85.0,179.5,33
-INIT-600,DATA,Program Reporting,initiative,12,12,0,257.0,77.0,216.0,30
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,completed_logged_hours,hours_accuracy_percent,percent_complete
+INIT-1500,DATA,Forecasting Program,initiative,11,11,0,231.0,85.0,181.5,58.5,8.6,37
+INIT-300,DATA,Data Foundations,initiative,12,12,0,261.0,85.0,179.5,60.5,8.9,33
+INIT-600,DATA,Program Reporting,initiative,12,12,0,257.0,77.0,216.0,72.0,11.7,30

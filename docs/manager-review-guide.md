@@ -81,3 +81,10 @@ Logged hours:
 - Logged hours are summed from child story/task/bug/sub-task rows to the epic row.
 - The value appears in `Rollup Status`, `planned-epics.csv`, and the sandbox `Logged Hours` column.
 - Logged hours are review information only; percent complete still comes from completed story points divided by total story points.
+
+Hours accuracy:
+
+- `Hours Accuracy %` compares completed child logged hours to completed story points multiplied by the configured hours-per-point value.
+- `100%` means completed work logged exactly the expected hours.
+- Values below or above `100%` show that completed work logged fewer or more hours than expected.
+- `0%` with no completed story points means the ratio is not applicable yet.

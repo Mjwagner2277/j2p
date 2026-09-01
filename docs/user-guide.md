@@ -370,6 +370,31 @@ By default, logged hours are written to the Microsoft Project custom number fiel
 
 If a logged-hours value is present but cannot be parsed, j2p treats it as `0` for calculation and adds an `UnparsedLoggedHours` warning to the manager report so the source CSV can be corrected.
 
+## Hours Accuracy
+
+Hours accuracy compares completed story points to logged hours using the configured conversion rate. The default is:
+
+```text
+1 story point = 8 hours
+```
+
+Formula:
+
+```text
+completed child logged hours / (completed child story points * hours per story point) * 100
+```
+
+Interpretation:
+
+| Value | Meaning |
+| --- | --- |
+| `100%` | Completed work logged exactly the expected hours. |
+| Below `100%` | Completed work logged fewer hours than the story-point expectation. |
+| Above `100%` | Completed work logged more hours than the story-point expectation. |
+| `0%` with no completed story points | Not applicable yet because there is no completed-point denominator. |
+
+By default, this is written to the Microsoft Project custom number field `Number4` and shown with the display name `Hours Accuracy %`. Incomplete child work can still contribute to the total `Logged Hours` field, but it does not affect `Hours Accuracy %` until the child work is in a done status.
+
 ## Dependencies
 
 j2p writes only epic-level dependencies to Project.
@@ -409,8 +434,8 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 | --- | --- | --- |
 | `Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Self-contained review report with summary sections and review guidance. |
 | `audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
-| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, and rollup decisions. |
-| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, and logged hours. |
+| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, hours-accuracy calculation, and rollup decisions. |
+| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and hours accuracy. |
 | `dependency-review.csv` | Schedule owners, Jira owners | Dependency-specific review items. |
 | `FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
 | `j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
@@ -461,6 +486,8 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `total_story_points` | Total child story/task points. |
 | `completed_story_points` | Completed child story/task points. |
 | `logged_hours` | Logged hours summed from child story/task rows. |
+| `completed_logged_hours` | Logged hours from completed child story/task rows. Used as the numerator for `hours_accuracy_percent`. |
+| `hours_accuracy_percent` | Completed logged hours divided by expected hours from completed story points. |
 | `percent_complete` | Calculated epic percent complete. |
 | `in_planning` | `Yes` when no pointed child work exists. |
 | `completed` | `Yes` when the epic itself is in a done status. |
@@ -486,6 +513,8 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `total_story_points` | Counted story points from driving rows only. |
 | `completed_story_points` | Counted completed story points from driving rows only. |
 | `logged_hours` | Logged hours from driving rows. Reference-only rollups show referenced hours for visibility. |
+| `completed_logged_hours` | Logged hours from completed driving rows. Reference-only rollups show referenced completed hours for visibility. |
+| `hours_accuracy_percent` | Hours accuracy based on completed logged hours and completed story points. |
 | `percent_complete` | Weighted percent complete. Reference-only rollups show visible referenced progress but keep counted points at zero. |
 
 ## Common Review Outcomes
