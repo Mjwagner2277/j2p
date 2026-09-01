@@ -11,6 +11,7 @@
       "jira_key": "PLAT-201",
       "key": "PLAT-201",
       "key_prefix": "PLAT",
+      "logged_hours": 10.0,
       "percent_complete": 100,
       "predecessors": [],
       "primary_schedule_key": "PLAT-201",
@@ -38,6 +39,7 @@
       "jira_key": "TEAM-101",
       "key": "TEAM-101",
       "key_prefix": "TEAM",
+      "logged_hours": 10.5,
       "percent_complete": 38,
       "predecessors": [],
       "primary_schedule_key": "TEAM-101",
@@ -67,6 +69,7 @@
       "jira_key": "TEAM-102",
       "key": "TEAM-102",
       "key_prefix": "TEAM",
+      "logged_hours": 1.5,
       "percent_complete": 0,
       "predecessors": [
         "TEAM-101"
@@ -96,6 +99,7 @@
       "jira_key": "TEAM-103",
       "key": "TEAM-103",
       "key_prefix": "TEAM",
+      "logged_hours": 2.5,
       "percent_complete": 0,
       "predecessors": [],
       "primary_schedule_key": "TEAM-103",
@@ -113,7 +117,7 @@
       "total_story_points": 13.0
     }
   },
-  "generated_at": "2026-09-01T06:52:26",
+  "generated_at": "2026-09-01T12:07:17",
   "jira_csv": "examples/project-wide-jira-initial.csv",
   "rollup_mode": "mixed",
   "summaries": {
@@ -122,6 +126,7 @@
       "completed_story_points": 8.0,
       "driving_epic_count": 1,
       "key": "Portal 2026",
+      "logged_hours": 10.0,
       "name": "Portal 2026",
       "percent_complete": 100,
       "project_key": "PLAT",
@@ -135,6 +140,7 @@
       "completed_story_points": 5.0,
       "driving_epic_count": 3,
       "key": "PROD-100",
+      "logged_hours": 14.5,
       "name": "Customer Portal Modernization",
       "percent_complete": 15,
       "project_key": "TEAM",

@@ -14,6 +14,7 @@ from j2p.core import (
     RunPlan,
     ProjectTaskSnapshot,
     build_run_plan,
+    parse_logged_hours,
     run_plan_to_state,
     snapshots_from_state,
     write_json,
@@ -74,10 +75,13 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(plan.rollup_mode, "mixed")
         self.assertIn("TEAM-101", plan.epics)
         self.assertEqual(plan.epics["TEAM-101"].percent_complete, 100)
+        self.assertEqual(plan.epics["TEAM-101"].logged_hours, 14)
         self.assertEqual(plan.epics["TEAM-102"].percent_complete, 38)
+        self.assertEqual(plan.epics["TEAM-102"].logged_hours, 7.25)
         self.assertEqual(plan.epics["TEAM-103"].rollup_key, "PLAT-100")
         self.assertEqual(plan.epics["PLAT-201"].rollup_mode, "fixVersion")
         self.assertEqual(plan.epics["PLAT-201"].rollup_key, "Portal 2026")
+        self.assertEqual(plan.epics["PLAT-201"].logged_hours, 10)
         self.assertEqual(plan.epics["TEAM-102"].predecessors, ["TEAM-101"])
         self.assertIn("TEAM-103", plan.epics["TEAM-102"].successors)
         self.assertNotIn("TEAM-105", plan.epics)
@@ -91,6 +95,32 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("ExcludedMissingRollup", categories)
         self.assertIn("ExcludedUnknownPrefix", categories)
         self.assertIn("MissingDependencyTarget", categories)
+
+    def test_parse_logged_hours_accepts_common_jira_time_formats(self) -> None:
+        self.assertEqual(parse_logged_hours("1.5"), 1.5)
+        self.assertEqual(parse_logged_hours("1h 30m"), 1.5)
+        self.assertEqual(parse_logged_hours("1:15"), 1.25)
+        self.assertEqual(parse_logged_hours("1d 2h"), 10)
+        self.assertEqual(parse_logged_hours("45m"), 0.75)
+        self.assertEqual(parse_logged_hours(""), 0)
+
+    def test_unparsed_logged_hours_are_reported_without_stopping_run(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,First epic,,PROD-1,,,,In Progress,,2026-01-01,2026-01-15,,",
+                "TEAM-11,4,Story,First story,TEAM-1,,,3,about a day,Done,,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "bad-hours.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(EXAMPLES / "config.example.yaml")
+            plan = build_run_plan(csv_path, config)
+
+        self.assertEqual(plan.epics["TEAM-1"].logged_hours, 0)
+        self.assertIn("UnparsedLoggedHours", {item.category for item in plan.audit_items})
 
     def test_fixversion_mode_defaults_multi_fixversion_epics_to_reference_rows(self) -> None:
         config = load_config(EXAMPLES / "config.fixversion.example.yaml")
@@ -197,8 +227,11 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertTrue((run_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
             report = (run_dir / "Manager-Review-Report.html").read_text(encoding="utf-8")
             self.assertIn("Reviewer Action Needed", report)
+            self.assertIn("Decision Briefing", report)
             self.assertIn("Rollup Status", report)
             self.assertIn("Review Type Summary", report)
+            self.assertIn("Report Context", report)
+            self.assertIn("Logged Hours", report)
             self.assertIn("Color Key", report)
             self.assertIn("Color Case Examples", report)
             self.assertIn("Project Key Rollup Mapping", report)
@@ -289,6 +322,7 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("Native Project fields used by j2p", field_mapping)
             self.assertIn("| Resource Group | Resource Group |", field_mapping)
             self.assertIn("Jira Status", field_mapping)
+            self.assertIn("Logged Hours", field_mapping)
             self.assertNotIn("| `resource_group` | `Text6` |", field_mapping)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
@@ -371,6 +405,7 @@ class J2PPlanningTests(unittest.TestCase):
                     key_prefix="TEAM",
                     total_story_points=8,
                     completed_story_points=0,
+                    logged_hours=0,
                     percent_complete=0,
                     in_planning=False,
                     completed=False,
@@ -389,6 +424,7 @@ class J2PPlanningTests(unittest.TestCase):
                     key_prefix="TEAM",
                     total_story_points=8,
                     completed_story_points=0,
+                    logged_hours=0,
                     percent_complete=0,
                     in_planning=False,
                     completed=False,
@@ -519,6 +555,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_for_audit_field("Rollup Key", config), "Text5")
         self.assertEqual(project_column_for_audit_field("Jira Target End", config), "Date2")
         self.assertEqual(project_column_for_audit_field("Resource Group", config), "Resource Group")
+        self.assertEqual(project_column_for_audit_field("Logged Hours", config), "Number3")
         self.assertEqual(project_column_for_audit_field("Status", config), "Text9")
         self.assertEqual(project_column_for_audit_field("Unmatched Project Task", config), "Flag2")
         self.assertEqual(project_column_aliases("Text1", config), ["Text1", "Jira Key"])
@@ -531,6 +568,7 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertIn("Text1", columns)
         self.assertIn("Text9", columns)
+        self.assertIn("Number3", columns)
         self.assertIn("Flag2", columns)
         self.assertIn("Predecessors", columns)
         self.assertIn("Resource Group", columns)

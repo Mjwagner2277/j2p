@@ -254,6 +254,10 @@ columns:
   story_points:
     - Story Points
     - Story point estimate
+  logged_hours:
+    - Logged Hours
+    - Time Spent
+    - Worklog Hours
 ```
 
 If your Jira export says `Custom field (Story point estimate)`, add it:
@@ -278,6 +282,7 @@ columns:
 | `parent` | Required for initiative-mode epics | Epic rows | Initiative parent key. |
 | `fix_versions` | Required for fixVersion-mode epics | Epic rows | fixVersion rollup value or values. |
 | `story_points` | Required for percent complete | Story/task/bug/sub-task rows | Points used in completion math. |
+| `logged_hours` | Optional | Story/task/bug/sub-task rows | Hours summed to epic rows and summary rollups. Unparsed nonblank values are reported and counted as zero. |
 | `status` | Required for percent complete | Epic and child rows | Determines done/in-progress status. |
 | `resolution` | No | All rows | Captured for traceability and future workflow decisions. |
 | `target_start` | Recommended | Epic rows | Jira target start date. |
@@ -364,6 +369,7 @@ project_fields:
   jira_key: Text1
   j2p_key: Text10
   total_story_points: Number1
+  logged_hours: Number3
   in_planning: Flag1
   jira_target_start: Date1
 ```
@@ -386,6 +392,7 @@ Supported fields:
 | `primary_schedule_key` | `Text13` | Primary row for a reference/split group. |
 | `total_story_points` | `Number1` | Total child story/task points. |
 | `completed_story_points` | `Number2` | Completed child story/task points. |
+| `logged_hours` | `Number3` | Logged hours summed from child story/task rows. |
 | `in_planning` | `Flag1` | Marks included epics with no pointed child work. |
 | `unmatched_project_task` | `Flag2` | Marks Project tasks not matched to the current Jira plan. |
 | `dependency_review_needed` | `Flag3` | Marks rows needing dependency review. |

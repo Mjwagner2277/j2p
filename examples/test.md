@@ -39,6 +39,7 @@ Expected:
 - `PLAT-201` uses fixVersion rollup because `PLAT` is configured that way.
 - `PROD-100`, `PLAT-100`, and `Portal 2026` are rollup summary rows.
 - Story/task rows are used for percent complete and are not Project work rows.
+- Logged Hours values on story/task rows roll up to their parent epic and summary rows.
 
 Per-project-key CSVs are written under:
 
@@ -84,6 +85,7 @@ Expected manager-review cases:
 | Completed since last update | `TEAM-101` |
 | Moved epic | `TEAM-103` moved from `PROD-100` to `PLAT-100` |
 | New epic | `TEAM-104` |
+| Logged hours changed | `TEAM-101` and `TEAM-102` |
 | Missing rollup | `TEAM-105` excluded |
 | Unknown prefix | `UNK-106` excluded |
 | Missing dependency target | `TEAM-107` references `EXT-999` |
@@ -94,6 +96,8 @@ Open the split CSVs for a single Jira key prefix:
 review-output\j2p-run-follow-on-demo\by-project-key\TEAM\planned-epics.csv
 review-output\j2p-run-follow-on-demo\by-project-key\PLAT\planned-epics.csv
 ```
+
+In the follow-on export, `TEAM-101` has two child stories with `4.5` and `9h 30m` logged. The planned epic row shows `14` logged hours. `TEAM-102` has `3.25` and `4` logged hours, so it shows `7.25`.
 
 ## Step 3: Run fixVersion Mode
 
@@ -135,6 +139,8 @@ review-output\j2p-run-YYYYMMDD-HHMMSS\
   dependency-review.csv
   FIELD_MAPPING.md
 ```
+
+Open the sandbox `.mpp` from the run folder, then use the `j2p Review` table. The `Logged Hours` column is a custom Project number field, `Number3` by default.
 
 ## Step 5: Iterative Review Against A Previous Sandbox
 

@@ -324,6 +324,7 @@ class MicrosoftProjectSession:
                 completed_story_points=safe_float(
                     safe_get(task, fields.get("completed_story_points", "Number2"))
                 ),
+                logged_hours=safe_float(safe_get(task, fields.get("logged_hours", "Number3"))),
                 percent_complete=safe_int(safe_get(task, "PercentComplete")),
                 status=str(safe_get(task, fields.get("jira_status", "Text9"))),
                 target_start=project_date_to_iso(safe_get(task, fields.get("jira_target_start", "Date1"))),
@@ -420,6 +421,7 @@ class MicrosoftProjectSession:
             setattr(task, fields.get("rollup_key", "Text5"), summary.key)
             setattr(task, fields.get("total_story_points", "Number1"), summary.total_story_points)
             setattr(task, fields.get("completed_story_points", "Number2"), summary.completed_story_points)
+            setattr(task, fields.get("logged_hours", "Number3"), summary.logged_hours)
             task.PercentComplete = summary.percent_complete
             summary_tasks[summary.summary_id] = task
         return summary_tasks
@@ -516,6 +518,7 @@ class MicrosoftProjectSession:
         setattr(task, fields.get("primary_schedule_key", "Text13"), epic.primary_schedule_key)
         setattr(task, fields.get("total_story_points", "Number1"), epic.total_story_points)
         setattr(task, fields.get("completed_story_points", "Number2"), epic.completed_story_points)
+        setattr(task, fields.get("logged_hours", "Number3"), epic.logged_hours)
         setattr(task, fields.get("in_planning", "Flag1"), bool(epic.in_planning))
         setattr(task, fields.get("dependency_review_needed", "Flag3"), bool(epic.dependency_review))
         setattr(task, fields.get("drives_schedule", "Flag4"), bool(epic.drives_schedule))
@@ -1133,6 +1136,7 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Primary Schedule Key": fields.get("primary_schedule_key", "Text13"),
         "Total Story Points": fields.get("total_story_points", "Number1"),
         "Completed Story Points": fields.get("completed_story_points", "Number2"),
+        "Logged Hours": fields.get("logged_hours", "Number3"),
         "In Planning": fields.get("in_planning", "Flag1"),
         "Unmatched Project Task": fields.get("unmatched_project_task", "Flag2"),
         "Dependency Review": fields.get("dependency_review", "Text8"),
@@ -1162,6 +1166,7 @@ def review_table_columns(config: Dict[str, Any], audit_columns: List[str]) -> Li
         "% Complete",
         fields.get("total_story_points", "Number1"),
         fields.get("completed_story_points", "Number2"),
+        fields.get("logged_hours", "Number3"),
         fields.get("in_planning", "Flag1"),
         fields.get("unmatched_project_task", "Flag2"),
         fields.get("dependency_review_needed", "Flag3"),

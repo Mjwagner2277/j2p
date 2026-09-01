@@ -194,7 +194,7 @@ The state file lets future report-only validation compare against the last saved
 
 Open `Manager-Review-Report.html` first.
 
-1. Review `Executive Summary`.
+1. Review `Decision Briefing`.
 2. Review `Rollup Status` for initiative/fixVersion progress.
 3. Review `Reviewer Action Needed`.
 4. Review `Review Type Summary` to see counts by issue category.
@@ -217,7 +217,7 @@ The manager report intentionally keeps rollup status and review-required items a
 | Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
-j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. The table includes Jira key, rollup, status, dates, story points, dependency review, predecessor, and review flag fields.
+j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. The table includes Jira key, rollup, status, dates, story points, logged hours, dependency review, predecessor, and review flag fields.
 
 If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories.
 
@@ -241,6 +241,7 @@ Recommended Jira CSV columns:
 | Parent | `Parent`, `Parent key` | Initiative-mode epic rollup. |
 | Fix versions | `Fix versions`, `Fix Version/s` | fixVersion-mode epic rollup. |
 | Story points | `Story Points`, `Story point estimate` | Completion calculations. |
+| Logged hours | `Logged Hours`, `Time Spent`, `Worklog Hours` | Worklog hour rollup from stories/tasks to epics and summaries. |
 | Status | `Status` | Completion calculations. |
 | Resolution | `Resolution` | Traceability and future status rules. |
 | Target start | `Target start` | Project custom date field and schedule review. |
@@ -352,6 +353,23 @@ If `Done` and `Closed` are configured as done statuses, the epic is `7 / 10 = 70
 
 If an epic has no pointed child work, j2p marks it `In Planning`, sets percent complete to `0`, and reports it for review.
 
+## Logged Hours
+
+Logged hours are optional. When the Jira CSV includes a mapped logged-hours column, j2p sums logged hours from child story/task/bug/sub-task rows and writes the result to the parent epic row.
+
+Supported input examples:
+
+| CSV Value | Interpreted As |
+| --- | ---: |
+| `1.5` | 1.5 hours |
+| `1h 30m` | 1.5 hours |
+| `1:15` | 1.25 hours |
+| `1d 2h` | 10 hours, using an 8-hour day |
+
+By default, logged hours are written to the Microsoft Project custom number field `Number3` and shown with the display name `Logged Hours`. Summary rollups also include logged hours from their driving epic rows. Reference-only rollups show referenced logged hours for visibility without making those rows drive the schedule.
+
+If a logged-hours value is present but cannot be parsed, j2p treats it as `0` for calculation and adds an `UnparsedLoggedHours` warning to the manager report so the source CSV can be corrected.
+
 ## Dependencies
 
 j2p writes only epic-level dependencies to Project.
@@ -391,8 +409,8 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 | --- | --- | --- |
 | `Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Self-contained review report with summary sections and review guidance. |
 | `audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
-| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing and rollup decisions. |
-| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries and percent complete. |
+| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, and rollup decisions. |
+| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, and logged hours. |
 | `dependency-review.csv` | Schedule owners, Jira owners | Dependency-specific review items. |
 | `FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
 | `j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
@@ -442,6 +460,7 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `key_prefix` | Same prefix used for resource and rollup mapping. |
 | `total_story_points` | Total child story/task points. |
 | `completed_story_points` | Completed child story/task points. |
+| `logged_hours` | Logged hours summed from child story/task rows. |
 | `percent_complete` | Calculated epic percent complete. |
 | `in_planning` | `Yes` when no pointed child work exists. |
 | `completed` | `Yes` when the epic itself is in a done status. |
@@ -466,6 +485,7 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `reference_epic_count` | Number of non-driving reference rows. |
 | `total_story_points` | Counted story points from driving rows only. |
 | `completed_story_points` | Counted completed story points from driving rows only. |
+| `logged_hours` | Logged hours from driving rows. Reference-only rollups show referenced hours for visibility. |
 | `percent_complete` | Weighted percent complete. Reference-only rollups show visible referenced progress but keep counted points at zero. |
 
 ## Common Review Outcomes
@@ -481,6 +501,7 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `MultiFixVersionReference` | Multi-fixVersion epic was handled with reference policy. | Confirm the first fixVersion should be primary. |
 | `MultiFixVersionSplit` | Multi-fixVersion epic was handled with split policy. | Confirm each fixVersion should drive schedule. |
 | `MissingDependencyTarget` | Jira dependency points outside the included epic set. | Add the target to the export/config or fix the Jira link. |
+| `UnparsedLoggedHours` | A logged-hours value was present but not readable as hours. | Correct the Jira export value to decimal hours, `HH:MM`, or duration text such as `1h 30m`. |
 | `CircularDependencySkipped` | Dependency would create a cycle. | Fix blocker links in Jira. |
 | `SelfDependencySkipped` | Epic references itself. | Fix blocker links in Jira. |
 | `ExcludedMissingRollup` | Required initiative or fixVersion is missing. | Fix Jira parent/fixVersion or confirm exclusion. |

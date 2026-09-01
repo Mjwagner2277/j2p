@@ -97,6 +97,8 @@ If an epic has no pointed child work, it is marked `In Planning`, excluded from 
 
 Summary task `% Complete` is manually calculated from child epics using weighted story points.
 
+Logged hours are calculated separately from percent complete. If the Jira CSV includes a mapped logged-hours column, j2p sums logged hours from child story/task/bug/sub-task rows to the parent epic and then to summary rollups. Logged hours do not change percent complete.
+
 ## Dependencies
 
 Only epic-level dependencies are written to Project.
@@ -166,6 +168,7 @@ Epics with unmapped prefixes are excluded and reported.
 | Primary Schedule Key | Text13 |
 | Total Story Points | Number1 |
 | Completed Story Points | Number2 |
+| Logged Hours | Number3 |
 | In Planning | Flag1 |
 | Unmatched Project Task | Flag2 |
 | Dependency Review Needed | Flag3 |

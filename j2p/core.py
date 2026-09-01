@@ -49,6 +49,7 @@ class JiraIssue:
     parent: str
     fix_versions: List[str]
     story_points: Optional[float]
+    logged_hours: float
     status: str
     resolution: str
     target_start: str
@@ -71,6 +72,7 @@ class PlanEpic:
     key_prefix: str
     total_story_points: float
     completed_story_points: float
+    logged_hours: float
     percent_complete: int
     in_planning: bool
     completed: bool
@@ -96,6 +98,7 @@ class PlanSummary:
     project_key: str
     total_story_points: float
     completed_story_points: float
+    logged_hours: float
     percent_complete: int
     child_epic_count: int
     driving_epic_count: int = 0
@@ -115,6 +118,7 @@ class ProjectTaskSnapshot:
     key_prefix: str = ""
     total_story_points: float = 0.0
     completed_story_points: float = 0.0
+    logged_hours: float = 0.0
     percent_complete: int = 0
     status: str = ""
     target_start: str = ""
@@ -237,7 +241,7 @@ def build_run_plan(
         issue for issue in issues if issue.issue_type.strip().lower() in issue_type_sets["story"]
     ]
 
-    story_points_by_epic: Dict[str, Dict[str, float]] = {}
+    story_rollup_by_epic: Dict[str, Dict[str, float]] = {}
     done_statuses = lowered(config.get("done_statuses", []))
     for story in stories:
         if not story.epic_link:
@@ -255,8 +259,12 @@ def build_run_plan(
             )
             continue
         points = story.story_points or 0.0
-        bucket = story_points_by_epic.setdefault(story.epic_link, {"total": 0.0, "completed": 0.0})
+        bucket = story_rollup_by_epic.setdefault(
+            story.epic_link,
+            {"total": 0.0, "completed": 0.0, "logged_hours": 0.0},
+        )
         bucket["total"] += points
+        bucket["logged_hours"] += story.logged_hours
         if story.status.strip().lower() in done_statuses:
             bucket["completed"] += points
 
@@ -315,9 +323,10 @@ def build_run_plan(
             )
             continue
 
-        point_bucket = story_points_by_epic.get(epic.key, {"total": 0.0, "completed": 0.0})
+        point_bucket = story_rollup_by_epic.get(epic.key, {"total": 0.0, "completed": 0.0, "logged_hours": 0.0})
         total_points = round(point_bucket["total"], 2)
         completed_points = round(point_bucket["completed"], 2)
+        logged_hours = round(point_bucket["logged_hours"], 2)
         in_planning = total_points <= 0
         percent_complete = calculate_percent(completed_points, total_points)
         completed = epic.status.strip().lower() in done_statuses
@@ -352,6 +361,7 @@ def build_run_plan(
                 key_prefix=prefix,
                 total_story_points=total_points,
                 completed_story_points=completed_points,
+                logged_hours=logged_hours,
                 percent_complete=percent_complete,
                 in_planning=in_planning,
                 completed=completed,
@@ -382,6 +392,7 @@ def build_run_plan(
         "summary_rows": len(summaries),
         "audit_items": len(audit),
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
+        "logged_hours": round(sum(epic.logged_hours for epic in planned_epics.values() if epic.drives_schedule), 2),
         "rollup_modes_by_prefix": config.get("rollup_modes", {}),
         "multi_fixversion_epics": len(
             {
@@ -440,6 +451,12 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 parent=table.get_first(row, columns.get("parent", [])).upper(),
                 fix_versions=split_multi_values(table.get_all(row, columns.get("fix_versions", []))),
                 story_points=parse_number(table.get_first(row, columns["story_points"])),
+                logged_hours=parse_logged_hours(
+                    table.get_first(row, columns.get("logged_hours", [])),
+                    audit,
+                    key,
+                    row_index,
+                ),
                 status=table.get_first(row, columns["status"]),
                 resolution=table.get_first(row, columns.get("resolution", [])),
                 target_start=parse_date(table.get_first(row, columns.get("target_start", [])), audit, key, row_index),
@@ -699,11 +716,13 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
         reference_children = [child for child in children if not child.drives_schedule]
         total = round(sum(child.total_story_points for child in driving_children), 2)
         completed = round(sum(child.completed_story_points for child in driving_children), 2)
+        logged_hours = round(sum(child.logged_hours for child in driving_children), 2)
         if driving_children:
             percent_complete = calculate_percent(completed, total)
         else:
             reference_total = round(sum(child.total_story_points for child in reference_children), 2)
             reference_completed = round(sum(child.completed_story_points for child in reference_children), 2)
+            logged_hours = round(sum(child.logged_hours for child in reference_children), 2)
             percent_complete = calculate_percent(reference_completed, reference_total)
         project_keys = sorted({child.key_prefix for child in children})
         summaries[bucket_id] = PlanSummary(
@@ -714,6 +733,7 @@ def build_summaries(epics: Dict[str, PlanEpic]) -> Dict[str, PlanSummary]:
             project_key=project_keys[0] if len(project_keys) == 1 else "MULTIPLE",
             total_story_points=total,
             completed_story_points=completed,
+            logged_hours=logged_hours,
             percent_complete=percent_complete,
             child_epic_count=len(children),
             driving_epic_count=len(driving_children),
@@ -765,6 +785,14 @@ def compare_with_baseline(
             "Completed Story Points",
             format_number(existing.completed_story_points),
             format_number(epic.completed_story_points),
+            "ChangedField",
+        )
+        compare_field(
+            audit,
+            epic,
+            "Logged Hours",
+            format_number(existing.logged_hours),
+            format_number(epic.logged_hours),
             "ChangedField",
         )
         compare_field(audit, epic, "Jira Target Start", existing.target_start, epic.target_start, "ChangedField")
@@ -835,6 +863,7 @@ def add_added_epic_audit(audit: List[AuditItem], epic: PlanEpic, message: str) -
         ("% Complete", str(epic.percent_complete)),
         ("Total Story Points", format_number(epic.total_story_points)),
         ("Completed Story Points", format_number(epic.completed_story_points)),
+        ("Logged Hours", format_number(epic.logged_hours)),
         ("Jira Target Start", epic.target_start),
         ("Jira Target End", epic.target_end),
         ("Predecessors", ",".join(epic.predecessors)),
@@ -938,6 +967,71 @@ def parse_number(value: str) -> Optional[float]:
         return float(cleaned)
     except ValueError:
         return None
+
+
+def parse_logged_hours(
+    value: str,
+    audit: Optional[List[AuditItem]] = None,
+    key: str = "",
+    row_index: int = 0,
+) -> float:
+    raw = "" if value is None else str(value).strip()
+    if not raw:
+        return 0.0
+    numeric = parse_number(raw)
+    if numeric is not None:
+        return numeric
+    time_text = raw.lower().replace(",", " ")
+    clock_match = re.fullmatch(r"(\d+):([0-5]\d)(?::[0-5]\d)?", time_text)
+    if clock_match:
+        return round(int(clock_match.group(1)) + int(clock_match.group(2)) / 60, 2)
+    multipliers = {
+        "w": 40.0,
+        "week": 40.0,
+        "weeks": 40.0,
+        "d": 8.0,
+        "day": 8.0,
+        "days": 8.0,
+        "h": 1.0,
+        "hr": 1.0,
+        "hrs": 1.0,
+        "hour": 1.0,
+        "hours": 1.0,
+        "m": 1.0 / 60.0,
+        "min": 1.0 / 60.0,
+        "mins": 1.0 / 60.0,
+        "minute": 1.0 / 60.0,
+        "minutes": 1.0 / 60.0,
+        "s": 1.0 / 3600.0,
+        "sec": 1.0 / 3600.0,
+        "secs": 1.0 / 3600.0,
+        "second": 1.0 / 3600.0,
+        "seconds": 1.0 / 3600.0,
+    }
+    total = 0.0
+    matched = False
+    for amount, unit in re.findall(r"(-?\d+(?:\.\d+)?)\s*([a-z]+)", time_text):
+        multiplier = multipliers.get(unit)
+        if multiplier is not None:
+            matched = True
+            total += float(amount) * multiplier
+    if matched:
+        return round(total, 2)
+    if audit is not None:
+        audit.append(
+            AuditItem(
+                "Warning",
+                "UnparsedLoggedHours",
+                jira_key=key,
+                field="Logged Hours",
+                old_value=raw,
+                new_value="0",
+                message=f"Could not parse logged hours '{raw}' on CSV row {row_index}.",
+                reviewer_action="Use decimal hours, HH:MM, or duration text such as 1h 30m.",
+                source_row=row_index,
+            )
+        )
+    return 0.0
 
 
 def parse_date(value: str, audit: List[AuditItem], key: str, row_index: int) -> str:
@@ -1063,6 +1157,7 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
             key_prefix=epic.get("key_prefix", ""),
             total_story_points=float(epic.get("total_story_points") or 0),
             completed_story_points=float(epic.get("completed_story_points") or 0),
+            logged_hours=float(epic.get("logged_hours") or 0),
             percent_complete=int(epic.get("percent_complete") or 0),
             status=epic.get("status", ""),
             target_start=epic.get("target_start", ""),

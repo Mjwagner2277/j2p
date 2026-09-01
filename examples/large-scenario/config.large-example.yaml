@@ -47,6 +47,10 @@ columns:
   story_points:
     - Story Points
     - Story point estimate
+  logged_hours:
+    - Logged Hours
+    - Time Spent
+    - Worklog Hours
   status:
     - Status
   resolution:
@@ -83,6 +87,7 @@ project_fields:
   primary_schedule_key: Text13
   total_story_points: Number1
   completed_story_points: Number2
+  logged_hours: Number3
   in_planning: Flag1
   unmatched_project_task: Flag2
   dependency_review_needed: Flag3

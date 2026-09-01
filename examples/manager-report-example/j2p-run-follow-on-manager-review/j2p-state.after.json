@@ -11,6 +11,7 @@
       "jira_key": "PLAT-201",
       "key": "PLAT-201",
       "key_prefix": "PLAT",
+      "logged_hours": 10.0,
       "percent_complete": 100,
       "predecessors": [],
       "primary_schedule_key": "PLAT-201",
@@ -38,6 +39,7 @@
       "jira_key": "TEAM-101",
       "key": "TEAM-101",
       "key_prefix": "TEAM",
+      "logged_hours": 14.0,
       "percent_complete": 100,
       "predecessors": [],
       "primary_schedule_key": "TEAM-101",
@@ -67,6 +69,7 @@
       "jira_key": "TEAM-102",
       "key": "TEAM-102",
       "key_prefix": "TEAM",
+      "logged_hours": 7.25,
       "percent_complete": 38,
       "predecessors": [
         "TEAM-101"
@@ -98,6 +101,7 @@
       "jira_key": "TEAM-103",
       "key": "TEAM-103",
       "key_prefix": "TEAM",
+      "logged_hours": 7.0,
       "percent_complete": 0,
       "predecessors": [
         "TEAM-102"
@@ -127,6 +131,7 @@
       "jira_key": "TEAM-104",
       "key": "TEAM-104",
       "key_prefix": "TEAM",
+      "logged_hours": 0.75,
       "percent_complete": 0,
       "predecessors": [],
       "primary_schedule_key": "TEAM-104",
@@ -154,6 +159,7 @@
       "jira_key": "TEAM-107",
       "key": "TEAM-107",
       "key_prefix": "TEAM",
+      "logged_hours": 0.0,
       "percent_complete": 0,
       "predecessors": [],
       "primary_schedule_key": "TEAM-107",
@@ -171,7 +177,7 @@
       "total_story_points": 0.0
     }
   },
-  "generated_at": "2026-09-01T06:52:33",
+  "generated_at": "2026-09-01T12:07:26",
   "jira_csv": "examples/project-wide-jira-update.csv",
   "rollup_mode": "mixed",
   "summaries": {
@@ -180,6 +186,7 @@
       "completed_story_points": 8.0,
       "driving_epic_count": 1,
       "key": "Portal 2026",
+      "logged_hours": 10.0,
       "name": "Portal 2026",
       "percent_complete": 100,
       "project_key": "PLAT",
@@ -193,6 +200,7 @@
       "completed_story_points": 0.0,
       "driving_epic_count": 1,
       "key": "PLAT-100",
+      "logged_hours": 7.0,
       "name": "Platform Readiness",
       "percent_complete": 0,
       "project_key": "TEAM",
@@ -206,6 +214,7 @@
       "completed_story_points": 16.0,
       "driving_epic_count": 4,
       "key": "PROD-100",
+      "logged_hours": 22.0,
       "name": "Customer Portal Modernization",
       "percent_complete": 62,
       "project_key": "TEAM",

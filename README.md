@@ -2,7 +2,7 @@
 
 Jira CSV to Microsoft Project sandbox review tooling.
 
-This repository contains a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It is intentionally limited to the Jira-to-Project workflow and does not contain any web app, Next.js, or React assets.
+This repository contains a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It rolls child story/task points and logged hours up to epic and summary rows. It is intentionally limited to the Jira-to-Project workflow and does not contain any web app, Next.js, or React assets.
 
 ## Start Here
 

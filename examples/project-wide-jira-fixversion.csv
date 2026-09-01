@@ -1,7 +1,7 @@
-Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)
-TEAM-501,50101,Epic,Release train launch,,,"Portal 2026",,In Progress,,2026-09-01,2026-10-01,TEAM-502,
-TEAM-502,50102,Epic,Release readiness checklist,,,"Portal 2026",,To Do,,2026-10-02,2026-10-20,,TEAM-501
-TEAM-503,50103,Epic,Ambiguous release parent,,,"Portal 2026;Portal 2027",,To Do,,2026-10-02,2026-10-20,,
-TEAM-601,60101,Story,Launch comms draft,TEAM-501,,"Portal 2026",3,Done,Done,,,,
-TEAM-602,60102,Task,Release gate review,TEAM-501,,"Portal 2026",5,In Progress,,,,,
-TEAM-603,60103,Story,Final readiness review,TEAM-502,,"Portal 2026",8,To Do,,,,,
+Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)
+TEAM-501,50101,Epic,Release train launch,,,"Portal 2026",,,In Progress,,2026-09-01,2026-10-01,TEAM-502,
+TEAM-502,50102,Epic,Release readiness checklist,,,"Portal 2026",,,To Do,,2026-10-02,2026-10-20,,TEAM-501
+TEAM-503,50103,Epic,Ambiguous release parent,,,"Portal 2026;Portal 2027",,,To Do,,2026-10-02,2026-10-20,,
+TEAM-601,60101,Story,Launch comms draft,TEAM-501,,"Portal 2026",3,2.5,Done,Done,,,,
+TEAM-602,60102,Task,Release gate review,TEAM-501,,"Portal 2026",5,1h 15m,In Progress,,,,,
+TEAM-603,60103,Story,Final readiness review,TEAM-502,,"Portal 2026",8,0,To Do,,,,,

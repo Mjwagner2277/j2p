@@ -90,6 +90,7 @@ Review the generated sandbox `.mpp` and confirm:
 - the active task table is `j2p Review`, or that table is available from Project's table menu
 - epics are under the correct initiative/fixVersion summary tasks
 - multi-fixVersion epics have the expected `j2p Row Role`, `Drives Schedule`, and `Primary Schedule Key` values
+- logged hours are visible in the `Logged Hours` custom number field
 - predecessor links match Jira blocker relationships; Project may display row IDs such as `12FS` instead of Jira keys
 - changed cells are green
 - dependency review cells are blue

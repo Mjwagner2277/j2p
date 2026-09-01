@@ -1,18 +1,18 @@
-Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)
-PROD-100,10000,Initiative,Customer Portal Modernization,,,Portal 2026,,In Progress,,2026-09-01,2026-12-15,,
-PLAT-100,10001,Initiative,Platform Readiness,,,Portal 2026,,In Progress,,2026-09-01,2026-11-15,,
-TEAM-101,10101,Epic,Identity and access foundation v2,,PROD-100,Portal 2026,,Done,Done,2026-09-01,2026-10-05,TEAM-102,
-TEAM-102,10102,Epic,Reporting MVP,,PROD-100,Portal 2026,,In Progress,,2026-10-06,2026-11-06,TEAM-103,TEAM-101
-PLAT-201,10201,Epic,Shared deployment pipeline,,PLAT-100,Portal 2026,,Done,Done,2026-09-01,2026-09-20,,
-TEAM-103,10103,Epic,Billing integration,,PLAT-100,Portal 2026,,To Do,,2026-11-07,2026-12-04,,TEAM-102
-TEAM-104,10104,Epic,Mobile shell,,PROD-100,Portal 2026,,To Do,,2026-11-15,2026-12-15,,
-TEAM-105,10105,Epic,Unplanned marketplace experiment,,,Portal 2026,,To Do,,2026-12-01,2026-12-20,,
-UNK-106,10106,Epic,Unknown team epic,,PROD-100,Portal 2026,,To Do,,2026-12-01,2026-12-20,,
-TEAM-107,10107,Epic,Dependency target outside scope,,PROD-100,Portal 2026,,To Do,,2026-12-01,2026-12-20,,EXT-999
-TEAM-301,20101,Story,Build login UI,TEAM-101,,Portal 2026,5,Done,Done,,,,
-TEAM-302,20102,Task,Implement token service,TEAM-101,,Portal 2026,8,Done,Done,,,,
-TEAM-303,20103,Story,Create dashboard summary,TEAM-102,,Portal 2026,3,Done,Done,,,,
-TEAM-304,20104,Story,Build export job,TEAM-102,,Portal 2026,5,In Progress,,,,,
-PLAT-301,20201,Story,Add pipeline templates,PLAT-201,,Portal 2026,8,Done,Done,,,,
-TEAM-305,20105,Story,Map payment provider APIs,TEAM-103,,Portal 2026,13,In Progress,,,,,
-TEAM-306,20106,Story,Create mobile navigation,TEAM-104,,Portal 2026,5,To Do,,,,,
+Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)
+PROD-100,10000,Initiative,Customer Portal Modernization,,,Portal 2026,,,In Progress,,2026-09-01,2026-12-15,,
+PLAT-100,10001,Initiative,Platform Readiness,,,Portal 2026,,,In Progress,,2026-09-01,2026-11-15,,
+TEAM-101,10101,Epic,Identity and access foundation v2,,PROD-100,Portal 2026,,,Done,Done,2026-09-01,2026-10-05,TEAM-102,
+TEAM-102,10102,Epic,Reporting MVP,,PROD-100,Portal 2026,,,In Progress,,2026-10-06,2026-11-06,TEAM-103,TEAM-101
+PLAT-201,10201,Epic,Shared deployment pipeline,,PLAT-100,Portal 2026,,,Done,Done,2026-09-01,2026-09-20,,
+TEAM-103,10103,Epic,Billing integration,,PLAT-100,Portal 2026,,,To Do,,2026-11-07,2026-12-04,,TEAM-102
+TEAM-104,10104,Epic,Mobile shell,,PROD-100,Portal 2026,,,To Do,,2026-11-15,2026-12-15,,
+TEAM-105,10105,Epic,Unplanned marketplace experiment,,,Portal 2026,,,To Do,,2026-12-01,2026-12-20,,
+UNK-106,10106,Epic,Unknown team epic,,PROD-100,Portal 2026,,,To Do,,2026-12-01,2026-12-20,,
+TEAM-107,10107,Epic,Dependency target outside scope,,PROD-100,Portal 2026,,,To Do,,2026-12-01,2026-12-20,,EXT-999
+TEAM-301,20101,Story,Build login UI,TEAM-101,,Portal 2026,5,4.5,Done,Done,,,,
+TEAM-302,20102,Task,Implement token service,TEAM-101,,Portal 2026,8,9h 30m,Done,Done,,,,
+TEAM-303,20103,Story,Create dashboard summary,TEAM-102,,Portal 2026,3,3.25,Done,Done,,,,
+TEAM-304,20104,Story,Build export job,TEAM-102,,Portal 2026,5,4,In Progress,,,,,
+PLAT-301,20201,Story,Add pipeline templates,PLAT-201,,Portal 2026,8,10,Done,Done,,,,
+TEAM-305,20105,Story,Map payment provider APIs,TEAM-103,,Portal 2026,13,7,In Progress,,,,,
+TEAM-306,20106,Story,Create mobile navigation,TEAM-104,,Portal 2026,5,0.75,To Do,,,,,

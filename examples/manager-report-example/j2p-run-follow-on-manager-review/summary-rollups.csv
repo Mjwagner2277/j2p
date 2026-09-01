@@ -1,4 +1,4 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,percent_complete
-Portal 2026,PLAT,Portal 2026,fixVersion,1,1,0,8.0,8.0,100
-PLAT-100,TEAM,Platform Readiness,initiative,1,1,0,13.0,0.0,0
-PROD-100,TEAM,Customer Portal Modernization,initiative,4,4,0,26.0,16.0,62
+rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,percent_complete
+Portal 2026,PLAT,Portal 2026,fixVersion,1,1,0,8.0,8.0,10.0,100
+PLAT-100,TEAM,Platform Readiness,initiative,1,1,0,13.0,0.0,7.0,0
+PROD-100,TEAM,Customer Portal Modernization,initiative,4,4,0,26.0,16.0,22.0,62

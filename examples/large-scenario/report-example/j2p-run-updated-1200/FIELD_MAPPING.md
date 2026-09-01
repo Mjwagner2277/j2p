@@ -26,6 +26,7 @@ Custom task fields used by j2p:
 | `jira_status` | `Text9` | Jira Status |
 | `jira_target_end` | `Date2` | Jira Target End |
 | `jira_target_start` | `Date1` | Jira Target Start |
+| `logged_hours` | `Number3` | Logged Hours |
 | `primary_schedule_key` | `Text13` | Primary Schedule Key |
 | `rollup_key` | `Text5` | Rollup Key |
 | `rollup_mode` | `Text4` | Rollup Mode |

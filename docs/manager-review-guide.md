@@ -4,7 +4,7 @@ Open `Manager-Review-Report.html` first. It is self-contained and can be emailed
 
 ## Review Order
 
-1. Review `Executive Summary`.
+1. Review `Decision Briefing`.
 2. Review `Rollup Status`.
 3. Review `Reviewer Action Needed`.
 4. Review `Review Type Summary`.
@@ -24,8 +24,8 @@ Large detail tables are collapsed by default so manager-level status and require
 | --- | --- |
 | `Manager-Review-Report.html` | Manager-level review report |
 | `audit-detail.csv` | Complete row-level audit register |
-| `planned-epics.csv` | Final included epic set and calculated fields |
-| `summary-rollups.csv` | Initiative/fixVersion rollup summary values |
+| `planned-epics.csv` | Final included epic set and calculated fields, including rolled-up logged hours |
+| `summary-rollups.csv` | Initiative/fixVersion rollup summary values, including logged hours |
 | `dependency-review.csv` | Dependency-specific warnings and changes |
 | `FIELD_MAPPING.md` | Project custom field mapping |
 | `j2p-state.after.json` | Snapshot of the run output |
@@ -75,3 +75,9 @@ In planning:
 - The epic has no pointed child stories/tasks.
 - `% Complete` is set to 0.
 - The In Planning field is marked.
+
+Logged hours:
+
+- Logged hours are summed from child story/task/bug/sub-task rows to the epic row.
+- The value appears in `Rollup Status`, `planned-epics.csv`, and the sandbox `Logged Hours` column.
+- Logged hours are review information only; percent complete still comes from completed story points divided by total story points.

@@ -52,6 +52,7 @@ PLANNED_EPIC_COLUMNS = [
     "key_prefix",
     "total_story_points",
     "completed_story_points",
+    "logged_hours",
     "percent_complete",
     "in_planning",
     "completed",
@@ -72,6 +73,7 @@ SUMMARY_ROLLUP_COLUMNS = [
     "reference_epic_count",
     "total_story_points",
     "completed_story_points",
+    "logged_hours",
     "percent_complete",
 ]
 
@@ -229,11 +231,13 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
         reference_epics = [epic for epic in epics if not epic.drives_schedule]
         total = round(sum(epic.total_story_points for epic in driving_epics), 2)
         completed = round(sum(epic.completed_story_points for epic in driving_epics), 2)
+        logged_hours = round(sum(epic.logged_hours for epic in driving_epics), 2)
         if driving_epics:
             percent_complete = calculate_percent(completed, total)
         else:
             reference_total = round(sum(epic.total_story_points for epic in reference_epics), 2)
             reference_completed = round(sum(epic.completed_story_points for epic in reference_epics), 2)
+            logged_hours = round(sum(epic.logged_hours for epic in reference_epics), 2)
             percent_complete = calculate_percent(reference_completed, reference_total)
         first = epics[0]
         rows.append(
@@ -247,6 +251,7 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
                 "reference_epic_count": len(reference_epics),
                 "total_story_points": total,
                 "completed_story_points": completed,
+                "logged_hours": logged_hours,
                 "percent_complete": percent_complete,
             }
         )
@@ -363,6 +368,7 @@ def write_manager_html(
       --muted: #59636e;
       --bg: #ffffff;
       --section: #f6f8fa;
+      --accent: #2f6f5e;
     }}
     body {{
       font-family: Arial, Helvetica, sans-serif;
@@ -372,20 +378,25 @@ def write_manager_html(
       line-height: 1.4;
     }}
     header {{
-      padding: 24px 32px;
+      padding: 22px 32px;
       border-bottom: 1px solid var(--border);
-      background: #f6f8fa;
+      background: #ffffff;
     }}
     main {{
       padding: 24px 32px 40px;
+      max-width: 1440px;
+      margin: 0 auto;
     }}
     h1 {{
-      margin: 0 0 8px;
-      font-size: 28px;
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 700;
     }}
     h2 {{
       margin: 28px 0 10px;
-      font-size: 20px;
+      font-size: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
     }}
     h3 {{
       margin: 18px 0 8px;
@@ -397,21 +408,41 @@ def write_manager_html(
     .muted {{
       color: var(--muted);
     }}
-    .summary-grid {{
+    .headline {{
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      max-width: 1440px;
+      margin: 0 auto;
+    }}
+    .headline-meta {{
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+    }}
+    .briefing-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      margin: 12px 0 18px;
     }}
-    .metric {{
+    .briefing-item {{
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px;
-      background: white;
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: #ffffff;
     }}
-    .metric strong {{
+    .briefing-item strong {{
       display: block;
-      font-size: 24px;
+      font-size: 22px;
+      margin-top: 2px;
+    }}
+    .briefing-item span {{
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0;
     }}
     .table-wrap {{
       width: 100%;
@@ -431,6 +462,10 @@ def write_manager_html(
     }}
     th {{
       background: var(--section);
+      font-weight: 600;
+    }}
+    .priority-table tbody tr:first-child td {{
+      border-top: 2px solid var(--accent);
     }}
     .empty {{
       color: var(--muted);
@@ -492,20 +527,24 @@ def write_manager_html(
 </head>
 <body>
   <header>
-    <h1>j2p Manager Review Report</h1>
-    <p class="muted">Generated {html_escape(plan.generated_at)}</p>
-    <p>Jira CSV: {html_escape(plan.jira_csv)}</p>
-    <p>Rollup mode: {html_escape(plan.rollup_mode)}</p>
-    <p>Sandbox Project file: {html_escape(str(sandbox_path) if sandbox_path else "not created in validate mode")}</p>
-    <p>State file: {html_escape(str(state_path) if state_path else "not written")}</p>
-    <p>Per-project-key CSVs: {html_escape(str(path.parent / "by-project-key"))}</p>
+    <div class="headline">
+      <div>
+        <h1>Schedule Review Report</h1>
+        <p class="muted">Jira-to-Project sandbox review packet</p>
+      </div>
+      <div class="headline-meta">
+        <p>Generated {html_escape(plan.generated_at)}</p>
+        <p>Rollup mode: {html_escape(plan.rollup_mode)}</p>
+      </div>
+    </div>
   </header>
   <main>
-    {summary_grid(plan)}
+    {decision_briefing(plan)}
     {render_rollup_status(plan)}
     {render_sections([("Reviewer Action Needed", action_needed)])}
     {render_review_type_summary(plan)}
     {render_prefix_rollup_map(plan, config)}
+    {render_report_context(plan, sandbox_path, state_path, path.parent / "by-project-key")}
     {color_key()}
     {render_color_examples(plan)}
     {render_collapsible("Detailed Review Sections", render_sections(detail_sections), detail_summary(detail_sections))}
@@ -518,22 +557,61 @@ def write_manager_html(
     path.write_text(html_text, encoding="utf-8")
 
 
-def summary_grid(plan: RunPlan) -> str:
+def decision_briefing(plan: RunPlan) -> str:
+    action_items = [item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}]
+    dependency_items = [
+        item
+        for item in plan.audit_items
+        if "Dependency" in item.category or item.field in {"Predecessors", "Successors", "Dependency Review"}
+    ]
+    completed_items = by_category(plan.audit_items, "CompletedSinceLastUpdate")
+    in_progress_rollups = sum(1 for summary in plan.summaries.values() if 0 < summary.percent_complete < 100)
+    completed_rollups = sum(1 for summary in plan.summaries.values() if summary.percent_complete >= 100)
     metrics = [
-        ("CSV Rows", plan.stats.get("csv_rows_read", 0)),
-        ("Epics Included", plan.stats.get("epics_included", 0)),
-        ("Epics Excluded", plan.stats.get("epics_excluded", 0)),
-        ("Rollup Rows", plan.stats.get("summary_rows", 0)),
-        ("Project Keys", len(plan.stats.get("project_keys", []))),
-        ("Planned Epic Rows", plan.stats.get("planned_epic_rows", plan.stats.get("epics_included", 0))),
-        ("Multi-FixVersion Epics", plan.stats.get("multi_fixversion_epics", 0)),
-        ("Review Items", len([i for i in plan.audit_items if i.severity in {"Error", "Warning", "Review"}])),
+        ("Needs Review", len(action_items), "Warnings and review decisions"),
+        ("Rollups In Progress", in_progress_rollups, f"{completed_rollups} complete"),
+        ("Dependency Items", len(dependency_items), "Changed, missing, skipped, or circular"),
+        ("Completed Epics", len(completed_items), "Completed since comparison baseline"),
+        ("Logged Hours", format_number(plan.stats.get("logged_hours", 0)), "Rolled up from child work"),
     ]
     cards = "\n".join(
-        f"<div class=\"metric\"><span>{html_escape(label)}</span><strong>{html_escape(value)}</strong></div>"
-        for label, value in metrics
+        (
+            "<div class=\"briefing-item\">"
+            f"<span>{html_escape(label)}</span>"
+            f"<strong>{html_escape(value)}</strong>"
+            f"<p class=\"muted\">{html_escape(note)}</p>"
+            "</div>"
+        )
+        for label, value, note in metrics
     )
-    return f"<section><h2>Executive Summary</h2><div class=\"summary-grid\">{cards}</div></section>"
+    return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{cards}</div></section>"
+
+
+def render_report_context(
+    plan: RunPlan,
+    sandbox_path: Optional[Path],
+    state_path: Optional[Path],
+    by_project_key_path: Path,
+) -> str:
+    rows = [
+        ["Jira CSV", plan.jira_csv],
+        ["Sandbox Project File", str(sandbox_path) if sandbox_path else "not created in validate mode"],
+        ["State File", str(state_path) if state_path else "not written"],
+        ["Per-Project-Key CSV Folder", str(by_project_key_path)],
+        ["CSV Rows Read", plan.stats.get("csv_rows_read", 0)],
+        ["Jira Issues Read", plan.stats.get("jira_issues_read", 0)],
+        ["Epics Included", plan.stats.get("epics_included", 0)],
+        ["Epics Excluded", plan.stats.get("epics_excluded", 0)],
+        ["Planned Epic Rows", plan.stats.get("planned_epic_rows", plan.stats.get("epics_included", 0))],
+        ["Summary Rollup Rows", plan.stats.get("summary_rows", 0)],
+        ["Project Keys", ", ".join(plan.stats.get("project_keys", []))],
+        ["Multi-FixVersion Epics", plan.stats.get("multi_fixversion_epics", 0)],
+    ]
+    return render_collapsible(
+        "Report Context",
+        render_table("Run Inputs And Counts", ["Item", "Value"], rows),
+        "Open for file paths, CSV row counts, and raw processing totals.",
+    )
 
 
 def render_rollup_status(plan: RunPlan) -> str:
@@ -548,6 +626,7 @@ def render_rollup_status(plan: RunPlan) -> str:
                 rollup_status(summary),
                 f"{summary.percent_complete}%",
                 f"{format_number(summary.completed_story_points)} / {format_number(summary.total_story_points)}",
+                format_number(summary.logged_hours),
                 summary.driving_epic_count,
                 summary.reference_epic_count,
                 summary.child_epic_count,
@@ -563,6 +642,7 @@ def render_rollup_status(plan: RunPlan) -> str:
             "Status",
             "% Complete",
             "Completed / Total Points",
+            "Logged Hours",
             "Driving Rows",
             "Reference Rows",
             "Total Rows",
@@ -771,6 +851,7 @@ def render_planned_epics(plan: RunPlan, collapsible: bool = False) -> str:
                 "Yes" if epic.drives_schedule else "No",
                 epic.resource_group,
                 epic.percent_complete,
+                format_number(epic.logged_hours),
                 "Yes" if epic.in_planning else "No",
                 "Yes" if epic.completed else "No",
                 epic.target_start,
@@ -793,6 +874,7 @@ def render_planned_epics(plan: RunPlan, collapsible: bool = False) -> str:
             "Drives Schedule",
             "Resource Group",
             "% Complete",
+            "Logged Hours",
             "In Planning",
             "Done",
             "Target Start",

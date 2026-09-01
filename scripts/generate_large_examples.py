@@ -27,6 +27,7 @@ CSV_COLUMNS = [
     "Parent",
     "Fix versions",
     "Story Points",
+    "Logged Hours",
     "Status",
     "Resolution",
     "Target start",
@@ -384,6 +385,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
             issue_type="Story",
             summary="Client Walkthrough - Blank-key story row for CSV quality warning",
             story_points="3",
+            logged_hours="0.5",
             status="To Do",
         ),
         row(
@@ -392,6 +394,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
             issue_type="Story",
             summary="Client Walkthrough - Orphan child story with no Epic Link",
             story_points="5",
+            logged_hours="1h 15m",
             status="Done",
             resolution="Done",
         ),
@@ -416,6 +419,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
                     epic_link=epic_key,
                     fix_versions=epic.get("Fix versions", "Portfolio 2026"),
                     story_points=str(points),
+                    logged_hours=story_logged_hours(epic_key, local_index, variant),
                     status=status,
                     resolution="Done" if status == "Done" else "",
                 )
@@ -467,6 +471,21 @@ def story_points(epic_key: str, local_index: int) -> int:
     return values[(stable_number(epic_key) + local_index) % len(values)]
 
 
+def story_logged_hours(epic_key: str, local_index: int, variant: str) -> str:
+    base = ((stable_number(epic_key) + local_index * 3) % 13) / 2
+    if epic_key == "CORE-1001" and variant == "updated":
+        base += 2
+    if epic_key == "CORE-1980":
+        base = local_index / 4
+    if local_index % 11 == 0:
+        whole_hours = int(base)
+        minutes = 30 if base % 1 else 0
+        if minutes:
+            return f"{whole_hours}h {minutes}m"
+        return f"{whole_hours}h"
+    return f"{base:.2f}".rstrip("0").rstrip(".")
+
+
 def child_summary(issue_type: str, epic_summary_text: str, local_index: int) -> str:
     phase = STORY_PHASES[local_index % len(STORY_PHASES)]
     cleaned_epic = epic_summary_text.replace("Client Walkthrough - ", "")
@@ -498,6 +517,7 @@ def row(
     parent: str = "",
     fix_versions: str = "",
     story_points: str = "",
+    logged_hours: str = "",
     status: str = "",
     resolution: str = "",
     target_start: str = "",
@@ -514,6 +534,7 @@ def row(
         "Parent": parent,
         "Fix versions": fix_versions,
         "Story Points": story_points,
+        "Logged Hours": logged_hours,
         "Status": status,
         "Resolution": resolution,
         "Target start": target_start,
