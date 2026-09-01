@@ -741,7 +741,27 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertEqual(error, "")
         self.assertEqual(task.link_calls, [3])
-        self.assertEqual(task.text_writes, [""])
+        self.assertTrue(task.text_writes)
+        self.assertEqual(set(task.text_writes), {""})
+        self.assertEqual(task.Predecessors, "3FS")
+
+    def test_write_project_predecessors_uses_task_dependencies_collection_first(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        predecessor = FakeLinkableTask(3)
+        task = FakeTaskDependencyCollectionTask(7)
+
+        error = MicrosoftProjectSession.write_project_predecessors(
+            session,
+            task,
+            "3",
+            ["3"],
+            [predecessor],
+        )
+
+        self.assertEqual(error, "")
+        self.assertEqual(task.TaskDependencies.add_calls, [3])
+        self.assertEqual(task.link_calls, [])
+        self.assertEqual(set(task.text_writes), {""})
         self.assertEqual(task.Predecessors, "3FS")
 
     def test_apply_dependencies_links_project_task_objects(self) -> None:
@@ -1097,6 +1117,25 @@ class FakeLinkableTask(FakeTask):
         current = self._predecessors.strip()
         value = f"{predecessor_id}FS"
         self._predecessors = f"{current},{value}" if current else value
+
+
+class FakeTaskDependencies:
+    def __init__(self, task: FakeLinkableTask) -> None:
+        self.task = task
+        self.add_calls = []
+
+    def Add(self, predecessor_task: FakeLinkableTask, *_args: object) -> None:
+        predecessor_id = int(predecessor_task.ID)
+        self.add_calls.append(predecessor_id)
+        current = self.task._predecessors.strip()
+        value = f"{predecessor_id}FS"
+        self.task._predecessors = f"{current},{value}" if current else value
+
+
+class FakeTaskDependencyCollectionTask(FakeLinkableTask):
+    def __init__(self, task_id: int) -> None:
+        super().__init__(task_id)
+        self.TaskDependencies = FakeTaskDependencies(self)
 
 
 class FakeStalePredecessorTask(FakeTask):

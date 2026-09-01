@@ -160,6 +160,8 @@ Common arguments:
 
 During normal runs, j2p prints timestamped progress messages in the terminal so users can see that the run is still moving through CSV parsing, Project automation, state writing, and report generation.
 
+For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. That warning includes the Project write methods attempted and the readback value Project returned.
+
 ## Output Folder
 
 Each run writes a timestamped run folder:

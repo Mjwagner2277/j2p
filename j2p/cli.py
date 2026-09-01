@@ -167,6 +167,7 @@ def run_update(args: argparse.Namespace) -> int:
     baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
     progress("Reading Jira CSV and building update plan")
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
+    progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     progress("Opening sandbox MPP and applying Jira updates")
     apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=debug_visible)
     progress("Writing state files")
@@ -184,6 +185,7 @@ def run_create(args: argparse.Namespace) -> int:
     progress("Reading Jira CSV and building initial Project plan")
     baseline = snapshots_from_state(context["state_path"]) if context["state_path"].exists() else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
+    progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     output_project = context["run_dir"] / args.output_project_name
     progress("Creating initial sandbox MPP")
     create_project_from_plan(output_project, plan, context["config"], visible=debug_visible)
@@ -254,6 +256,10 @@ def get_debug_visible(args: argparse.Namespace) -> bool:
 
 def progress(message: str) -> None:
     print(f"[j2p] {datetime.now().strftime('%H:%M:%S')} {message}...", flush=True)
+
+
+def planned_dependency_count(plan: Any) -> int:
+    return sum(len(epic.predecessors) for epic in plan.epics.values() if epic.drives_schedule)
 
 
 if __name__ == "__main__":

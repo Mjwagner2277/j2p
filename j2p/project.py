@@ -85,10 +85,13 @@ def create_project_from_plan(
     with MicrosoftProjectSession(visible=visible) as session:
         session.new()
         session.configure_custom_fields(config)
-        session.apply_plan(plan, config)
+        session.apply_plan(plan, config, write_dependencies=False)
+        session.recalculate()
+        session.save_as(output_project)
+        session.apply_plan_dependencies(plan, config)
         session.recalculate()
         session.apply_review_formatting(plan, config)
-        session.save_as(output_project)
+        session.save()
     return plan.audit_items
 
 
@@ -346,7 +349,7 @@ class MicrosoftProjectSession:
             )
         return snapshots
 
-    def apply_plan(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+    def apply_plan(self, plan: RunPlan, config: Dict[str, Any], write_dependencies: bool = True) -> None:
         self.set_auto_scheduled()
         task_by_key = self.index_tasks_by_key(config)
         summary_tasks = self.ensure_summaries(plan, config, task_by_key)
@@ -363,6 +366,14 @@ class MicrosoftProjectSession:
                 task_by_key[epic.key] = task
             self.update_epic_task(task, epic, config, plan)
 
+        if not write_dependencies:
+            task_by_key = self.index_tasks_by_key(config)
+            self.mark_unmatched_tasks(plan, config, task_by_key)
+            return
+        self.apply_plan_dependencies(plan, config)
+
+    def apply_plan_dependencies(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+        self.recalculate()
         task_by_key = self.index_tasks_by_key(config)
         self.apply_dependencies(plan, task_by_key)
         self.mark_unmatched_tasks(plan, config, task_by_key)
@@ -767,7 +778,7 @@ class MicrosoftProjectSession:
                     )
                 )
 
-            desired = ",".join(f"{predecessor_id}FS" for predecessor_id in predecessor_ids)
+            desired = ",".join(predecessor_ids)
             error = self.write_project_predecessors(task, desired, predecessor_ids, predecessor_tasks)
             if error:
                 plan.audit_items.append(
@@ -796,32 +807,105 @@ class MicrosoftProjectSession:
     ) -> str:
         errors: List[str] = []
         predecessor_tasks = predecessor_tasks or []
-        clear_error = self.set_project_predecessor_text(task, "")
-        if clear_error:
-            errors.append(f"clear failed: {clear_error}")
+        predecessor_texts = unique_columns(
+            [
+                predecessor_text,
+                ",".join(expected_ids),
+                ",".join(f"{predecessor_id}FS" for predecessor_id in expected_ids),
+            ]
+        )
+        unique_id_text = project_unique_id_predecessor_text(predecessor_tasks)
 
+        if not expected_ids:
+            clear_error = self.clear_project_predecessors(task)
+            if clear_error:
+                return f"clear failed: {clear_error}"
+            return verify_project_predecessors(task, expected_ids)
+
+        attempts: List[Tuple[str, Any]] = []
         if predecessor_tasks:
-            link_errors = []
-            for predecessor_task in predecessor_tasks:
-                link_error = self.link_project_predecessor(task, predecessor_task)
-                if link_error:
-                    link_errors.append(link_error)
-            error = verify_project_predecessors(task, expected_ids)
-            if not error and not link_errors:
-                return ""
-            if link_errors:
-                errors.append("object linking failed: " + " | ".join(link_errors))
-            if error:
-                errors.append(f"object-link readback failed: {error}")
+            attempts.extend(
+                [
+                    ("TaskDependencies.Add", lambda: self.add_project_task_dependencies(task, predecessor_tasks)),
+                    ("Task.LinkPredecessors", lambda: self.link_project_predecessors(task, predecessor_tasks)),
+                    (
+                        "Application.LinkTasksEdit",
+                        lambda: self.link_project_predecessors_by_id(task, predecessor_tasks),
+                    ),
+                ]
+            )
+        if unique_id_text:
+            attempts.append(
+                (
+                    "Task.UniqueIDPredecessors",
+                    lambda: self.set_project_unique_id_predecessors(task, unique_id_text),
+                )
+            )
+        for text in predecessor_texts:
+            attempts.append(
+                (
+                    f"Predecessors field '{text}'",
+                    lambda value=text: self.set_project_predecessor_text(task, value),
+                )
+            )
 
-        text_error = self.set_project_predecessor_text(task, predecessor_text)
-        if text_error:
-            errors.append(f"text write failed: {text_error}")
-        error = verify_project_predecessors(task, expected_ids)
-        if not error:
-            return ""
-        errors.append(f"text-write readback failed: {error}")
+        for method_name, attempt in attempts:
+            clear_error = self.clear_project_predecessors(task)
+            if clear_error:
+                errors.append(f"{method_name}: clear failed before attempt: {clear_error}")
+            attempt_error = attempt()
+            readback_error = verify_project_predecessors(task, expected_ids)
+            if not attempt_error and not readback_error:
+                return ""
+            details = []
+            if attempt_error:
+                details.append(attempt_error)
+            if readback_error:
+                details.append(readback_error)
+            errors.append(f"{method_name}: {' | '.join(details)}")
+
         return " ".join(errors)
+
+    def clear_project_predecessors(self, task: Any) -> str:
+        errors: List[str] = []
+        for predecessor_task in current_predecessor_tasks(task):
+            try:
+                task.UnlinkPredecessors(Tasks=predecessor_task)
+            except Exception as exc:
+                try:
+                    task.UnlinkPredecessors(predecessor_task)
+                except Exception as fallback_exc:
+                    predecessor_id = safe_get(predecessor_task, "ID")
+                    errors.append(
+                        f"UnlinkPredecessors failed for predecessor ID {predecessor_id}: "
+                        f"{exc}; fallback: {fallback_exc}"
+                    )
+        text_error = self.set_project_predecessor_text(task, "")
+        if text_error:
+            errors.append(text_error)
+        return " | ".join(errors)
+
+    def add_project_task_dependencies(self, task: Any, predecessor_tasks: List[Any]) -> str:
+        errors: List[str] = []
+        dependencies = safe_get(task, "TaskDependencies")
+        if not dependencies:
+            return "TaskDependencies collection was unavailable."
+        for predecessor_task in predecessor_tasks:
+            predecessor_id = safe_get(predecessor_task, "ID")
+            try:
+                dependencies.Add(predecessor_task)
+                continue
+            except Exception as exc:
+                first_error = exc
+            try:
+                dependencies.Add(predecessor_task, 0)
+                continue
+            except Exception as exc:
+                errors.append(
+                    f"TaskDependencies.Add rejected predecessor task ID {predecessor_id}: "
+                    f"{first_error}; fallback: {exc}"
+                )
+        return " | ".join(errors)
 
     def set_project_predecessor_text(self, task: Any, predecessor_text: str) -> str:
         errors = []
@@ -837,23 +921,87 @@ class MicrosoftProjectSession:
             return ""
         except Exception as exc:
             errors.append(f"Task.SetField rejected '{predecessor_text}': {exc}")
+
+        task_id = safe_int(safe_get(task, "ID"))
+        if task_id > 0:
+            try:
+                self.app.SetTaskField(
+                    Field="Predecessors",
+                    Value=predecessor_text,
+                    TaskID=task_id,
+                    Create=False,
+                )
+                return ""
+            except Exception as exc:
+                errors.append(f"Application.SetTaskField rejected '{predecessor_text}': {exc}")
+            try:
+                self.app.SetTaskField("Predecessors", predecessor_text, False, False, task_id)
+                return ""
+            except Exception as exc:
+                errors.append(f"Application.SetTaskField positional rejected '{predecessor_text}': {exc}")
         return " | ".join(errors)
 
-    def link_project_predecessor(self, task: Any, predecessor_task: Any) -> str:
-        predecessor_id = safe_get(predecessor_task, "ID")
+    def link_project_predecessors(self, task: Any, predecessor_tasks: List[Any]) -> str:
+        errors: List[str] = []
+        for predecessor_task in predecessor_tasks:
+            predecessor_id = safe_get(predecessor_task, "ID")
+            try:
+                task.LinkPredecessors(Tasks=predecessor_task)
+                continue
+            except Exception as exc:
+                keyword_error = exc
+            try:
+                task.LinkPredecessors(predecessor_task)
+                continue
+            except Exception as exc:
+                errors.append(
+                    f"LinkPredecessors rejected predecessor task ID {predecessor_id}: "
+                    f"{keyword_error}; fallback: {exc}"
+                )
+        return " | ".join(errors)
+
+    def link_project_predecessors_by_id(self, task: Any, predecessor_tasks: List[Any]) -> str:
+        task_id = safe_int(safe_get(task, "ID"))
+        if task_id <= 0:
+            return "Task has no positive Project ID for Application.LinkTasksEdit."
+        errors: List[str] = []
+        for predecessor_task in predecessor_tasks:
+            predecessor_id = safe_int(safe_get(predecessor_task, "ID"))
+            if predecessor_id <= 0:
+                errors.append("Predecessor task has no positive Project ID for Application.LinkTasksEdit.")
+                continue
+            try:
+                result = self.app.LinkTasksEdit(From=predecessor_id, To=task_id, Delete=False)
+                if not project_call_failed(result):
+                    continue
+                errors.append(
+                    f"Application.LinkTasksEdit returned False for predecessor ID {predecessor_id} "
+                    f"and task ID {task_id}."
+                )
+                continue
+            except Exception as exc:
+                keyword_error = exc
+            try:
+                result = self.app.LinkTasksEdit(predecessor_id, task_id, False)
+                if not project_call_failed(result):
+                    continue
+                errors.append(
+                    f"Application.LinkTasksEdit positional returned False for predecessor ID {predecessor_id} "
+                    f"and task ID {task_id}."
+                )
+            except Exception as exc:
+                errors.append(
+                    f"Application.LinkTasksEdit rejected predecessor ID {predecessor_id} and task ID {task_id}: "
+                    f"{keyword_error}; fallback: {exc}"
+                )
+        return " | ".join(errors)
+
+    def set_project_unique_id_predecessors(self, task: Any, unique_id_text: str) -> str:
         try:
-            task.LinkPredecessors(Tasks=predecessor_task)
+            task.UniqueIDPredecessors = unique_id_text
             return ""
         except Exception as exc:
-            keyword_error = exc
-        try:
-            task.LinkPredecessors(predecessor_task)
-            return ""
-        except Exception as exc:
-            return (
-                f"LinkPredecessors rejected predecessor task ID {predecessor_id}: "
-                f"{keyword_error}; fallback: {exc}"
-            )
+            return f"Task.UniqueIDPredecessors rejected '{unique_id_text}': {exc}"
 
     def mark_unmatched_tasks(
         self,
@@ -1366,9 +1514,46 @@ def project_predecessor_ids(value: str) -> List[str]:
     return re.findall(r"\b(\d+)(?:[A-Z]{0,2})?(?:[+-]\d+[a-zA-Z]+)?\b", value)
 
 
+def current_predecessor_tasks(task: Any) -> List[Any]:
+    result: List[Any] = []
+    collection = safe_get(task, "PredecessorTasks")
+    if not collection:
+        return result
+    try:
+        count = int(collection.Count)
+    except Exception:
+        return result
+    for index in range(1, count + 1):
+        try:
+            predecessor_task = collection(index)
+        except Exception:
+            continue
+        if predecessor_task is not None:
+            result.append(predecessor_task)
+    return result
+
+
+def current_predecessor_task_ids(task: Any) -> List[str]:
+    ids: List[str] = []
+    for predecessor_task in current_predecessor_tasks(task):
+        predecessor_id = safe_int(safe_get(predecessor_task, "ID"))
+        if predecessor_id > 0:
+            ids.append(str(predecessor_id))
+    return ids
+
+
+def project_unique_id_predecessor_text(predecessor_tasks: List[Any]) -> str:
+    unique_ids: List[str] = []
+    for predecessor_task in predecessor_tasks:
+        unique_id = safe_int(safe_get(predecessor_task, "UniqueID"))
+        if unique_id > 0:
+            unique_ids.append(str(unique_id))
+    return ",".join(unique_ids)
+
+
 def verify_project_predecessors(task: Any, expected_ids: List[str]) -> str:
     current_value = str(safe_get(task, "Predecessors"))
-    current_ids = project_predecessor_ids(current_value)
+    current_ids = unique_columns(project_predecessor_ids(current_value) + current_predecessor_task_ids(task))
     missing_ids = [predecessor_id for predecessor_id in expected_ids if predecessor_id not in current_ids]
     unexpected_ids = [predecessor_id for predecessor_id in current_ids if predecessor_id not in expected_ids]
     if missing_ids:
