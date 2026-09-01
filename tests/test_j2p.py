@@ -20,6 +20,7 @@ from j2p.core import (
 )
 from j2p.project import (
     MicrosoftProjectSession,
+    ProjectAutomationError,
     append_resource_name,
     project_column_for_audit_field,
     project_date_for_com,
@@ -463,6 +464,25 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIs(session.project, session.app.project)
         self.assertEqual(session.app.file_new_calls, [(False, "", False, False)])
 
+    def test_create_application_prefers_isolated_project_instance(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.win32com = FakeWin32Com()
+        session.owns_app = False
+
+        app = MicrosoftProjectSession.create_application(session)
+
+        self.assertIs(app, session.win32com.dispatch_ex_app)
+        self.assertTrue(session.owns_app)
+        self.assertEqual(session.win32com.calls, ["DispatchEx"])
+
+    def test_create_application_error_points_to_task_manager(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.win32com = FakeWin32Com(dispatch_ex_error=RuntimeError("stale Project"), dispatch_error=RuntimeError("busy"))
+        session.owns_app = False
+
+        with self.assertRaisesRegex(ProjectAutomationError, "Task Manager.*WINPROJ.EXE"):
+            MicrosoftProjectSession.create_application(session)
+
     def test_application_visibility_is_best_effort(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeVisibilityRejectingApp()
@@ -527,6 +547,27 @@ class FakeProjectApp:
 
     def FileSaveAs(self, Name: str) -> None:
         self.save_as_paths.append(Name)
+
+
+class FakeWin32Com:
+    def __init__(self, dispatch_ex_error: Exception = None, dispatch_error: Exception = None) -> None:
+        self.dispatch_ex_error = dispatch_ex_error
+        self.dispatch_error = dispatch_error
+        self.dispatch_ex_app = object()
+        self.dispatch_app = object()
+        self.calls = []
+
+    def DispatchEx(self, _name: str) -> object:
+        self.calls.append("DispatchEx")
+        if self.dispatch_ex_error:
+            raise self.dispatch_ex_error
+        return self.dispatch_ex_app
+
+    def Dispatch(self, _name: str) -> object:
+        self.calls.append("Dispatch")
+        if self.dispatch_error:
+            raise self.dispatch_error
+        return self.dispatch_app
 
 
 class FakeProjects:

@@ -15,6 +15,13 @@ from typing import Any, Dict, List, Optional
 from .core import AuditItem, PlanEpic, RunPlan, ProjectTaskSnapshot, summary_id
 
 
+PROJECT_TASK_MANAGER_RESOLUTION = (
+    "Close Microsoft Project and rerun j2p. If the problem continues, open Windows Task Manager "
+    "(Ctrl+Shift+Esc), find Microsoft Project or WINPROJ.EXE on the Processes or Details tab, "
+    "choose End task, then rerun j2p."
+)
+
+
 class ProjectAutomationError(RuntimeError):
     """Raised when Microsoft Project automation is unavailable or fails."""
 
@@ -91,9 +98,16 @@ class MicrosoftProjectSession:
         self.app: Any = None
         self.project: Any = None
         self.saved_successfully = False
+        self.owns_app = False
+        self.com_initialized = False
 
     def __enter__(self) -> "MicrosoftProjectSession":
-        self.app = self.win32com.Dispatch("MSProject.Application")
+        try:
+            self.pythoncom.CoInitialize()
+            self.com_initialized = True
+        except Exception:
+            pass
+        self.app = self.create_application()
         self.configure_application_window()
         return self
 
@@ -102,11 +116,36 @@ class MicrosoftProjectSession:
             if self.project is not None:
                 self.close_project(save_changes=exc_type is None and self.saved_successfully)
         finally:
-            if self.app is not None and not self.visible:
+            if self.app is not None and self.owns_app and not self.visible:
                 try:
                     self.app.Quit()
                 except Exception:
                     pass
+            if self.com_initialized:
+                try:
+                    self.pythoncom.CoUninitialize()
+                except Exception:
+                    pass
+
+    def create_application(self) -> Any:
+        errors = []
+        try:
+            app = self.win32com.DispatchEx("MSProject.Application")
+            self.owns_app = True
+            return app
+        except Exception as exc:
+            errors.append(f"DispatchEx failed: {exc}")
+        try:
+            app = self.win32com.Dispatch("MSProject.Application")
+            self.owns_app = False
+            return app
+        except Exception as exc:
+            errors.append(f"Dispatch failed: {exc}")
+        detail = " | ".join(errors) if errors else "no COM startup method was available"
+        raise ProjectAutomationError(
+            "Could not start Microsoft Project through COM. "
+            f"{PROJECT_TASK_MANAGER_RESOLUTION} Last Project error: {detail}"
+        )
 
     def configure_application_window(self) -> None:
         try:
@@ -135,7 +174,8 @@ class MicrosoftProjectSession:
             self.project = safe_get(self.app, "ActiveProject")
         if not self.project:
             raise ProjectAutomationError(
-                "Microsoft Project did not return an active blank project after creating a new file."
+                "Microsoft Project did not return an active blank project after creating a new file. "
+                f"{PROJECT_TASK_MANAGER_RESOLUTION}"
             )
         self.apply_gantt_chart_view()
 
@@ -177,6 +217,7 @@ class MicrosoftProjectSession:
             "Could not create a blank Microsoft Project file through COM. "
             "This can happen when Project is not fully initialized, a Project startup/template dialog is open, "
             "or the installed Project edition blocks blank-file automation. "
+            f"{PROJECT_TASK_MANAGER_RESOLUTION} "
             f"Last Project error: {detail}"
         )
 
