@@ -12,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .core import AuditItem, PlanEpic, RunPlan, ProjectTaskSnapshot, summary_id
+from .models import AuditItem, PlanEpic, ProjectTaskSnapshot, RunPlan
+from .rollups import summary_id
 
 
 PROJECT_TASK_MANAGER_RESOLUTION = (

@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .config import ConfigError, load_config
-from .core import J2PError, build_run_plan, run_plan_to_state, snapshots_from_state, write_json
+from .core import build_run_plan
+from .models import J2PError
 from .project import (
     ProjectAutomationError,
     apply_plan_to_sandbox,
@@ -18,6 +19,7 @@ from .project import (
     snapshot_project_file,
 )
 from .reports import write_reports
+from .state import run_plan_to_state, snapshots_from_state, write_json
 
 
 def main(argv: Optional[list[str]] = None) -> int:

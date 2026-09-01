@@ -2,7 +2,7 @@
 
 Jira CSV to Microsoft Project sandbox review tooling.
 
-j2p is a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It rolls child story/task points and logged hours up to epic and summary rows, calculates story points delivered per configured work block of 8 hours by default, and produces HTML/CSV review packets.
+j2p is a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It rolls child story/task points and logged hours up to epic and summary rows, calculates Story Point Ratio, and produces HTML/CSV review packets.
 
 The repository is intentionally limited to the Jira-to-Project workflow. It does not contain a web app, Next.js, React, or browser runtime.
 

@@ -28,8 +28,16 @@ PowerShell snippets in documentation are fine when they show Windows users how t
 | Path | Purpose |
 | --- | --- |
 | `j2p/cli.py` | Command-line parsing and run orchestration. |
+| `j2p/models.py` | Shared dataclasses and package-level planning errors. |
 | `j2p/config.py` | YAML/default configuration loading and validation. |
-| `j2p/core.py` | Jira CSV parsing, rollup logic, dependency logic, completion calculations, baseline comparison. |
+| `j2p/core.py` | Top-level Jira CSV planning orchestration and public planning facade. |
+| `j2p/jira.py` | Jira CSV table handling and field parsing. |
+| `j2p/rollups.py` | Initiative/fixVersion assignment, multi-fixVersion policy, and summary rollup math. |
+| `j2p/dependencies.py` | Epic dependency graph validation and accepted predecessor/successor planning. |
+| `j2p/baseline.py` | Baseline comparison and changed/added/unmatched audit item creation. |
+| `j2p/metrics.py` | Percent-complete and Story Point Ratio calculations. |
+| `j2p/state.py` | JSON state serialization used for report-only comparison runs. |
+| `j2p/formatting.py` | Shared number and HTML escaping helpers. |
 | `j2p/project.py` | Microsoft Project COM automation for create/update/sandbox coloring. |
 | `j2p/reports.py` | Manager HTML and CSV report generation. |
 | `scripts/generate_large_examples.py` | Deterministic 1,200-line training fixture generator. |
@@ -101,6 +109,8 @@ See `docs/testing.md` for the full checklist.
 ## Microsoft Project Changes
 
 Changes to `j2p/project.py` need additional care because cross-platform tests cannot open Microsoft Project.
+
+The Project adapter is intentionally kept together unless a change can be manually verified on Windows with Microsoft Project. It is large, but it wraps one external automation boundary and contains several defensive fallbacks for Project table setup, predecessor writes, and cell coloring.
 
 Before release, run a Windows smoke test with a sanitized source-of-truth `.mpp`:
 
