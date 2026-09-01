@@ -2,6 +2,8 @@
 
 j2p reads a project-wide Jira CSV, calculates epic completion from child story/task points, and creates review outputs for Microsoft Project managers.
 
+This is the short path. For the full product-user write-up, including YAML field documentation and report interpretation, use `docs/user-guide.md` and `docs/configuration-reference.md`.
+
 ## Guardrail Summary
 
 - The source-of-truth `.mpp` is not modified.

@@ -1,4 +1,6 @@
-# Testing And Pre-Merge Checks
+# Contributor Testing And Pre-Merge Checks
+
+This page is contributor information for people changing j2p code, fixtures, or generated examples. Product users should start with `docs/user-guide.md`.
 
 This project intentionally does not use GitHub Actions right now. Run the checks below locally before merging or handing off a change.
 

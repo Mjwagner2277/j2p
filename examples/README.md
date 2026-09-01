@@ -2,6 +2,8 @@
 
 Use these files to validate the j2p workflow before using a live Jira export.
 
+From the repository root, product users should read `docs/user-guide.md` and `docs/configuration-reference.md` before adapting these examples to a real team export.
+
 | File | Purpose |
 | --- | --- |
 | `config.example.yaml` | Mixed per-prefix YAML config: `TEAM` uses initiative, `PLAT` uses fixVersion |

@@ -6,10 +6,13 @@ This repository contains a Python CLI for creating manager-reviewable Microsoft 
 
 ## Start Here
 
+- Product user guide: `docs/user-guide.md`
+- YAML configuration reference: `docs/configuration-reference.md`
 - Quick start: `docs/quick-start.md`
-- Requirements and guardrails: `docs/requirements.md`
 - Manager review guide: `docs/manager-review-guide.md`
 - Testing and pre-merge checks: `docs/testing.md`
+- Contributor guide: `docs/contributing.md`
+- Requirements and design decisions: `docs/requirements.md`
 - Complete worked example: `examples/test.md`
 - Full manager report example: `examples/manager-report-example/j2p-run-follow-on-manager-review/Manager-Review-Report.html`
 - Large 1,200-line walkthrough: `examples/large-scenario/README.md`
@@ -24,6 +27,12 @@ This repository contains a Python CLI for creating manager-reviewable Microsoft 
 - No React, Next.js, node runtime, browser app, or web server
 
 Validation/report generation does not require Microsoft Project and can run on any machine with Python.
+
+## Documentation Audiences
+
+Product users and schedule reviewers should use `docs/user-guide.md`, `docs/configuration-reference.md`, and `docs/manager-review-guide.md`.
+
+Contributors changing code, tests, fixtures, or generated examples should use `docs/contributing.md` and `docs/testing.md`.
 
 ## Install
 
