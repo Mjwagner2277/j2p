@@ -217,7 +217,11 @@ The manager report intentionally keeps rollup status and review-required items a
 | Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
-j2p applies sandbox colors through Project cell background formatting, which depends on Project being able to select the target cell in the active task view. j2p prepares the Gantt view before coloring and uses stable Project field IDs for custom columns. If Project still rejects cell formatting, the run continues and adds one summarized `ProjectCellColoringFailed` item to the report instead of opening a formatting dialog or flooding the report.
+j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. The table includes Jira key, rollup, status, dates, story points, dependency review, predecessor, and review flag fields.
+
+If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories.
+
+Project stores predecessor links as Project task row IDs, not Jira keys. The manager report and audit CSV show Jira keys such as `CORE-1001`, but the sandbox `Predecessors` column normally shows values such as `12FS`. That is expected.
 
 ## CSV Inputs
 

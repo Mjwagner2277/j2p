@@ -22,8 +22,11 @@ from j2p.project import (
     MicrosoftProjectSession,
     ProjectAutomationError,
     append_resource_name,
+    project_color,
     project_column_for_audit_field,
     project_date_for_com,
+    project_predecessor_ids,
+    review_table_columns,
 )
 from j2p.reports import write_reports
 
@@ -516,6 +519,37 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_for_audit_field("Rollup Key", config), "Text5")
         self.assertEqual(project_column_for_audit_field("Jira Target End", config), "Date2")
         self.assertEqual(project_column_for_audit_field("Resource Group", config), "Resource Group")
+        self.assertEqual(project_column_for_audit_field("Status", config), "Text9")
+        self.assertEqual(project_column_for_audit_field("Unmatched Project Task", config), "Flag2")
+
+    def test_review_table_columns_include_required_coloring_fields(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+
+        columns = review_table_columns(config, ["Text9", "Flag2", "Predecessors"])
+
+        self.assertIn("Text1", columns)
+        self.assertIn("Text9", columns)
+        self.assertIn("Flag2", columns)
+        self.assertIn("Predecessors", columns)
+        self.assertIn("Resource Group", columns)
+
+    def test_prepare_formatting_view_creates_and_applies_review_table(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeReviewTableApp()
+
+        errors = MicrosoftProjectSession.prepare_formatting_view(
+            session,
+            ["Text1", "Text9", "Predecessors"],
+            config,
+        )
+
+        self.assertEqual(errors, [])
+        self.assertEqual(session.app.table_apply_calls, ["j2p Review"])
+        added_columns = [call["NewFieldName"] for call in session.app.table_edit_calls if call.get("NewFieldName")]
+        self.assertIn("Text1", added_columns)
+        self.assertIn("Text9", added_columns)
+        self.assertNotIn("Predecessors", added_columns)
 
     def test_color_project_cell_sets_active_cell_background(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -527,14 +561,42 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(session.app.select_calls, [("cell", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
 
-    def test_color_project_cell_does_not_open_font_dialog_fallback(self) -> None:
+    def test_color_project_cell_uses_named_font32ex_fallback(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeFontPromptRiskFormattingApp()
         task = FakeTask()
         task.ID = 8
 
-        self.assertFalse(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
-        self.assertEqual(session.app.font32_calls, 0)
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertEqual(
+            session.app.font32_kwargs,
+            [{"CellColor": project_color("#FFC7CE"), "Pattern": 1}],
+        )
+
+    def test_select_project_cell_treats_false_return_as_failure(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeFalseThenTrueSelectionApp()
+        task = FakeTask()
+        task.ID = 9
+
+        selected, error = MicrosoftProjectSession.select_project_cell(session, task, "Text2")
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertEqual(
+            session.app.select_calls,
+            [("cell", 9, "Text2", False), ("field", 9, "Text2", False)],
+        )
+
+    def test_write_project_predecessors_uses_fs_ids_and_verifies_readback(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        task = FakeTask()
+
+        error = MicrosoftProjectSession.write_project_predecessors(session, task, "3FS,4FS", ["3", "4"])
+
+        self.assertEqual(error, "")
+        self.assertEqual(task.Predecessors, "3FS,4FS")
+        self.assertEqual(project_predecessor_ids("3FS,4SS+2d"), ["3", "4"])
 
 
 class FakeProjectApp:
@@ -639,9 +701,36 @@ class FakeVisibilityRejectingApp:
         self.display_alerts = value
 
 
+class FakeReviewTableApp:
+    def __init__(self) -> None:
+        self.table_edit_calls = []
+        self.table_apply_calls = []
+
+    def ViewApply(self, Name: str = "") -> None:
+        pass
+
+    def FilterClear(self) -> None:
+        pass
+
+    def GroupApply(self, Name: str = "") -> None:
+        pass
+
+    def OutlineShowAllTasks(self) -> None:
+        pass
+
+    def TableEditEx(self, **kwargs: object) -> bool:
+        self.table_edit_calls.append(kwargs)
+        return True
+
+    def TableApply(self, Name: str = "") -> bool:
+        self.table_apply_calls.append(Name)
+        return True
+
+
 class FakeCell:
     def __init__(self) -> None:
         self.CellColorEx = 0
+        self.Pattern = 0
 
 
 class FakeFormattingApp:
@@ -654,6 +743,16 @@ class FakeFormattingApp:
 
     def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> None:
         self.select_calls.append(("field", Row, Column, RowRelative))
+
+
+class FakeFalseThenTrueSelectionApp(FakeFormattingApp):
+    def SelectTaskCell(self, Row: int, Column: str, RowRelative: bool) -> bool:
+        self.select_calls.append(("cell", Row, Column, RowRelative))
+        return False
+
+    def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> bool:
+        self.select_calls.append(("field", Row, Column, RowRelative))
+        return True
 
 
 class FakeRejectingCell:
@@ -670,11 +769,12 @@ class FakeFontPromptRiskFormattingApp(FakeFormattingApp):
     def __init__(self) -> None:
         super().__init__()
         self.ActiveCell = FakeRejectingCell()
-        self.font32_calls = 0
+        self.font32_kwargs = []
 
-    def Font32Ex(self, *_args: object) -> None:
-        self.font32_calls += 1
-        raise AssertionError("Font32Ex can open Project's Font dialog and must not be called")
+    def Font32Ex(self, *args: object, **kwargs: object) -> None:
+        if args:
+            raise AssertionError("Font32Ex must be called with named arguments only")
+        self.font32_kwargs.append(kwargs)
 
 
 class FakeAssignment:

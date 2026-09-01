@@ -87,9 +87,10 @@ Review the generated sandbox `.mpp` and confirm:
 - source-of-truth `.mpp` was not modified
 - sandbox `.mpp` was timestamped
 - Jira Key and other custom fields were created/renamed
+- the active task table is `j2p Review`, or that table is available from Project's table menu
 - epics are under the correct initiative/fixVersion summary tasks
 - multi-fixVersion epics have the expected `j2p Row Role`, `Drives Schedule`, and `Primary Schedule Key` values
-- predecessor links match Jira blocker relationships
+- predecessor links match Jira blocker relationships; Project may display row IDs such as `12FS` instead of Jira keys
 - changed cells are green
 - dependency review cells are blue
 - unmatched review cells are amber

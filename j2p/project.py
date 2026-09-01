@@ -10,7 +10,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .core import AuditItem, PlanEpic, RunPlan, ProjectTaskSnapshot, summary_id
 
@@ -20,6 +20,20 @@ PROJECT_TASK_MANAGER_RESOLUTION = (
     "(Ctrl+Shift+Esc), find Microsoft Project or WINPROJ.EXE on the Processes or Details tab, "
     "choose End task, then rerun j2p."
 )
+
+J2P_REVIEW_TABLE_NAME = "j2p Review"
+PROJECT_SOLID_FILL_PATTERN = 1
+PROJECT_ENTRY_TABLE_COLUMNS = {
+    "duration",
+    "finish",
+    "id",
+    "indicators",
+    "name",
+    "predecessors",
+    "resource names",
+    "start",
+    "task mode",
+}
 
 
 class ProjectAutomationError(RuntimeError):
@@ -345,6 +359,7 @@ class MicrosoftProjectSession:
                 task_by_key[epic.key] = task
             self.update_epic_task(task, epic, config, plan)
 
+        task_by_key = self.index_tasks_by_key(config)
         self.apply_dependencies(plan, task_by_key)
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
@@ -709,25 +724,78 @@ class MicrosoftProjectSession:
             task = task_by_key.get(epic.key)
             if task is None:
                 continue
-            predecessor_ids = []
+            predecessor_ids: List[str] = []
+            missing_predecessors: List[str] = []
             for predecessor_key in epic.predecessors:
-                predecessor_task = task_by_key.get(predecessor_key)
+                predecessor_task = task_by_key.get(predecessor_key.upper())
                 if predecessor_task is not None:
-                    predecessor_ids.append(str(predecessor_task.ID))
-            try:
-                task.Predecessors = ",".join(predecessor_ids)
-            except Exception as exc:
+                    predecessor_id = safe_int(safe_get(predecessor_task, "ID"))
+                    if predecessor_id > 0:
+                        predecessor_ids.append(str(predecessor_id))
+                    else:
+                        missing_predecessors.append(predecessor_key)
+                else:
+                    missing_predecessors.append(predecessor_key)
+            for predecessor_key in missing_predecessors:
+                plan.audit_items.append(
+                    AuditItem(
+                        "Warning",
+                        "ProjectDependencyTaskMissing",
+                        jira_key=epic.jira_key or epic.key,
+                        schedule_key=epic.key,
+                        issue_type="Epic",
+                        summary=epic.summary,
+                        field="Predecessors",
+                        new_value=predecessor_key,
+                        color="dependency_review",
+                        message=(
+                            f"Could not find the included Project task for predecessor schedule key "
+                            f"'{predecessor_key}' while writing dependencies."
+                        ),
+                        reviewer_action="Review dependency links manually in the sandbox file.",
+                        source_row=epic.source_row,
+                    )
+                )
+
+            desired = ",".join(f"{predecessor_id}FS" for predecessor_id in predecessor_ids)
+            error = self.write_project_predecessors(task, desired, predecessor_ids)
+            if error:
                 plan.audit_items.append(
                     AuditItem(
                         "Warning",
                         "ProjectDependencyWriteFailed",
-                        jira_key=epic.key,
+                        jira_key=epic.jira_key or epic.key,
+                        schedule_key=epic.key,
+                        issue_type="Epic",
+                        summary=epic.summary,
                         field="Predecessors",
+                        new_value=desired,
                         color="dependency_review",
-                        message=f"Could not write predecessors to Microsoft Project: {exc}",
+                        message=error,
                         reviewer_action="Review dependency links manually in the sandbox file.",
+                        source_row=epic.source_row,
                     )
                 )
+
+    def write_project_predecessors(self, task: Any, predecessor_text: str, expected_ids: List[str]) -> str:
+        try:
+            task.Predecessors = predecessor_text
+        except Exception as exc:
+            return f"Microsoft Project rejected predecessor value '{predecessor_text}': {exc}"
+
+        current_ids = project_predecessor_ids(str(safe_get(task, "Predecessors")))
+        missing_ids = [predecessor_id for predecessor_id in expected_ids if predecessor_id not in current_ids]
+        if missing_ids:
+            return (
+                f"Microsoft Project did not retain predecessor ID(s) {', '.join(missing_ids)} "
+                f"after writing '{predecessor_text}'. Current Project value: '{safe_get(task, 'Predecessors')}'."
+            )
+        if not expected_ids and project_predecessor_ids(str(safe_get(task, "Predecessors"))):
+            return (
+                "Microsoft Project did not clear the predecessor field. "
+                f"Current Project value: '{safe_get(task, 'Predecessors')}'."
+            )
+        return ""
 
     def mark_unmatched_tasks(
         self,
@@ -834,8 +902,7 @@ class MicrosoftProjectSession:
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         task_by_key = self.index_tasks_by_key(config)
-        self.prepare_formatting_view()
-        failed_columns: Dict[str, int] = {}
+        formatting_items: List[Tuple[AuditItem, Any, str, str]] = []
         for item in list(plan.audit_items):
             if not item.jira_key or not item.color:
                 continue
@@ -847,12 +914,43 @@ class MicrosoftProjectSession:
             if not column:
                 continue
             color = config.get("colors", {}).get(item.color, item.color)
-            if self.color_project_cell(task, column, color):
+            formatting_items.append((item, task, column, color))
+
+        table_errors = self.prepare_formatting_view(
+            review_table_columns(config, [column for _item, _task, column, _color in formatting_items]),
+            config,
+        )
+        if table_errors:
+            plan.audit_items.append(
+                AuditItem(
+                    "Warning",
+                    "ProjectReviewTableSetupFailed",
+                    field="Project Review Table",
+                    color="review_needed",
+                    message=(
+                        f"Could not fully prepare the {J2P_REVIEW_TABLE_NAME} table before coloring. "
+                        f"Details: {' | '.join(table_errors[:5])}"
+                    ),
+                    reviewer_action=(
+                        "Open the sandbox in Project and confirm the j2p review columns are visible. "
+                        "Then compare the manager report and audit CSV against the sandbox."
+                    ),
+                )
+            )
+
+        failed_columns: Dict[str, int] = {}
+        failed_examples: List[str] = []
+        for item, task, column, color in formatting_items:
+            error = self.color_project_cell_error(task, column, color)
+            if not error:
                 continue
             failed_columns[column] = failed_columns.get(column, 0) + 1
+            if len(failed_examples) < 10:
+                failed_examples.append(f"{item.jira_key or item.schedule_key} {item.field}: {error}")
         if failed_columns:
             total = sum(failed_columns.values())
             columns = ", ".join(f"{column} ({count})" for column, count in sorted(failed_columns.items()))
+            examples = " Examples: " + " | ".join(failed_examples) if failed_examples else ""
             plan.audit_items.append(
                 AuditItem(
                     "Warning",
@@ -862,15 +960,18 @@ class MicrosoftProjectSession:
                     message=(
                         f"Could not color {total} Project cell(s). Failed Project columns: {columns}. "
                         "The underlying task data was still written where Project accepted the field values."
+                        f"{examples}"
                     ),
                     reviewer_action=(
                         "Review the manager report and audit CSV for changed fields. If colored cells are required, "
-                        "open the sandbox in Project and confirm the review columns are available in the active task table."
+                        f"open the sandbox in Project and confirm the {J2P_REVIEW_TABLE_NAME} table is available "
+                        "and the review columns are visible."
                     ),
                 )
             )
 
-    def prepare_formatting_view(self) -> None:
+    def prepare_formatting_view(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
         self.apply_gantt_chart_view()
         try:
             self.app.FilterClear()
@@ -884,35 +985,127 @@ class MicrosoftProjectSession:
             self.app.OutlineShowAllTasks()
         except Exception:
             pass
+        errors.extend(self.create_review_table(columns, config))
+        try:
+            result = self.app.TableApply(Name=J2P_REVIEW_TABLE_NAME)
+            if result is False:
+                errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
+        except Exception as exc:
+            try:
+                result = self.app.TableApply(J2P_REVIEW_TABLE_NAME)
+                if result is False:
+                    errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
+            except Exception as fallback_exc:
+                errors.append(f"TableApply failed: {exc}; fallback failed: {fallback_exc}")
+        return errors
+
+    def create_review_table(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
+        errors: List[str] = []
+        try:
+            result = self.app.TableEditEx(
+                Name="Entry",
+                TaskTable=True,
+                NewName=J2P_REVIEW_TABLE_NAME,
+                Create=True,
+                OverwriteExisting=True,
+                ShowInMenu=True,
+                ShowAddNewColumn=True,
+            )
+            if result is False:
+                errors.append(f"TableEditEx returned False while creating {J2P_REVIEW_TABLE_NAME}.")
+        except Exception as exc:
+            errors.append(f"TableEditEx create failed: {exc}")
+            return errors
+
+        columns_to_add = [
+            column for column in columns if column.strip().lower() not in PROJECT_ENTRY_TABLE_COLUMNS
+        ]
+        for position, column in enumerate(columns_to_add, start=2):
+            title = project_column_title(column, config)
+            try:
+                result = self.app.TableEditEx(
+                    Name=J2P_REVIEW_TABLE_NAME,
+                    TaskTable=True,
+                    FieldName="",
+                    NewFieldName=column,
+                    Title=title,
+                    Width=18,
+                    ColumnPosition=position,
+                    ShowInMenu=True,
+                    HeaderTextWrap=True,
+                    WrapText=True,
+                    ShowAddNewColumn=True,
+                )
+                if result is False:
+                    errors.append(f"TableEditEx returned False while adding {column}.")
+            except Exception as exc:
+                errors.append(f"TableEditEx add {column} failed: {exc}")
+        return errors
 
     def color_project_cell(self, task: Any, column: str, hex_color: str) -> bool:
-        color = project_color(hex_color)
-        if not self.select_project_cell(task, column):
-            return False
-        return self.color_active_cell(color)
+        return not self.color_project_cell_error(task, column, hex_color)
 
-    def select_project_cell(self, task: Any, column: str) -> bool:
+    def color_project_cell_error(self, task: Any, column: str, hex_color: str) -> str:
+        color = project_color(hex_color)
+        selected, selection_error = self.select_project_cell(task, column)
+        if not selected:
+            return selection_error
+        cell_error = self.color_active_cell(color)
+        if not cell_error:
+            return ""
+        font_error = self.font32_selected_cell_color(color)
+        if not font_error:
+            return ""
+        return f"{cell_error}; {font_error}"
+
+    def select_project_cell(self, task: Any, column: str) -> Tuple[bool, str]:
         row = int(safe_get(task, "ID") or 0)
         if row <= 0:
-            return False
+            return False, "Task has no positive Project row ID."
+        errors: List[str] = []
         try:
-            self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
-            return True
+            result = self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
+            if result is not False:
+                return True, ""
+            errors.append("SelectTaskCell returned False.")
+        except Exception as exc:
+            errors.append(f"SelectTaskCell failed: {exc}")
+        try:
+            result = self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
+            if result is not False:
+                return True, ""
+            errors.append("SelectTaskField returned False.")
+        except Exception as exc:
+            errors.append(f"SelectTaskField failed: {exc}")
+        return False, " ".join(errors)
+
+    def color_active_cell(self, color: int) -> str:
+        try:
+            active_cell = self.app.ActiveCell
+        except Exception as exc:
+            return f"ActiveCell was unavailable after selecting the Project cell: {exc}"
+        try:
+            active_cell.CellColorEx = color
+        except Exception as exc:
+            return f"ActiveCell.CellColorEx rejected the background color: {exc}"
+        try:
+            active_cell.Pattern = PROJECT_SOLID_FILL_PATTERN
         except Exception:
             pass
         try:
-            self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
-            return True
+            readback = int(active_cell.CellColorEx)
+            if readback != color:
+                return f"ActiveCell.CellColorEx read back {readback}, expected {color}."
         except Exception:
-            return False
+            pass
+        return ""
 
-    def color_active_cell(self, color: int) -> bool:
+    def font32_selected_cell_color(self, color: int) -> str:
         try:
-            active_cell = self.app.ActiveCell
-            active_cell.CellColorEx = color
-            return True
-        except Exception:
-            return False
+            self.app.Font32Ex(CellColor=color, Pattern=PROJECT_SOLID_FILL_PATTERN)
+            return ""
+        except Exception as exc:
+            return f"Font32Ex named cell background formatting failed: {exc}"
 
 
 def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> str:
@@ -924,21 +1117,85 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Successors": "Successors",
         "Finish": "Finish",
         "Start": "Start",
+        "Status": fields.get("jira_status", "Text9"),
         "Resource Group": "Resource Group",
+        "Rollup": fields.get("rollup_key", "Text5"),
         "Rollup Key": fields.get("rollup_key", "Text5"),
         "Schedule Key": fields.get("j2p_key", "Text10"),
         "Row Role": fields.get("row_role", "Text11"),
         "Fix Version": fields.get("fix_version", "Text12"),
+        "Fix versions": fields.get("fix_version", "Text12"),
         "Drives Schedule": fields.get("drives_schedule", "Flag4"),
         "Primary Schedule Key": fields.get("primary_schedule_key", "Text13"),
         "Total Story Points": fields.get("total_story_points", "Number1"),
         "Completed Story Points": fields.get("completed_story_points", "Number2"),
         "In Planning": fields.get("in_planning", "Flag1"),
+        "Unmatched Project Task": fields.get("unmatched_project_task", "Flag2"),
         "Dependency Review": fields.get("dependency_review", "Text8"),
         "Jira Target Start": fields.get("jira_target_start", "Date1"),
         "Jira Target End": fields.get("jira_target_end", "Date2"),
     }
     return mapping.get(field_name, "")
+
+
+def review_table_columns(config: Dict[str, Any], audit_columns: List[str]) -> List[str]:
+    fields = config.get("project_fields", {})
+    standard_columns = [
+        "Name",
+        fields.get("jira_key", "Text1"),
+        fields.get("j2p_key", "Text10"),
+        fields.get("jira_issue_type", "Text3"),
+        fields.get("rollup_mode", "Text4"),
+        fields.get("rollup_key", "Text5"),
+        fields.get("jira_key_prefix", "Text7"),
+        "Resource Group",
+        fields.get("dependency_review", "Text8"),
+        fields.get("jira_status", "Text9"),
+        "Start",
+        "Finish",
+        fields.get("jira_target_start", "Date1"),
+        fields.get("jira_target_end", "Date2"),
+        "% Complete",
+        fields.get("total_story_points", "Number1"),
+        fields.get("completed_story_points", "Number2"),
+        fields.get("in_planning", "Flag1"),
+        fields.get("unmatched_project_task", "Flag2"),
+        fields.get("dependency_review_needed", "Flag3"),
+        fields.get("row_role", "Text11"),
+        fields.get("fix_version", "Text12"),
+        fields.get("drives_schedule", "Flag4"),
+        fields.get("primary_schedule_key", "Text13"),
+        "Predecessors",
+    ]
+    return unique_columns(standard_columns + audit_columns)
+
+
+def unique_columns(columns: List[str]) -> List[str]:
+    result: List[str] = []
+    seen = set()
+    for column in columns:
+        column_text = str(column or "").strip()
+        key = column_text.lower()
+        if not column_text or key in seen:
+            continue
+        seen.add(key)
+        result.append(column_text)
+    return result
+
+
+def project_column_title(column: str, config: Dict[str, Any]) -> str:
+    for logical_name, project_field in config.get("project_fields", {}).items():
+        if project_field == column:
+            return str(config.get("project_field_names", {}).get(logical_name) or column)
+    titles = {
+        "% Complete": "% Complete",
+        "Finish": "Finish",
+        "Name": "Name",
+        "Predecessors": "Predecessors",
+        "Resource Group": "Resource Group",
+        "Start": "Start",
+    }
+    return titles.get(column, column)
 
 
 def safe_get(task: Any, name: str) -> Any:
@@ -1026,6 +1283,12 @@ def parse_project_key_list(value: str) -> List[str]:
     import re
 
     return sorted(set(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", value.upper())))
+
+
+def project_predecessor_ids(value: str) -> List[str]:
+    import re
+
+    return re.findall(r"\b(\d+)(?:[A-Z]{0,2})?(?:[+-]\d+[a-zA-Z]+)?\b", value)
 
 
 def append_resource_name(current: str, resource_name: str) -> str:
