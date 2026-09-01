@@ -1396,6 +1396,7 @@ class MicrosoftProjectSession:
 
     def create_review_table(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
         errors: List[str] = []
+        created_from_entry = False
         try:
             result = self.app.TableEditEx(
                 Name="Entry",
@@ -1408,18 +1409,38 @@ class MicrosoftProjectSession:
             )
             if project_call_failed(result):
                 errors.append(f"TableEditEx returned False while creating {J2P_REVIEW_TABLE_NAME}.")
+            else:
+                created_from_entry = True
         except Exception as exc:
-            errors.append(f"TableEditEx create failed: {exc}")
-            return errors
+            if project_table_name_conflict_error(exc):
+                project_progress(f"{J2P_REVIEW_TABLE_NAME} table already exists; updating existing table")
+            else:
+                errors.append(f"TableEditEx create failed: {exc}")
+                return errors
 
-        columns_to_add = [
-            column for column in columns if column.strip().lower() not in PROJECT_ENTRY_TABLE_COLUMNS
-        ]
+        existing_columns = self.project_table_field_names(J2P_REVIEW_TABLE_NAME)
+        if not existing_columns and created_from_entry:
+            existing_columns = list(PROJECT_ENTRY_TABLE_COLUMNS)
+        column_errors = self.add_columns_to_table(J2P_REVIEW_TABLE_NAME, columns, config, existing_columns)
+        if column_errors:
+            errors.extend(column_errors)
+        return errors
+
+    def add_columns_to_table(
+        self,
+        table_name: str,
+        columns: List[str],
+        config: Dict[str, Any],
+        existing_columns: List[str],
+    ) -> List[str]:
+        errors: List[str] = []
+        existing = {normalize_project_column_name(column) for column in existing_columns}
+        columns_to_add = [column for column in columns if normalize_project_column_name(column) not in existing]
         for position, column in enumerate(columns_to_add, start=2):
             title = project_column_title(column, config)
             try:
                 result = self.app.TableEditEx(
-                    Name=J2P_REVIEW_TABLE_NAME,
+                    Name=table_name,
                     TaskTable=True,
                     FieldName="",
                     NewFieldName=column,
@@ -1432,10 +1453,58 @@ class MicrosoftProjectSession:
                     ShowAddNewColumn=True,
                 )
                 if project_call_failed(result):
-                    errors.append(f"TableEditEx returned False while adding {column}.")
+                    errors.append(f"TableEditEx returned False while adding {column} to {table_name}.")
             except Exception as exc:
-                errors.append(f"TableEditEx add {column} failed: {exc}")
+                if project_table_column_already_present_error(exc):
+                    continue
+                errors.append(f"TableEditEx add {column} to {table_name} failed: {exc}")
         return errors
+
+    def project_table_field_names(self, table_name: str) -> List[str]:
+        table = self.project_task_table(table_name)
+        if table is None:
+            return []
+        table_fields = safe_get(table, "TableFields")
+        if not table_fields:
+            return []
+        names: List[str] = []
+        try:
+            count = int(table_fields.Count)
+        except Exception:
+            return names
+        for index in range(1, count + 1):
+            try:
+                table_field = table_fields(index)
+            except Exception:
+                continue
+            title = str(safe_get(table_field, "Title") or "").strip()
+            if title:
+                names.append(title)
+            field_value = safe_get(table_field, "Field")
+            if field_value in ("", None):
+                continue
+            if isinstance(field_value, str):
+                names.append(field_value)
+                continue
+            try:
+                names.append(str(self.app.FieldConstantToFieldName(field_value)))
+            except Exception:
+                names.append(str(field_value))
+        return unique_columns(names)
+
+    def project_task_table(self, table_name: str) -> Any:
+        project = getattr(self, "project", None) or safe_get(self.app, "ActiveProject")
+        task_tables = safe_get(project, "TaskTables")
+        if not task_tables:
+            return None
+        try:
+            return task_tables(table_name)
+        except Exception:
+            pass
+        try:
+            return task_tables.Item(table_name)
+        except Exception:
+            return None
 
     def color_project_cell(
         self,
@@ -1603,6 +1672,20 @@ def project_column_title(column: str, config: Dict[str, Any]) -> str:
 def project_column_aliases(column: str, config: Dict[str, Any]) -> List[str]:
     title = project_column_title(column, config)
     return unique_columns([column, title])
+
+
+def normalize_project_column_name(column: str) -> str:
+    return str(column or "").strip().lower()
+
+
+def project_table_name_conflict_error(error: Any) -> bool:
+    text = str(error).lower()
+    return "already" in text and ("used" in text or "exist" in text)
+
+
+def project_table_column_already_present_error(error: Any) -> bool:
+    text = str(error).lower()
+    return "already" in text and ("column" in text or "field" in text or "table" in text)
 
 
 def project_call_failed(result: Any) -> bool:

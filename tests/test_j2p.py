@@ -664,6 +664,27 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Text9", added_columns)
         self.assertNotIn("Predecessors", added_columns)
 
+    def test_prepare_formatting_view_updates_existing_review_table_on_name_conflict(self) -> None:
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeExistingReviewTableApp(["Name", "Text1"])
+        session.project = session.app.project
+
+        errors = MicrosoftProjectSession.prepare_formatting_view(
+            session,
+            ["Name", "Text1", "Text9", "Predecessors"],
+            config,
+        )
+
+        self.assertEqual(errors, [])
+        self.assertEqual(session.app.table_apply_calls, ["j2p Review"])
+        create_calls = [call for call in session.app.table_edit_calls if call.get("Create")]
+        self.assertEqual(len(create_calls), 1)
+        added_columns = [call["NewFieldName"] for call in session.app.table_edit_calls if call.get("NewFieldName")]
+        self.assertNotIn("Text1", added_columns)
+        self.assertIn("Text9", added_columns)
+        self.assertIn("Predecessors", added_columns)
+
     def test_color_project_cell_sets_active_cell_background(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeFormattingApp()
@@ -1003,6 +1024,64 @@ class FakeReviewTableApp:
     def TableApply(self, Name: str = "") -> bool:
         self.table_apply_calls.append(Name)
         return True
+
+
+class FakeTableField:
+    def __init__(self, field: str, title: str = "") -> None:
+        self.Field = field
+        self.Title = title
+
+
+class FakeTableFields:
+    def __init__(self, fields: list[str]) -> None:
+        self.fields = fields
+
+    @property
+    def Count(self) -> int:
+        return len(self.fields)
+
+    def __call__(self, index: int) -> FakeTableField:
+        return FakeTableField(self.fields[index - 1])
+
+
+class FakeProjectTable:
+    def __init__(self, fields: list[str]) -> None:
+        self.fields = fields
+        self.TableFields = FakeTableFields(self.fields)
+
+
+class FakeTaskTables:
+    def __init__(self, tables: dict[str, FakeProjectTable]) -> None:
+        self.tables = tables
+
+    def __call__(self, name: str) -> FakeProjectTable:
+        return self.tables[name]
+
+    def Item(self, name: str) -> FakeProjectTable:
+        return self.tables[name]
+
+
+class FakeProjectWithTables:
+    def __init__(self, fields: list[str]) -> None:
+        self.TaskTables = FakeTaskTables({"j2p Review": FakeProjectTable(fields)})
+
+
+class FakeExistingReviewTableApp(FakeReviewTableApp):
+    def __init__(self, existing_fields: list[str]) -> None:
+        super().__init__()
+        self.project = FakeProjectWithTables(existing_fields)
+
+    def TableEditEx(self, **kwargs: object) -> bool:
+        self.table_edit_calls.append(kwargs)
+        if kwargs.get("Create"):
+            raise RuntimeError("The name j2p Review is already being used.")
+        new_field = str(kwargs.get("NewFieldName") or "")
+        if new_field:
+            self.project.TaskTables("j2p Review").fields.append(new_field)
+        return True
+
+    def FieldConstantToFieldName(self, field: object) -> str:
+        return str(field)
 
 
 class FakeCell:
