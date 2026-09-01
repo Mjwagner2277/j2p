@@ -733,6 +733,7 @@ class MicrosoftProjectSession:
             if task is None:
                 continue
             predecessor_ids: List[str] = []
+            predecessor_tasks: List[Any] = []
             missing_predecessors: List[str] = []
             for predecessor_key in epic.predecessors:
                 predecessor_task = task_by_key.get(predecessor_key.upper())
@@ -740,6 +741,7 @@ class MicrosoftProjectSession:
                     predecessor_id = safe_int(safe_get(predecessor_task, "ID"))
                     if predecessor_id > 0:
                         predecessor_ids.append(str(predecessor_id))
+                        predecessor_tasks.append(predecessor_task)
                     else:
                         missing_predecessors.append(predecessor_key)
                 else:
@@ -766,7 +768,7 @@ class MicrosoftProjectSession:
                 )
 
             desired = ",".join(f"{predecessor_id}FS" for predecessor_id in predecessor_ids)
-            error = self.write_project_predecessors(task, desired, predecessor_ids)
+            error = self.write_project_predecessors(task, desired, predecessor_ids, predecessor_tasks)
             if error:
                 plan.audit_items.append(
                     AuditItem(
@@ -785,25 +787,73 @@ class MicrosoftProjectSession:
                     )
                 )
 
-    def write_project_predecessors(self, task: Any, predecessor_text: str, expected_ids: List[str]) -> str:
+    def write_project_predecessors(
+        self,
+        task: Any,
+        predecessor_text: str,
+        expected_ids: List[str],
+        predecessor_tasks: Optional[List[Any]] = None,
+    ) -> str:
+        errors: List[str] = []
+        predecessor_tasks = predecessor_tasks or []
+        clear_error = self.set_project_predecessor_text(task, "")
+        if clear_error:
+            errors.append(f"clear failed: {clear_error}")
+
+        if predecessor_tasks:
+            link_errors = []
+            for predecessor_task in predecessor_tasks:
+                link_error = self.link_project_predecessor(task, predecessor_task)
+                if link_error:
+                    link_errors.append(link_error)
+            error = verify_project_predecessors(task, expected_ids)
+            if not error and not link_errors:
+                return ""
+            if link_errors:
+                errors.append("object linking failed: " + " | ".join(link_errors))
+            if error:
+                errors.append(f"object-link readback failed: {error}")
+
+        text_error = self.set_project_predecessor_text(task, predecessor_text)
+        if text_error:
+            errors.append(f"text write failed: {text_error}")
+        error = verify_project_predecessors(task, expected_ids)
+        if not error:
+            return ""
+        errors.append(f"text-write readback failed: {error}")
+        return " ".join(errors)
+
+    def set_project_predecessor_text(self, task: Any, predecessor_text: str) -> str:
+        errors = []
         try:
             task.Predecessors = predecessor_text
+            return ""
         except Exception as exc:
-            return f"Microsoft Project rejected predecessor value '{predecessor_text}': {exc}"
+            errors.append(f"Task.Predecessors rejected '{predecessor_text}': {exc}")
 
-        current_ids = project_predecessor_ids(str(safe_get(task, "Predecessors")))
-        missing_ids = [predecessor_id for predecessor_id in expected_ids if predecessor_id not in current_ids]
-        if missing_ids:
+        try:
+            field_id = self.app.FieldNameToFieldConstant("Predecessors")
+            task.SetField(field_id, predecessor_text)
+            return ""
+        except Exception as exc:
+            errors.append(f"Task.SetField rejected '{predecessor_text}': {exc}")
+        return " | ".join(errors)
+
+    def link_project_predecessor(self, task: Any, predecessor_task: Any) -> str:
+        predecessor_id = safe_get(predecessor_task, "ID")
+        try:
+            task.LinkPredecessors(Tasks=predecessor_task)
+            return ""
+        except Exception as exc:
+            keyword_error = exc
+        try:
+            task.LinkPredecessors(predecessor_task)
+            return ""
+        except Exception as exc:
             return (
-                f"Microsoft Project did not retain predecessor ID(s) {', '.join(missing_ids)} "
-                f"after writing '{predecessor_text}'. Current Project value: '{safe_get(task, 'Predecessors')}'."
+                f"LinkPredecessors rejected predecessor task ID {predecessor_id}: "
+                f"{keyword_error}; fallback: {exc}"
             )
-        if not expected_ids and project_predecessor_ids(str(safe_get(task, "Predecessors"))):
-            return (
-                "Microsoft Project did not clear the predecessor field. "
-                f"Current Project value: '{safe_get(task, 'Predecessors')}'."
-            )
-        return ""
 
     def mark_unmatched_tasks(
         self,
@@ -1314,6 +1364,24 @@ def project_predecessor_ids(value: str) -> List[str]:
     import re
 
     return re.findall(r"\b(\d+)(?:[A-Z]{0,2})?(?:[+-]\d+[a-zA-Z]+)?\b", value)
+
+
+def verify_project_predecessors(task: Any, expected_ids: List[str]) -> str:
+    current_value = str(safe_get(task, "Predecessors"))
+    current_ids = project_predecessor_ids(current_value)
+    missing_ids = [predecessor_id for predecessor_id in expected_ids if predecessor_id not in current_ids]
+    unexpected_ids = [predecessor_id for predecessor_id in current_ids if predecessor_id not in expected_ids]
+    if missing_ids:
+        return (
+            f"Microsoft Project did not retain predecessor ID(s) {', '.join(missing_ids)}. "
+            f"Current Project value: '{current_value}'."
+        )
+    if unexpected_ids:
+        return (
+            f"Microsoft Project retained unexpected predecessor ID(s) {', '.join(unexpected_ids)}. "
+            f"Current Project value: '{current_value}'."
+        )
+    return ""
 
 
 def append_resource_name(current: str, resource_name: str) -> str:

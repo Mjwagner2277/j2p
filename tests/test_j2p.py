@@ -726,6 +726,104 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(task.Predecessors, "3FS,4FS")
         self.assertEqual(project_predecessor_ids("3FS,4SS+2d"), ["3", "4"])
 
+    def test_write_project_predecessors_prefers_project_object_links(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        predecessor = FakeLinkableTask(3)
+        task = FakeLinkableTask(7)
+
+        error = MicrosoftProjectSession.write_project_predecessors(
+            session,
+            task,
+            "3FS",
+            ["3"],
+            [predecessor],
+        )
+
+        self.assertEqual(error, "")
+        self.assertEqual(task.link_calls, [3])
+        self.assertEqual(task.text_writes, [""])
+        self.assertEqual(task.Predecessors, "3FS")
+
+    def test_apply_dependencies_links_project_task_objects(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        predecessor = FakeLinkableTask(3)
+        task = FakeLinkableTask(7)
+        plan = RunPlan(
+            generated_at="2026-01-01T00:00:00",
+            jira_csv="unit.csv",
+            rollup_mode="initiative",
+            column_map={},
+            stats={},
+            summaries={},
+            epics={
+                "TEAM-1": PlanEpic(
+                    key="TEAM-1",
+                    issue_id="1",
+                    summary="Predecessor",
+                    status="In Progress",
+                    rollup_mode="initiative",
+                    rollup_key="PROD-1",
+                    rollup_name="Program",
+                    resource_group="Product Delivery",
+                    key_prefix="TEAM",
+                    total_story_points=1,
+                    completed_story_points=0,
+                    logged_hours=0,
+                    completed_logged_hours=0,
+                    hours_accuracy_percent=0,
+                    percent_complete=0,
+                    in_planning=False,
+                    completed=False,
+                    target_start="",
+                    target_end="",
+                ),
+                "TEAM-2": PlanEpic(
+                    key="TEAM-2",
+                    issue_id="2",
+                    summary="Successor",
+                    status="In Progress",
+                    rollup_mode="initiative",
+                    rollup_key="PROD-1",
+                    rollup_name="Program",
+                    resource_group="Product Delivery",
+                    key_prefix="TEAM",
+                    total_story_points=1,
+                    completed_story_points=0,
+                    logged_hours=0,
+                    completed_logged_hours=0,
+                    hours_accuracy_percent=0,
+                    percent_complete=0,
+                    in_planning=False,
+                    completed=False,
+                    target_start="",
+                    target_end="",
+                    predecessors=["TEAM-1"],
+                ),
+            },
+            audit_items=[],
+        )
+
+        MicrosoftProjectSession.apply_dependencies(
+            session,
+            plan,
+            {
+                "TEAM-1": predecessor,
+                "TEAM-2": task,
+            },
+        )
+
+        self.assertEqual(plan.audit_items, [])
+        self.assertEqual(task.link_calls, [3])
+        self.assertEqual(task.Predecessors, "3FS")
+
+    def test_write_project_predecessors_reports_stale_extra_ids(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        task = FakeStalePredecessorTask()
+
+        error = MicrosoftProjectSession.write_project_predecessors(session, task, "3FS", ["3"])
+
+        self.assertIn("unexpected predecessor ID(s) 4", error)
+
 
 class FakeProjectApp:
     def __init__(self) -> None:
@@ -973,6 +1071,46 @@ class FakeTask:
     def __init__(self) -> None:
         self.Assignments = FakeAssignments()
         self.ResourceNames = ""
+
+
+class FakeLinkableTask(FakeTask):
+    def __init__(self, task_id: int) -> None:
+        super().__init__()
+        self.ID = task_id
+        self._predecessors = ""
+        self.link_calls = []
+        self.text_writes = []
+
+    @property
+    def Predecessors(self) -> str:
+        return self._predecessors
+
+    @Predecessors.setter
+    def Predecessors(self, value: object) -> None:
+        self.text_writes.append(str(value))
+        self._predecessors = str(value)
+
+    def LinkPredecessors(self, *args: object, **kwargs: object) -> None:
+        predecessor = kwargs.get("Tasks") if "Tasks" in kwargs else args[0]
+        predecessor_id = int(getattr(predecessor, "ID"))
+        self.link_calls.append(predecessor_id)
+        current = self._predecessors.strip()
+        value = f"{predecessor_id}FS"
+        self._predecessors = f"{current},{value}" if current else value
+
+
+class FakeStalePredecessorTask(FakeTask):
+    def __init__(self) -> None:
+        super().__init__()
+        self._predecessors = "3FS,4FS"
+
+    @property
+    def Predecessors(self) -> str:
+        return self._predecessors
+
+    @Predecessors.setter
+    def Predecessors(self, _value: object) -> None:
+        return
 
 
 if __name__ == "__main__":
