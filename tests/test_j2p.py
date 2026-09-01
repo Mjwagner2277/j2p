@@ -444,6 +444,25 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertTrue(output_path.parent.exists())
             self.assertEqual(session.app.save_as_paths, [str(output_path.resolve())])
 
+    def test_new_uses_projects_add_without_dialogs(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeNewProjectApp()
+
+        MicrosoftProjectSession.new(session)
+
+        self.assertIs(session.project, session.app.project)
+        self.assertEqual(session.app.Projects.add_calls, [(False, "", False)])
+        self.assertEqual(session.app.view_calls, ["&Gantt Chart"])
+
+    def test_new_can_fallback_to_filenew(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeFileNewOnlyApp()
+
+        MicrosoftProjectSession.new(session)
+
+        self.assertIs(session.project, session.app.project)
+        self.assertEqual(session.app.file_new_calls, [(False, "", False, False)])
+
     def test_application_visibility_is_best_effort(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeVisibilityRejectingApp()
@@ -508,6 +527,54 @@ class FakeProjectApp:
 
     def FileSaveAs(self, Name: str) -> None:
         self.save_as_paths.append(Name)
+
+
+class FakeProjects:
+    def __init__(self, project: object) -> None:
+        self.project = project
+        self.add_calls = []
+
+    def Add(self, DisplayProjectInfo: bool = True, Template: str = "", FileNewDialog: bool = True) -> object:
+        self.add_calls.append((DisplayProjectInfo, Template, FileNewDialog))
+        return self.project
+
+
+class FakeNewProjectApp:
+    def __init__(self) -> None:
+        self.project = object()
+        self.ActiveProject = self.project
+        self.Projects = FakeProjects(self.project)
+        self.view_calls = []
+
+    def ViewApply(self, Name: str = "") -> None:
+        self.view_calls.append(Name)
+
+
+class FakeFailingProjects:
+    def Add(self, *_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("Projects.Add rejected")
+
+
+class FakeFileNewOnlyApp:
+    def __init__(self) -> None:
+        self.project = object()
+        self.ActiveProject = None
+        self.Projects = FakeFailingProjects()
+        self.file_new_calls = []
+        self.view_calls = []
+
+    def FileNew(
+        self,
+        SummaryInfo: bool = True,
+        Template: str = "",
+        FileNewDialog: bool = True,
+        FileNewWorkpane: bool = True,
+    ) -> None:
+        self.file_new_calls.append((SummaryInfo, Template, FileNewDialog, FileNewWorkpane))
+        self.ActiveProject = self.project
+
+    def ViewApply(self, Name: str = "") -> None:
+        self.view_calls.append(Name)
 
 
 class FakeVisibilityRejectingApp:

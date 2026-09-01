@@ -127,12 +127,69 @@ class MicrosoftProjectSession:
         except Exception:
             self.app.FileOpen(str(path))
         self.project = self.app.ActiveProject
-        self.app.ViewApply(Name="&Gantt Chart")
+        self.apply_gantt_chart_view()
 
     def new(self) -> None:
-        self.app.FileNew()
-        self.project = self.app.ActiveProject
-        self.app.ViewApply(Name="&Gantt Chart")
+        self.project = self.create_blank_project()
+        if self.project is None:
+            self.project = safe_get(self.app, "ActiveProject")
+        if not self.project:
+            raise ProjectAutomationError(
+                "Microsoft Project did not return an active blank project after creating a new file."
+            )
+        self.apply_gantt_chart_view()
+
+    def create_blank_project(self) -> Any:
+        errors = []
+        projects = safe_get(self.app, "Projects")
+        if projects:
+            for create_project in (
+                lambda: projects.Add(DisplayProjectInfo=False, Template="", FileNewDialog=False),
+                lambda: projects.Add(False, "", False),
+                lambda: projects.Add(False),
+            ):
+                try:
+                    project = create_project()
+                    return project or safe_get(self.app, "ActiveProject")
+                except Exception as exc:
+                    errors.append(str(exc))
+
+        for create_project in (
+            lambda: self.app.FileNew(
+                SummaryInfo=False,
+                Template="",
+                FileNewDialog=False,
+                FileNewWorkpane=False,
+            ),
+            lambda: self.app.FileNew(False, "", False, False),
+            lambda: self.app.FileNew(),
+        ):
+            try:
+                create_project()
+                project = safe_get(self.app, "ActiveProject")
+                if project:
+                    return project
+            except Exception as exc:
+                errors.append(str(exc))
+
+        detail = errors[-1] if errors else "no Project creation method was available"
+        raise ProjectAutomationError(
+            "Could not create a blank Microsoft Project file through COM. "
+            "This can happen when Project is not fully initialized, a Project startup/template dialog is open, "
+            "or the installed Project edition blocks blank-file automation. "
+            f"Last Project error: {detail}"
+        )
+
+    def apply_gantt_chart_view(self) -> None:
+        try:
+            self.app.ViewApply(Name="&Gantt Chart")
+            return
+        except Exception:
+            pass
+        try:
+            self.app.ViewApply("&Gantt Chart")
+        except Exception:
+            pass
 
     def save(self) -> None:
         self.app.FileSave()
@@ -773,10 +830,7 @@ class MicrosoftProjectSession:
             )
 
     def prepare_formatting_view(self) -> None:
-        try:
-            self.app.ViewApply(Name="&Gantt Chart")
-        except Exception:
-            pass
+        self.apply_gantt_chart_view()
         try:
             self.app.FilterClear()
         except Exception:

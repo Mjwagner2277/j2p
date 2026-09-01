@@ -98,6 +98,8 @@ py -3.14 -m j2p create `
   --output-project-name j2p-initial-sandbox.mpp
 ```
 
+If Microsoft Project blocks blank-file creation on a workstation, create a blank `.mpp` manually once and use `update` with that file as `--main-project`. Normal production runs should use `update` against an existing source-of-truth `.mpp`.
+
 Update a sandbox copy from the source-of-truth `.mpp`:
 
 ```powershell
