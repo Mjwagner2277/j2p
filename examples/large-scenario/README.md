@@ -15,6 +15,8 @@ Rows 2-35 start the client walkthrough. Rows 17-35 are the authored epic example
 | `report-example\j2p-run-updated-1200\Manager-Review-Report.html` | Generated manager report for the updated CSV |
 | `report-example\j2p-run-updated-1200\by-project-key\index.csv` | Index of the per-project-key CSV outputs |
 
+No `.mpp` files are committed in this example folder. The committed `report-example` folders were created with `validate`, so they contain report files only. To create Project files you can open in Microsoft Project, use Step 5 on a Windows machine with Microsoft Project installed.
+
 The CSVs are authored fixtures maintained by a generator so line counts and scale rows stay consistent. They are not random. Rebuild them only when changing the training scenario:
 
 ```powershell
@@ -82,7 +84,7 @@ The `UNK` prefix is intentionally not configured. It appears in the report as an
 
 ## Step 3: Run The Baseline Export
 
-This writes the baseline state file used for comparison.
+This report-only command writes the baseline state file used for comparison. It does not create a Microsoft Project file.
 
 ```powershell
 py -3.14 -m j2p validate `
@@ -101,6 +103,8 @@ examples\large-scenario\report-example\j2p-run-baseline-1200\
 
 ## Step 4: Run The Updated Export Against The Baseline
 
+This report-only command writes the updated manager report and CSV audit files. It does not create a Microsoft Project file.
+
 ```powershell
 py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
@@ -116,7 +120,127 @@ Open the generated manager report:
 examples\large-scenario\report-example\j2p-run-updated-1200\Manager-Review-Report.html
 ```
 
-## Step 5: Walk The Manager Report
+## Step 5: Create Project Files For Windows Review
+
+Use this step when training users need to open `.mpp` files in Microsoft Project.
+
+Important command distinction:
+
+| Command | Creates An `.mpp`? | Use In This Scenario |
+| --- | --- | --- |
+| `validate` | No | Create report-only examples and check Jira/config quality. |
+| `create` | Yes | Create a baseline training `.mpp` from the baseline CSV. |
+| `update` | Yes | Copy the baseline `.mpp` to a sandbox and apply the updated CSV. |
+
+Prerequisites on the Windows machine:
+
+- Python 3.14.2
+- Microsoft Project desktop
+- j2p installed with Project automation support
+
+Install from the repository root:
+
+```powershell
+py -3.14 -m pip install -e ".[project]"
+```
+
+### Create The Baseline Training Project
+
+This command creates a baseline `.mpp` from the baseline Jira CSV. For this walkthrough, treat the created file as the training source-of-truth Project file.
+
+```powershell
+py -3.14 -m j2p create `
+  --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
+  --config .\examples\large-scenario\config.large-example.yaml `
+  --output-dir .\review-output\large-scenario-project `
+  --run-id baseline-project `
+  --output-project-name Large-Scenario-Baseline-Source.mpp `
+  --visible
+```
+
+Expected baseline Project file:
+
+```text
+review-output\large-scenario-project\j2p-run-baseline-project\Large-Scenario-Baseline-Source.mpp
+```
+
+Open this file if you want to see the baseline schedule before the update. Do not edit it during the walkthrough; the next command copies it and updates the sandbox copy.
+
+### Update A Sandbox From The Baseline Project
+
+This command copies the baseline `.mpp` to a timestamped sandbox and applies the updated Jira CSV.
+
+```powershell
+py -3.14 -m j2p update `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
+  --main-project .\review-output\large-scenario-project\j2p-run-baseline-project\Large-Scenario-Baseline-Source.mpp `
+  --config .\examples\large-scenario\config.large-example.yaml `
+  --output-dir .\review-output\large-scenario-project `
+  --run-id updated-project-review `
+  --visible
+```
+
+Expected sandbox Project file:
+
+```text
+review-output\large-scenario-project\j2p-run-updated-project-review\Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp
+```
+
+Expected manager report for the Project update:
+
+```text
+review-output\large-scenario-project\j2p-run-updated-project-review\Manager-Review-Report.html
+```
+
+Open the sandbox `.mpp`, not the baseline source file, for review.
+
+### Review The Sandbox In Microsoft Project
+
+In Microsoft Project:
+
+1. Open `Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp`.
+2. Use the Gantt Chart view.
+3. If review columns are not visible, insert the columns listed in `FIELD_MAPPING.md`.
+4. Start with these columns: `Jira Key`, `j2p Unique Key`, `j2p Row Role`, `Rollup Key`, `Resource Group`, `% Complete`, `Jira Target Start`, `Jira Target End`, `Dependency Review`, `In Planning`, and `Drives Schedule`.
+5. Use `Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key.
+6. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and in-planning rows.
+
+Training keys to find in the sandbox:
+
+| Jira Key | What To Review In The `.mpp` |
+| --- | --- |
+| `CORE-1000` | Name changed from the baseline; changed cell should be green. |
+| `CORE-1001` | Percent/date changes from child story updates. |
+| `CORE-1004` | Intended red finish-date driver candidate after Project auto-scheduling. |
+| `CORE-1005` | Downstream schedule item from the `CORE-1004` dependency path. |
+| `CORE-1006` | Missing dependency target in the Dependency Review field. |
+| `CORE-1007` | Valid dependency change. |
+| `CORE-1980` | New epic added to the sandbox. |
+| `WEB-2010` | In-planning epic with no pointed child work. |
+| `PLAT-4028` | Default reference multi-fixVersion behavior. Confirm primary and reference rows. |
+| `OPS-5019` | Split multi-fixVersion behavior. Confirm both rows drive schedule. |
+
+For `PLAT-4028`, the sandbox should show two rows with the same `Jira Key`:
+
+| Row | Expected Values |
+| --- | --- |
+| Primary row | `j2p Row Role` = `Primary`, `Drives Schedule` = `Yes`, `j2p Unique Key` = `PLAT-4028` |
+| Reference row | `j2p Row Role` = `Reference`, `Drives Schedule` = `No`, `Primary Schedule Key` = `PLAT-4028` |
+
+For `OPS-5019`, the sandbox should show split rows where `Drives Schedule` is `Yes`.
+
+### If You Do Not See A Project File
+
+Use this quick check:
+
+| What Happened | Likely Cause | Fix |
+| --- | --- | --- |
+| You see HTML/CSV reports but no `.mpp`. | You ran `validate`. | Run `create` or `update`. |
+| `update` failed before writing a sandbox. | `--main-project` did not point to an existing `.mpp`. | Create the baseline `.mpp` first or point to a real source-of-truth `.mpp`. |
+| Microsoft Project did not open. | The machine is missing Microsoft Project desktop or `pywin32`. | Install with `py -3.14 -m pip install -e ".[project]"` and run on Windows with Project installed. |
+| You opened the source file and do not see updates. | j2p updated the sandbox copy, not the source file. | Open the `.sandbox.updated-project-review.mpp` file in the update run folder. |
+
+## Step 6: Walk The Manager Report
 
 Start at `Executive Summary`.
 
@@ -185,7 +309,7 @@ Data-quality rows that do not produce Project cell colors:
 | Blank Jira key | updated row 201 | The CSV row is skipped and reported in `Reviewer Action Needed` |
 | Orphan child story | updated row 202, `CORE-899999` | The story is not counted toward any epic because `Epic Link` is blank |
 
-## Step 6: Review Per-Project-Key CSVs
+## Step 7: Review Per-Project-Key CSVs
 
 Open:
 
@@ -216,17 +340,9 @@ Each folder contains:
 
 `UNK` and `UNASSIGNED` are useful review folders. They do not represent included teams; they show data-quality issues that need cleanup.
 
-## Step 7: Understand The Red Case
+## Step 8: Understand The Red Case
 
-The red cascade-root color cannot be selected in `validate` mode because no Microsoft Project schedule engine is running. It is selected during:
-
-```powershell
-py -3.14 -m j2p update `
-  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
-  --main-project .\path\to\Program-Source-Of-Truth.mpp `
-  --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
-```
+The red cascade-root color cannot be selected in `validate` mode because no Microsoft Project schedule engine is running. It is selected during a Windows `update` run, such as the sandbox update command in Step 5.
 
 For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 
@@ -234,7 +350,7 @@ For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 - `CORE-1005` is the downstream dependent epic.
 - In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports the first/root finish-date driver as red and downstream finish-date changes as green.
 
-## Step 8: Manager Decisions
+## Step 9: Manager Decisions
 
 Use the report to make these decisions:
 

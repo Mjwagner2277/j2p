@@ -39,7 +39,7 @@ Contributors changing code, tests, fixtures, or generated examples should use `d
 From the repository root:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 ```
 
 If the machine does not need to write `.mpp` files, install without the Project automation extra:

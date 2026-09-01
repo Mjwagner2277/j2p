@@ -73,7 +73,7 @@ py -3.14 -m j2p validate `
 The cross-platform smoke test does not open Microsoft Project. Before a release that changes `j2p/project.py`, also run this on a Windows machine with Microsoft Project desktop and `pywin32` installed:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 
 py -3.14 -m j2p update `
   --jira-csv .\examples\project-wide-jira-update.csv `

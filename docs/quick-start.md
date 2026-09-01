@@ -21,7 +21,7 @@ This is the short path. For the full product-user write-up, including YAML field
 On the Windows machine that will write `.mpp` files:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 ```
 
 For report-only validation on a non-Project machine:

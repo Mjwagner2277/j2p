@@ -64,7 +64,7 @@ For full Microsoft Project create/update use, run j2p on a Windows machine with:
 Install from the repository root:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 ```
 
 For report-only validation on macOS, Linux, or a Windows machine without Microsoft Project:

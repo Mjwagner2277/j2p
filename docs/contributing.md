@@ -63,7 +63,7 @@ When in doubt, keep user-facing workflow and configuration explanations in `docs
 From the repository root:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 ```
 
 For report-only development on macOS or Linux:

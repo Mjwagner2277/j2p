@@ -20,7 +20,7 @@ For `.mpp` create/update:
 Install:
 
 ```powershell
-py -3.14 -m pip install -e .[project]
+py -3.14 -m pip install -e ".[project]"
 ```
 
 ## Step 1: Validate The Initial Export
