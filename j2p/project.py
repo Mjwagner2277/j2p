@@ -713,7 +713,8 @@ class MicrosoftProjectSession:
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         task_by_key = self.index_tasks_by_key(config)
-        for item in plan.audit_items:
+        formatting_warnings = []
+        for item in list(plan.audit_items):
             if not item.jira_key or not item.color:
                 continue
             lookup_key = (item.schedule_key or item.jira_key).upper()
@@ -724,11 +725,33 @@ class MicrosoftProjectSession:
             if not column:
                 continue
             color = config.get("colors", {}).get(item.color, item.color)
-            try:
-                self.app.SelectTaskField(Row=int(task.ID), Column=column, RowRelative=False)
-                self.app.Font32Ex(CellColor=project_color(color))
-            except Exception:
+            if self.color_project_cell(task, column, color):
                 continue
+            formatting_warnings.append(
+                AuditItem(
+                    "Warning",
+                    "ProjectCellColoringFailed",
+                    jira_key=item.jira_key,
+                    schedule_key=item.schedule_key,
+                    issue_type=item.issue_type,
+                    summary=item.summary,
+                    field=item.field,
+                    color="review_needed",
+                    message=f"Could not color the Project cell for column '{column}'.",
+                    reviewer_action="Use the manager report and audit CSV for this review item if the sandbox cell is not colored.",
+                    source_row=item.source_row,
+                )
+            )
+        plan.audit_items.extend(formatting_warnings)
+
+    def color_project_cell(self, task: Any, column: str, hex_color: str) -> bool:
+        try:
+            self.app.SelectTaskField(Row=int(task.ID), Column=column, RowRelative=False)
+            active_cell = self.app.ActiveCell
+            active_cell.CellColorEx = project_color(hex_color)
+            return True
+        except Exception:
+            return False
 
 
 def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> str:

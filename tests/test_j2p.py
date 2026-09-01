@@ -427,6 +427,16 @@ class J2PPlanningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside the Microsoft Project supported range"):
             project_date_for_com("1800-01-01", "Start")
 
+    def test_color_project_cell_sets_active_cell_background(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeFormattingApp()
+        task = FakeTask()
+        task.ID = 7
+
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Jira Key", "#C6EFCE"))
+        self.assertEqual(session.app.select_calls, [(7, "Jira Key", False)])
+        self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
+
 
 class FakeProjectApp:
     def __init__(self) -> None:
@@ -434,6 +444,20 @@ class FakeProjectApp:
 
     def FileCloseEx(self, Save: int, NoAuto: bool, CheckIn: bool) -> None:
         self.close_ex_calls.append((Save, NoAuto, CheckIn))
+
+
+class FakeCell:
+    def __init__(self) -> None:
+        self.CellColorEx = 0
+
+
+class FakeFormattingApp:
+    def __init__(self) -> None:
+        self.ActiveCell = FakeCell()
+        self.select_calls = []
+
+    def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> None:
+        self.select_calls.append((Row, Column, RowRelative))
 
 
 class FakeAssignment:

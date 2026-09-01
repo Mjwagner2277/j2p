@@ -213,6 +213,8 @@ The manager report intentionally keeps rollup status and review-required items a
 | Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
+j2p applies sandbox colors through Project cell background formatting. If Project rejects a specific cell-formatting operation, the run continues and adds a `ProjectCellColoringFailed` item to the report instead of opening a formatting dialog.
+
 ## CSV Inputs
 
 j2p accepts configurable column names. The examples use standard Jira export-style headers.
