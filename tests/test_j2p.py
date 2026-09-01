@@ -18,7 +18,12 @@ from j2p.core import (
     snapshots_from_state,
     write_json,
 )
-from j2p.project import MicrosoftProjectSession, append_resource_name, project_date_for_com
+from j2p.project import (
+    MicrosoftProjectSession,
+    append_resource_name,
+    project_column_for_audit_field,
+    project_date_for_com,
+)
 from j2p.reports import write_reports
 
 
@@ -466,15 +471,31 @@ class J2PPlanningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside the Microsoft Project supported range"):
             project_date_for_com("1800-01-01", "Start")
 
+    def test_project_column_for_audit_field_uses_stable_custom_field_ids(self) -> None:
+        config = load_config(EXAMPLES / "config.example.yaml")
+
+        self.assertEqual(project_column_for_audit_field("Rollup Key", config), "Text5")
+        self.assertEqual(project_column_for_audit_field("Jira Target End", config), "Date2")
+        self.assertEqual(project_column_for_audit_field("Resource Group", config), "Resource Group")
+
     def test_color_project_cell_sets_active_cell_background(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeFormattingApp()
         task = FakeTask()
         task.ID = 7
 
-        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Jira Key", "#C6EFCE"))
-        self.assertEqual(session.app.select_calls, [(7, "Jira Key", False)])
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text1", "#C6EFCE"))
+        self.assertEqual(session.app.select_calls, [("cell", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
+
+    def test_color_project_cell_can_fall_back_to_font32ex(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeFontFallbackFormattingApp()
+        task = FakeTask()
+        task.ID = 8
+
+        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertEqual(session.app.font32_colors, [13551615])
 
 
 class FakeProjectApp:
@@ -520,8 +541,43 @@ class FakeFormattingApp:
         self.ActiveCell = FakeCell()
         self.select_calls = []
 
+    def SelectTaskCell(self, Row: int, Column: str, RowRelative: bool) -> None:
+        self.select_calls.append(("cell", Row, Column, RowRelative))
+
     def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> None:
-        self.select_calls.append((Row, Column, RowRelative))
+        self.select_calls.append(("field", Row, Column, RowRelative))
+
+
+class FakeRejectingCell:
+    @property
+    def CellColorEx(self) -> int:
+        return 0
+
+    @CellColorEx.setter
+    def CellColorEx(self, _value: int) -> None:
+        raise AttributeError("CellColorEx cannot be set")
+
+
+class FakeFontFallbackFormattingApp(FakeFormattingApp):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ActiveCell = FakeRejectingCell()
+        self.font32_colors = []
+
+    def Font32Ex(
+        self,
+        _name: object,
+        _size: object,
+        _bold: object,
+        _italic: object,
+        _underline: object,
+        _color: object,
+        _reset: object,
+        cell_color: int,
+        _pattern: object,
+        _strikethrough: object,
+    ) -> None:
+        self.font32_colors.append(cell_color)
 
 
 class FakeAssignment:

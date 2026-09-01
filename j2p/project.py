@@ -80,11 +80,13 @@ class MicrosoftProjectSession:
             )
         try:
             import win32com.client  # type: ignore
+            import pythoncom  # type: ignore
         except ImportError as exc:
             raise ProjectAutomationError(
                 "pywin32 is required for Microsoft Project automation. Install it with: py -m pip install pywin32"
             ) from exc
         self.win32com = win32com.client
+        self.pythoncom = pythoncom
         self.visible = visible
         self.app: Any = None
         self.project: Any = None
@@ -734,7 +736,8 @@ class MicrosoftProjectSession:
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         task_by_key = self.index_tasks_by_key(config)
-        formatting_warnings = []
+        self.prepare_formatting_view()
+        failed_columns: Dict[str, int] = {}
         for item in list(plan.audit_items):
             if not item.jira_key or not item.color:
                 continue
@@ -748,35 +751,98 @@ class MicrosoftProjectSession:
             color = config.get("colors", {}).get(item.color, item.color)
             if self.color_project_cell(task, column, color):
                 continue
-            formatting_warnings.append(
+            failed_columns[column] = failed_columns.get(column, 0) + 1
+        if failed_columns:
+            total = sum(failed_columns.values())
+            columns = ", ".join(f"{column} ({count})" for column, count in sorted(failed_columns.items()))
+            plan.audit_items.append(
                 AuditItem(
                     "Warning",
                     "ProjectCellColoringFailed",
-                    jira_key=item.jira_key,
-                    schedule_key=item.schedule_key,
-                    issue_type=item.issue_type,
-                    summary=item.summary,
-                    field=item.field,
+                    field="Project Cell Formatting",
                     color="review_needed",
-                    message=f"Could not color the Project cell for column '{column}'.",
-                    reviewer_action="Use the manager report and audit CSV for this review item if the sandbox cell is not colored.",
-                    source_row=item.source_row,
+                    message=(
+                        f"Could not color {total} Project cell(s). Failed Project columns: {columns}. "
+                        "The underlying task data was still written where Project accepted the field values."
+                    ),
+                    reviewer_action=(
+                        "Review the manager report and audit CSV for changed fields. If colored cells are required, "
+                        "open the sandbox in Project and confirm the review columns are available in the active task table."
+                    ),
                 )
             )
-        plan.audit_items.extend(formatting_warnings)
+
+    def prepare_formatting_view(self) -> None:
+        try:
+            self.app.ViewApply(Name="&Gantt Chart")
+        except Exception:
+            pass
+        try:
+            self.app.FilterClear()
+        except Exception:
+            pass
+        try:
+            self.app.GroupApply(Name="No Group")
+        except Exception:
+            pass
+        try:
+            self.app.OutlineShowAllTasks()
+        except Exception:
+            pass
 
     def color_project_cell(self, task: Any, column: str, hex_color: str) -> bool:
+        color = project_color(hex_color)
+        if not self.select_project_cell(task, column):
+            return False
+        if self.color_active_cell(color):
+            return True
+        return self.font32_cell_color(color)
+
+    def select_project_cell(self, task: Any, column: str) -> bool:
+        row = int(safe_get(task, "ID") or 0)
+        if row <= 0:
+            return False
         try:
-            self.app.SelectTaskField(Row=int(task.ID), Column=column, RowRelative=False)
+            self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
+            return True
+        except Exception:
+            pass
+        try:
+            self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
+            return True
+        except Exception:
+            return False
+
+    def color_active_cell(self, color: int) -> bool:
+        try:
             active_cell = self.app.ActiveCell
-            active_cell.CellColorEx = project_color(hex_color)
+            active_cell.CellColorEx = color
+            return True
+        except Exception:
+            return False
+
+    def font32_cell_color(self, color: int) -> bool:
+        try:
+            missing = getattr(getattr(self, "pythoncom", None), "Missing", None)
+            self.app.Font32Ex(
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                False,
+                color,
+                missing,
+                missing,
+            )
             return True
         except Exception:
             return False
 
 
 def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> str:
-    names = config.get("project_field_names", {})
+    fields = config.get("project_fields", {})
     mapping = {
         "Name": "Name",
         "% Complete": "% Complete",
@@ -785,18 +851,18 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Finish": "Finish",
         "Start": "Start",
         "Resource Group": "Resource Group",
-        "Rollup Key": names.get("rollup_key", "Rollup Key"),
-        "Schedule Key": names.get("j2p_key", "j2p Unique Key"),
-        "Row Role": names.get("row_role", "j2p Row Role"),
-        "Fix Version": names.get("fix_version", "Jira Fix Version"),
-        "Drives Schedule": names.get("drives_schedule", "Drives Schedule"),
-        "Primary Schedule Key": names.get("primary_schedule_key", "Primary Schedule Key"),
-        "Total Story Points": names.get("total_story_points", "Total Story Points"),
-        "Completed Story Points": names.get("completed_story_points", "Completed Story Points"),
-        "In Planning": names.get("in_planning", "In Planning"),
-        "Dependency Review": names.get("dependency_review", "Dependency Review"),
-        "Jira Target Start": names.get("jira_target_start", "Jira Target Start"),
-        "Jira Target End": names.get("jira_target_end", "Jira Target End"),
+        "Rollup Key": fields.get("rollup_key", "Text5"),
+        "Schedule Key": fields.get("j2p_key", "Text10"),
+        "Row Role": fields.get("row_role", "Text11"),
+        "Fix Version": fields.get("fix_version", "Text12"),
+        "Drives Schedule": fields.get("drives_schedule", "Flag4"),
+        "Primary Schedule Key": fields.get("primary_schedule_key", "Text13"),
+        "Total Story Points": fields.get("total_story_points", "Number1"),
+        "Completed Story Points": fields.get("completed_story_points", "Number2"),
+        "In Planning": fields.get("in_planning", "Flag1"),
+        "Dependency Review": fields.get("dependency_review", "Text8"),
+        "Jira Target Start": fields.get("jira_target_start", "Date1"),
+        "Jira Target End": fields.get("jira_target_end", "Date2"),
     }
     return mapping.get(field_name, "")
 
