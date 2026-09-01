@@ -101,7 +101,6 @@ project_fields:
   jira_issue_type: Text3
   rollup_mode: Text4
   rollup_key: Text5
-  resource_group: Text6
   jira_key_prefix: Text7
   dependency_review: Text8
   jira_status: Text9
@@ -130,7 +129,7 @@ project_fields:
 | `multi_fixversion_policy` | No | `reference` | `reference`, `split` | Controls how fixVersion-mode epics with multiple fixVersions are represented. |
 | `columns` | Recommended | Built-in defaults | Mapping of logical j2p fields to one or more CSV headers | Lets j2p read different Jira export header names. |
 | `behavior` | No | Built-in defaults | Mapping | Operational guardrails. |
-| `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. |
+| `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
 | `colors` | No | Built-in defaults | Hex colors | Controls cell highlight colors. Usually omitted. |
 
@@ -207,7 +206,7 @@ Rules:
 
 - A Jira epic prefix must be present in `resource_groups` to be included.
 - Unknown prefixes are excluded and reported by default.
-- The mapped value is written to the Project resource group field.
+- The mapped value is written to the native Microsoft Project `Resource Group` field.
 
 Use this section as the authoritative list of Jira project keys that j2p is allowed to schedule.
 
@@ -356,6 +355,8 @@ Current guardrail:
 
 Maps j2p values to Microsoft Project task custom fields.
 
+`Resource Group` is not listed here because it is a native Microsoft Project field. Use the top-level `resource_groups` section to map Jira key prefixes to the value j2p writes into the native `Resource Group` column.
+
 Most users should keep the defaults unless their Project template already uses these fields.
 
 ```yaml
@@ -376,7 +377,6 @@ Supported fields:
 | `jira_issue_type` | `Text3` | Jira issue type. |
 | `rollup_mode` | `Text4` | `initiative` or `fixVersion`. |
 | `rollup_key` | `Text5` | Initiative key or fixVersion string. |
-| `resource_group` | `Text6` | Resource group from Jira prefix. |
 | `jira_key_prefix` | `Text7` | Jira key prefix. |
 | `dependency_review` | `Text8` | Human-readable dependency review note. |
 | `jira_status` | `Text9` | Jira status. |

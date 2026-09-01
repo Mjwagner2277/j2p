@@ -258,7 +258,10 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)
             field_mapping = paths["field_mapping"].read_text(encoding="utf-8")
+            self.assertIn("Native Project fields used by j2p", field_mapping)
+            self.assertIn("| Resource Group | Resource Group |", field_mapping)
             self.assertIn("Jira Status", field_mapping)
+            self.assertNotIn("| `resource_group` | `Text6` |", field_mapping)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
         config = load_config(EXAMPLES / "config.example.yaml")

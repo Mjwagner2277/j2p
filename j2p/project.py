@@ -157,7 +157,7 @@ class MicrosoftProjectSession:
                 issue_type=str(safe_get(task, fields.get("jira_issue_type", "Text3"))),
                 rollup_mode=str(safe_get(task, fields.get("rollup_mode", "Text4"))),
                 rollup_key=str(rollup_key),
-                resource_group=str(safe_get(task, fields.get("resource_group", "Text6"))),
+                resource_group=self.get_native_resource_group(task),
                 key_prefix=str(safe_get(task, fields.get("jira_key_prefix", "Text7"))),
                 total_story_points=safe_float(safe_get(task, fields.get("total_story_points", "Number1"))),
                 completed_story_points=safe_float(
@@ -344,7 +344,7 @@ class MicrosoftProjectSession:
         setattr(task, fields.get("jira_issue_type", "Text3"), "Epic")
         setattr(task, fields.get("rollup_mode", "Text4"), epic.rollup_mode)
         setattr(task, fields.get("rollup_key", "Text5"), epic.rollup_key)
-        setattr(task, fields.get("resource_group", "Text6"), epic.resource_group)
+        self.set_native_resource_group(task, epic.resource_group)
         setattr(task, fields.get("jira_key_prefix", "Text7"), epic.key_prefix)
         setattr(task, fields.get("dependency_review", "Text8"), epic.dependency_review)
         setattr(task, fields.get("jira_status", "Text9"), epic.status)
@@ -392,6 +392,29 @@ class MicrosoftProjectSession:
                 task.HideBar = False
             except Exception:
                 pass
+
+    def get_native_resource_group(self, task: Any) -> str:
+        value = safe_get(task, "ResourceGroup")
+        if value:
+            return str(value)
+        try:
+            field_id = self.app.FieldNameToFieldConstant("Resource Group")
+            return str(task.GetField(field_id))
+        except Exception:
+            return ""
+
+    def set_native_resource_group(self, task: Any, resource_group: str) -> None:
+        if safe_set(task, "ResourceGroup", resource_group):
+            return
+        try:
+            field_id = self.app.FieldNameToFieldConstant("Resource Group")
+            task.SetField(field_id, str(resource_group))
+            return
+        except Exception as exc:
+            raise ProjectAutomationError(
+                "Could not write the native Microsoft Project Resource Group field. "
+                "Confirm the Resource Group column is available in the task table and retry."
+            ) from exc
 
     def apply_dependencies(self, plan: RunPlan, task_by_key: Dict[str, Any]) -> None:
         for epic in plan.epics.values():
@@ -552,7 +575,7 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
         "Successors": "Successors",
         "Finish": "Finish",
         "Start": "Start",
-        "Resource Group": names.get("resource_group", "Resource Group"),
+        "Resource Group": "Resource Group",
         "Rollup Key": names.get("rollup_key", "Rollup Key"),
         "Schedule Key": names.get("j2p_key", "j2p Unique Key"),
         "Row Role": names.get("row_role", "j2p Row Role"),
@@ -574,6 +597,14 @@ def safe_get(task: Any, name: str) -> Any:
         return getattr(task, name)
     except Exception:
         return ""
+
+
+def safe_set(task: Any, name: str, value: Any) -> bool:
+    try:
+        setattr(task, name, value)
+        return True
+    except Exception:
+        return False
 
 
 def safe_float(value: Any) -> float:

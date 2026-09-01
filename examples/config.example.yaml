@@ -69,7 +69,6 @@ project_fields:
   jira_issue_type: Text3
   rollup_mode: Text4
   rollup_key: Text5
-  resource_group: Text6
   jira_key_prefix: Text7
   dependency_review: Text8
   jira_status: Text9

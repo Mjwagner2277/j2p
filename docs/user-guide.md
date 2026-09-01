@@ -424,7 +424,7 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `fix_version` | FixVersion represented by this row, when applicable. |
 | `drives_schedule` | `Yes` if Project dependencies and schedule logic should use this row. |
 | `primary_schedule_key` | Primary row for reference/split relationship tracking. |
-| `resource_group` | Project resource group derived from Jira key prefix. |
+| `resource_group` | Project resource group derived from Jira key prefix. This is written to the native Microsoft Project `Resource Group` field. |
 | `key_prefix` | Same prefix used for resource and rollup mapping. |
 | `total_story_points` | Total child story/task points. |
 | `completed_story_points` | Completed child story/task points. |

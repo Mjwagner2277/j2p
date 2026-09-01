@@ -135,7 +135,7 @@ Completed epics remain in the sandbox and are reported. Microsoft Project does n
 
 ## Resource Groups
 
-Resource Group is mapped from the Jira key prefix.
+Resource Group is mapped from the Jira key prefix and written to the native Microsoft Project `Resource Group` field. It does not use a j2p custom text field.
 
 Example:
 
@@ -157,7 +157,6 @@ Epics with unmapped prefixes are excluded and reported.
 | Jira Issue Type | Text3 |
 | Rollup Mode | Text4 |
 | Rollup Key | Text5 |
-| Resource Group | Text6 |
 | Jira Key Prefix | Text7 |
 | Dependency Review | Text8 |
 | Jira Status | Text9 |

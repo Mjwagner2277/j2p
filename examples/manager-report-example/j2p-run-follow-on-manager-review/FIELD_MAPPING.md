@@ -1,6 +1,14 @@
 # j2p Microsoft Project Field Mapping
 
-These task custom fields are used by j2p when it creates or updates a sandbox Project file.
+These Project task fields are used by j2p when it creates or updates a sandbox Project file.
+
+Native Project fields used by j2p:
+
+| j2p Value | Project Field | Purpose |
+| --- | --- | --- |
+| Resource Group | Resource Group | Populated from the Jira key prefix mapping in `resource_groups`. |
+
+Custom task fields used by j2p:
 
 | j2p Value | Project Field | Project Column Name |
 | --- | --- | --- |
@@ -19,7 +27,6 @@ These task custom fields are used by j2p when it creates or updates a sandbox Pr
 | `jira_target_end` | `Date2` | Jira Target End |
 | `jira_target_start` | `Date1` | Jira Target Start |
 | `primary_schedule_key` | `Text13` | Primary Schedule Key |
-| `resource_group` | `Text6` | Resource Group |
 | `rollup_key` | `Text5` | Rollup Key |
 | `rollup_mode` | `Text4` | Rollup Mode |
 | `row_role` | `Text11` | j2p Row Role |
