@@ -223,6 +223,8 @@ If Project rejects table setup or cell formatting, the run continues and adds `P
 
 Project stores predecessor links as Project task row IDs, not Jira keys. The manager report and audit CSV show Jira keys such as `CORE-1001`, but the sandbox `Predecessors` column normally shows values such as `12FS`. That is expected.
 
+j2p does not use VBA macros for default coloring. Macros can be useful for a controlled engineering workstation, but they add Office macro security prompts and Trust Center settings that are not ideal for nontechnical handoff. Default highlighting is macro-free; if Project rejects cell coloring, the manager report calls that out explicitly.
+
 ## CSV Inputs
 
 j2p accepts configurable column names. The examples use standard Jira export-style headers.

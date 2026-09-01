@@ -22,8 +22,8 @@ from j2p.project import (
     MicrosoftProjectSession,
     ProjectAutomationError,
     append_resource_name,
-    project_color,
     project_column_for_audit_field,
+    project_column_aliases,
     project_date_for_com,
     project_predecessor_ids,
     review_table_columns,
@@ -521,6 +521,8 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_for_audit_field("Resource Group", config), "Resource Group")
         self.assertEqual(project_column_for_audit_field("Status", config), "Text9")
         self.assertEqual(project_column_for_audit_field("Unmatched Project Task", config), "Flag2")
+        self.assertEqual(project_column_aliases("Text1", config), ["Text1", "Jira Key"])
+        self.assertEqual(project_column_aliases("Name", config), ["Name"])
 
     def test_review_table_columns_include_required_coloring_fields(self) -> None:
         config = load_config(EXAMPLES / "config.example.yaml")
@@ -561,17 +563,19 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(session.app.select_calls, [("cell", 7, "Text1", False)])
         self.assertNotEqual(session.app.ActiveCell.CellColorEx, 0)
 
-    def test_color_project_cell_uses_named_font32ex_fallback(self) -> None:
+    def test_project_adapter_does_not_call_font32ex(self) -> None:
+        source = (ROOT / "j2p" / "project.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Font32Ex", source)
+
+    def test_color_project_cell_reports_error_without_font_dialog_fallback(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeFontPromptRiskFormattingApp()
         task = FakeTask()
         task.ID = 8
 
-        self.assertTrue(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
-        self.assertEqual(
-            session.app.font32_kwargs,
-            [{"CellColor": project_color("#FFC7CE"), "Pattern": 1}],
-        )
+        self.assertFalse(MicrosoftProjectSession.color_project_cell(session, task, "Text2", "#FFC7CE"))
+        self.assertEqual(session.app.font32_calls, 0)
 
     def test_select_project_cell_treats_false_return_as_failure(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
@@ -579,13 +583,36 @@ class J2PPlanningTests(unittest.TestCase):
         task = FakeTask()
         task.ID = 9
 
-        selected, error = MicrosoftProjectSession.select_project_cell(session, task, "Text2")
+        selected, error = MicrosoftProjectSession.select_project_cell(session, task, ["Text2"])
 
         self.assertTrue(selected)
         self.assertEqual(error, "")
         self.assertEqual(
             session.app.select_calls,
             [("cell", 9, "Text2", False), ("field", 9, "Text2", False)],
+        )
+
+    def test_select_project_cell_tries_column_aliases(self) -> None:
+        session = object.__new__(MicrosoftProjectSession)
+        session.app = FakeAliasSelectionApp("Jira Key")
+        task = FakeTask()
+        task.ID = 10
+
+        selected, error = MicrosoftProjectSession.select_project_cell(
+            session,
+            task,
+            ["Text1", "Jira Key"],
+        )
+
+        self.assertTrue(selected)
+        self.assertEqual(error, "")
+        self.assertEqual(
+            session.app.select_calls,
+            [
+                ("cell", 10, "Text1", False),
+                ("field", 10, "Text1", False),
+                ("cell", 10, "Jira Key", False),
+            ],
         )
 
     def test_write_project_predecessors_uses_fs_ids_and_verifies_readback(self) -> None:
@@ -748,11 +775,25 @@ class FakeFormattingApp:
 class FakeFalseThenTrueSelectionApp(FakeFormattingApp):
     def SelectTaskCell(self, Row: int, Column: str, RowRelative: bool) -> bool:
         self.select_calls.append(("cell", Row, Column, RowRelative))
-        return False
+        return 0
 
     def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> bool:
         self.select_calls.append(("field", Row, Column, RowRelative))
         return True
+
+
+class FakeAliasSelectionApp(FakeFormattingApp):
+    def __init__(self, selectable_column: str) -> None:
+        super().__init__()
+        self.selectable_column = selectable_column
+
+    def SelectTaskCell(self, Row: int, Column: str, RowRelative: bool) -> bool:
+        self.select_calls.append(("cell", Row, Column, RowRelative))
+        return Column == self.selectable_column
+
+    def SelectTaskField(self, Row: int, Column: str, RowRelative: bool) -> bool:
+        self.select_calls.append(("field", Row, Column, RowRelative))
+        return Column == self.selectable_column
 
 
 class FakeRejectingCell:
@@ -769,12 +810,11 @@ class FakeFontPromptRiskFormattingApp(FakeFormattingApp):
     def __init__(self) -> None:
         super().__init__()
         self.ActiveCell = FakeRejectingCell()
-        self.font32_kwargs = []
+        self.font32_calls = 0
 
     def Font32Ex(self, *args: object, **kwargs: object) -> None:
-        if args:
-            raise AssertionError("Font32Ex must be called with named arguments only")
-        self.font32_kwargs.append(kwargs)
+        self.font32_calls += 1
+        raise AssertionError("Font32Ex can open Project's Font dialog and must not be called")
 
 
 class FakeAssignment:

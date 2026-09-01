@@ -902,7 +902,7 @@ class MicrosoftProjectSession:
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         task_by_key = self.index_tasks_by_key(config)
-        formatting_items: List[Tuple[AuditItem, Any, str, str]] = []
+        formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
         for item in list(plan.audit_items):
             if not item.jira_key or not item.color:
                 continue
@@ -914,10 +914,11 @@ class MicrosoftProjectSession:
             if not column:
                 continue
             color = config.get("colors", {}).get(item.color, item.color)
-            formatting_items.append((item, task, column, color))
+            column_aliases = project_column_aliases(column, config)
+            formatting_items.append((item, task, column, color, column_aliases))
 
         table_errors = self.prepare_formatting_view(
-            review_table_columns(config, [column for _item, _task, column, _color in formatting_items]),
+            review_table_columns(config, [column for _item, _task, column, _color, _aliases in formatting_items]),
             config,
         )
         if table_errors:
@@ -940,8 +941,8 @@ class MicrosoftProjectSession:
 
         failed_columns: Dict[str, int] = {}
         failed_examples: List[str] = []
-        for item, task, column, color in formatting_items:
-            error = self.color_project_cell_error(task, column, color)
+        for item, task, column, color, column_aliases in formatting_items:
+            error = self.color_project_cell_error(task, column, color, column_aliases)
             if not error:
                 continue
             failed_columns[column] = failed_columns.get(column, 0) + 1
@@ -988,12 +989,12 @@ class MicrosoftProjectSession:
         errors.extend(self.create_review_table(columns, config))
         try:
             result = self.app.TableApply(Name=J2P_REVIEW_TABLE_NAME)
-            if result is False:
+            if project_call_failed(result):
                 errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
         except Exception as exc:
             try:
                 result = self.app.TableApply(J2P_REVIEW_TABLE_NAME)
-                if result is False:
+                if project_call_failed(result):
                     errors.append(f"TableApply returned False for {J2P_REVIEW_TABLE_NAME}.")
             except Exception as fallback_exc:
                 errors.append(f"TableApply failed: {exc}; fallback failed: {fallback_exc}")
@@ -1011,7 +1012,7 @@ class MicrosoftProjectSession:
                 ShowInMenu=True,
                 ShowAddNewColumn=True,
             )
-            if result is False:
+            if project_call_failed(result):
                 errors.append(f"TableEditEx returned False while creating {J2P_REVIEW_TABLE_NAME}.")
         except Exception as exc:
             errors.append(f"TableEditEx create failed: {exc}")
@@ -1036,47 +1037,58 @@ class MicrosoftProjectSession:
                     WrapText=True,
                     ShowAddNewColumn=True,
                 )
-                if result is False:
+                if project_call_failed(result):
                     errors.append(f"TableEditEx returned False while adding {column}.")
             except Exception as exc:
                 errors.append(f"TableEditEx add {column} failed: {exc}")
         return errors
 
-    def color_project_cell(self, task: Any, column: str, hex_color: str) -> bool:
-        return not self.color_project_cell_error(task, column, hex_color)
+    def color_project_cell(
+        self,
+        task: Any,
+        column: str,
+        hex_color: str,
+        column_aliases: Optional[List[str]] = None,
+    ) -> bool:
+        return not self.color_project_cell_error(task, column, hex_color, column_aliases)
 
-    def color_project_cell_error(self, task: Any, column: str, hex_color: str) -> str:
+    def color_project_cell_error(
+        self,
+        task: Any,
+        column: str,
+        hex_color: str,
+        column_aliases: Optional[List[str]] = None,
+    ) -> str:
         color = project_color(hex_color)
-        selected, selection_error = self.select_project_cell(task, column)
+        selected, selection_error = self.select_project_cell(task, column_aliases or [column])
         if not selected:
             return selection_error
-        cell_error = self.color_active_cell(color)
-        if not cell_error:
-            return ""
-        font_error = self.font32_selected_cell_color(color)
-        if not font_error:
-            return ""
-        return f"{cell_error}; {font_error}"
+        return self.color_active_cell(color)
 
-    def select_project_cell(self, task: Any, column: str) -> Tuple[bool, str]:
+    def select_project_cell(self, task: Any, columns: Any) -> Tuple[bool, str]:
         row = int(safe_get(task, "ID") or 0)
         if row <= 0:
             return False, "Task has no positive Project row ID."
+        if isinstance(columns, str):
+            candidate_columns = [columns]
+        else:
+            candidate_columns = [str(column) for column in columns if str(column or "").strip()]
         errors: List[str] = []
-        try:
-            result = self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
-            if result is not False:
-                return True, ""
-            errors.append("SelectTaskCell returned False.")
-        except Exception as exc:
-            errors.append(f"SelectTaskCell failed: {exc}")
-        try:
-            result = self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
-            if result is not False:
-                return True, ""
-            errors.append("SelectTaskField returned False.")
-        except Exception as exc:
-            errors.append(f"SelectTaskField failed: {exc}")
+        for column in unique_columns(candidate_columns):
+            try:
+                result = self.app.SelectTaskCell(Row=row, Column=column, RowRelative=False)
+                if not project_call_failed(result):
+                    return True, ""
+                errors.append(f"SelectTaskCell returned False for {column}.")
+            except Exception as exc:
+                errors.append(f"SelectTaskCell failed for {column}: {exc}")
+            try:
+                result = self.app.SelectTaskField(Row=row, Column=column, RowRelative=False)
+                if not project_call_failed(result):
+                    return True, ""
+                errors.append(f"SelectTaskField returned False for {column}.")
+            except Exception as exc:
+                errors.append(f"SelectTaskField failed for {column}: {exc}")
         return False, " ".join(errors)
 
     def color_active_cell(self, color: int) -> str:
@@ -1099,14 +1111,6 @@ class MicrosoftProjectSession:
         except Exception:
             pass
         return ""
-
-    def font32_selected_cell_color(self, color: int) -> str:
-        try:
-            self.app.Font32Ex(CellColor=color, Pattern=PROJECT_SOLID_FILL_PATTERN)
-            return ""
-        except Exception as exc:
-            return f"Font32Ex named cell background formatting failed: {exc}"
-
 
 def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> str:
     fields = config.get("project_fields", {})
@@ -1196,6 +1200,15 @@ def project_column_title(column: str, config: Dict[str, Any]) -> str:
         "Start": "Start",
     }
     return titles.get(column, column)
+
+
+def project_column_aliases(column: str, config: Dict[str, Any]) -> List[str]:
+    title = project_column_title(column, config)
+    return unique_columns([column, title])
+
+
+def project_call_failed(result: Any) -> bool:
+    return result is False or result == 0
 
 
 def safe_get(task: Any, name: str) -> Any:
