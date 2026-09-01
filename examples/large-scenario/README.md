@@ -1,6 +1,6 @@
 # Large 1,200-Line Walkthrough Scenario
 
-This folder is the full training scenario for j2p. It is intentionally larger than the quick-start files so reviewers can practice with a project-wide Jira export that feels closer to a real portfolio.
+This folder is the full training scenario for j2p. It gives reviewers a project-wide Jira export that feels closer to a real portfolio.
 
 Rows 2-35 start the client walkthrough. Rows 17-35 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
 

@@ -83,8 +83,8 @@ Validate a CSV and write reports without opening Microsoft Project:
 
 ```powershell
 py -3.14 -m j2p validate `
-  --jira-csv .\examples\project-wide-jira-update.csv `
-  --config .\examples\config.example.yaml `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 
@@ -92,8 +92,8 @@ Create an initial `.mpp` from Jira. This is intended for first setup or demonstr
 
 ```powershell
 py -3.14 -m j2p create `
-  --jira-csv .\examples\project-wide-jira-update.csv `
-  --config .\examples\config.example.yaml `
+  --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output `
   --output-project-name j2p-initial-sandbox.mpp
 ```
@@ -106,7 +106,7 @@ Update a sandbox copy from the source-of-truth `.mpp`:
 py -3.14 -m j2p update `
   --jira-csv .\path\to\jira-export.csv `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
-  --config .\examples\config.example.yaml `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 
@@ -118,7 +118,7 @@ py -3.14 -m j2p update `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
   --previous-sandbox .\review-output\j2p-run-20260901-090000\Program-Source-Of-Truth.sandbox.20260901-090000.mpp `
   --comparison-source previous-sandbox `
-  --config .\examples\config.example.yaml `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 

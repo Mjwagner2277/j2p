@@ -2,7 +2,9 @@
 
 This document explains every supported YAML configuration section for product users and schedule owners.
 
-For a complete working file, start with `examples/config.example.yaml`.
+For a complete working file, start with `examples/large-scenario/config.large-example.yaml`.
+
+Developers changing Microsoft Project field behavior should also read `docs/project-fields.md`.
 
 ## Minimal Example
 
@@ -420,6 +422,8 @@ Supported fields:
 | `drives_schedule` | `Flag4` | Indicates whether the row drives Project schedule logic. |
 | `jira_target_start` | `Date1` | Jira target start. |
 | `jira_target_end` | `Date2` | Jira target end. |
+
+For developer-level detail on what each Project field enables in matching, rollups, dependency review, coloring, and reporting, see `docs/project-fields.md`.
 
 ## `project_field_names`
 

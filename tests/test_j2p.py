@@ -35,11 +35,12 @@ from j2p.reports import project_wide_accuracy_summary, resource_group_accuracy_r
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples"
+FIXTURES = ROOT / "tests" / "fixtures"
 
 
 class J2PPlanningTests(unittest.TestCase):
     def test_initiative_mode_rollups_dependencies_and_exclusions(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
+        config = load_config(FIXTURES / "mixed-config.yaml")
         baseline = {
             "TEAM-101": ProjectTaskSnapshot(
                 key="TEAM-101",
@@ -71,7 +72,7 @@ class J2PPlanningTests(unittest.TestCase):
                 rollup_key="PROD-100",
             ),
         }
-        plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config, baseline)
+        plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config, baseline)
 
         self.assertEqual(plan.rollup_mode, "mixed")
         self.assertIn("TEAM-101", plan.epics)
@@ -129,7 +130,7 @@ class J2PPlanningTests(unittest.TestCase):
             csv_path = Path(temp) / "hours-accuracy.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
             config = load_config(
-                EXAMPLES / "config.example.yaml",
+                FIXTURES / "mixed-config.yaml",
                 {"metrics": {"hours_per_story_point": 10}},
             )
             plan = build_run_plan(csv_path, config)
@@ -149,15 +150,15 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "bad-hours.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.example.yaml")
+            config = load_config(FIXTURES / "mixed-config.yaml")
             plan = build_run_plan(csv_path, config)
 
         self.assertEqual(plan.epics["TEAM-1"].logged_hours, 0)
         self.assertIn("UnparsedLoggedHours", {item.category for item in plan.audit_items})
 
     def test_fixversion_mode_defaults_multi_fixversion_epics_to_reference_rows(self) -> None:
-        config = load_config(EXAMPLES / "config.fixversion.example.yaml")
-        plan = build_run_plan(EXAMPLES / "project-wide-jira-fixversion.csv", config)
+        config = load_config(FIXTURES / "fixversion-config.yaml")
+        plan = build_run_plan(FIXTURES / "project-wide-jira-fixversion.csv", config)
 
         self.assertEqual(plan.rollup_mode, "fixVersion")
         self.assertEqual(plan.epics["TEAM-501"].rollup_key, "Portal 2026")
@@ -187,7 +188,7 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "split.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.fixversion.example.yaml")
+            config = load_config(FIXTURES / "fixversion-config.yaml")
             plan = build_run_plan(csv_path, config)
 
         split_keys = [epic.key for epic in plan.epics.values()]
@@ -209,7 +210,7 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "reference.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.example.yaml")
+            config = load_config(FIXTURES / "mixed-config.yaml")
             plan = build_run_plan(csv_path, config)
 
         reference_summary = plan.summaries["fixVersion:Shop Drop A"]
@@ -236,9 +237,9 @@ class J2PPlanningTests(unittest.TestCase):
                     [
                         "validate",
                         "--jira-csv",
-                        str(EXAMPLES / "project-wide-jira-update.csv"),
+                        str(FIXTURES / "project-wide-jira-update.csv"),
                         "--config",
-                        str(EXAMPLES / "config.example.yaml"),
+                        str(FIXTURES / "mixed-config.yaml"),
                         "--output-dir",
                         temp,
                         "--run-id",
@@ -303,7 +304,7 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "cycle.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.example.yaml")
+            config = load_config(FIXTURES / "mixed-config.yaml")
             plan = build_run_plan(csv_path, config)
             self.assertIn("CircularDependencySkipped", {item.category for item in plan.audit_items})
             edge_count = len(plan.epics["TEAM-1"].successors) + len(plan.epics["TEAM-2"].successors)
@@ -319,7 +320,7 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "missing-columns.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.example.yaml")
+            config = load_config(FIXTURES / "mixed-config.yaml")
             with self.assertRaisesRegex(J2PError, "missing required mapped columns"):
                 build_run_plan(csv_path, config)
 
@@ -335,7 +336,7 @@ class J2PPlanningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             csv_path = Path(temp) / "orphan.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
-            config = load_config(EXAMPLES / "config.example.yaml")
+            config = load_config(FIXTURES / "mixed-config.yaml")
             plan = build_run_plan(csv_path, config)
             self.assertEqual(plan.epics["TEAM-1"].total_story_points, 0)
             categories = {item.category for item in plan.audit_items}
@@ -343,8 +344,8 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("InPlanning", categories)
 
     def test_manager_report_is_self_contained_and_field_mapping_includes_status(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
-        plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config)
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config)
         with tempfile.TemporaryDirectory() as temp:
             run_dir = Path(temp)
             paths = write_reports(plan, run_dir, config)
@@ -363,8 +364,8 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertNotIn("| `resource_group` | `Text6` |", field_mapping)
 
     def test_manager_accuracy_breakdown_uses_in_progress_scheduled_epics_only(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
-        plan = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config)
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config)
 
         project_accuracy = project_wide_accuracy_summary(plan)
         self.assertEqual(project_accuracy["epic_count"], 1)
@@ -382,13 +383,13 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(resource_rows[0]["hours_accuracy_percent"], 13.5)
 
     def test_state_round_trip_can_be_used_as_baseline(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
-        initial = build_run_plan(EXAMPLES / "project-wide-jira-initial.csv", config)
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        initial = build_run_plan(FIXTURES / "project-wide-jira-initial.csv", config)
         with tempfile.TemporaryDirectory() as temp:
             state_path = Path(temp) / "j2p-state.json"
             write_json(state_path, run_plan_to_state(initial))
             baseline = snapshots_from_state(state_path)
-            follow_on = build_run_plan(EXAMPLES / "project-wide-jira-update.csv", config, baseline)
+            follow_on = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config, baseline)
             categories = {item.category for item in follow_on.audit_items}
             self.assertIn("ChangedName", categories)
             self.assertIn("CompletedSinceLastUpdate", categories)
@@ -440,7 +441,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertTrue({"changed_cell", "review_needed", "dependency_review", "in_planning"}.issubset(colors))
 
     def test_schedule_review_marks_cascade_root_red(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
+        config = load_config(FIXTURES / "mixed-config.yaml")
         plan = RunPlan(
             generated_at="2026-01-01T00:00:00",
             jira_csv="unit.csv",
@@ -610,7 +611,7 @@ class J2PPlanningTests(unittest.TestCase):
             project_date_for_com("1800-01-01", "Start")
 
     def test_project_column_for_audit_field_uses_stable_custom_field_ids(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
+        config = load_config(FIXTURES / "mixed-config.yaml")
 
         self.assertEqual(project_column_for_audit_field("Rollup Key", config), "Text5")
         self.assertEqual(project_column_for_audit_field("Jira Target End", config), "Date2")
@@ -623,7 +624,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_column_aliases("Name", config), ["Name"])
 
     def test_review_table_columns_include_required_coloring_fields(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
+        config = load_config(FIXTURES / "mixed-config.yaml")
 
         columns = review_table_columns(config, ["Text9", "Flag2", "Predecessors"])
 
@@ -636,7 +637,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Resource Group", columns)
 
     def test_prepare_formatting_view_creates_and_applies_review_table(self) -> None:
-        config = load_config(EXAMPLES / "config.example.yaml")
+        config = load_config(FIXTURES / "mixed-config.yaml")
         session = object.__new__(MicrosoftProjectSession)
         session.app = FakeReviewTableApp()
 

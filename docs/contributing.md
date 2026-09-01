@@ -6,7 +6,6 @@ Product users should start with:
 
 - `docs/user-guide.md`
 - `docs/configuration-reference.md`
-- `docs/manager-review-guide.md`
 - `examples/large-scenario/README.md`
 
 ## Repository Scope
@@ -36,6 +35,7 @@ PowerShell snippets in documentation are fine when they show Windows users how t
 | `scripts/generate_large_examples.py` | Deterministic 1,200-line training fixture generator. |
 | `scripts/smoke_tests.py` | Local pre-merge smoke test runner. |
 | `tests/test_j2p.py` | Unit tests for core parsing, planning, reporting, and configuration behavior. |
+| `tests/fixtures/` | Small private regression fixtures used by unit tests. These are not product walkthrough material. |
 
 ## Product Documentation Versus Contributor Documentation
 
@@ -55,8 +55,9 @@ Contributor documentation should answer:
 - How are fixtures regenerated?
 - What behavior must stay backward compatible?
 - How should Microsoft Project automation changes be manually smoke tested?
+- What does each Microsoft Project custom field enable?
 
-When in doubt, keep user-facing workflow and configuration explanations in `docs/user-guide.md` or `docs/configuration-reference.md`, and keep implementation/test details here or in `docs/testing.md`.
+When in doubt, keep user-facing workflow and configuration explanations in `docs/user-guide.md` or `docs/configuration-reference.md`, and keep implementation/test details here, in `docs/testing.md`, or in `docs/project-fields.md`.
 
 ## Development Setup
 
@@ -105,9 +106,9 @@ Before release, run a Windows smoke test with a sanitized source-of-truth `.mpp`
 
 ```powershell
 py -3.14 -m j2p update `
-  --jira-csv .\examples\project-wide-jira-update.csv `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --main-project .\path\to\sanitized-source-of-truth.mpp `
-  --config .\examples\config.example.yaml `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 
@@ -124,11 +125,15 @@ Manually confirm:
 - completed epics are inactive and Gantt bars are hidden when Project permits it
 - report CSVs match visible sandbox changes
 
+For details on why each Project custom field exists and which code paths depend on it, read `docs/project-fields.md`.
+
 ## Fixture Rules
 
 The large scenario is intended for client walkthroughs, so it must stay deterministic and teachable.
 
 Do not replace the authored walkthrough rows with random-only data.
+
+Keep product examples under `examples/large-scenario`. Small focused CSVs/configs belong in `tests/fixtures` when they are needed for unit coverage.
 
 The large CSVs must remain exactly 1,200 lines each:
 

@@ -1,2 +1,0 @@
-rollup_key,project_key,name,rollup_mode,child_epic_count,driving_epic_count,reference_epic_count,total_story_points,completed_story_points,logged_hours,completed_logged_hours,hours_accuracy_percent,percent_complete
-PROD-100,TEAM,Customer Portal Modernization,initiative,3,3,0,34.0,5.0,14.5,4.5,11.2,15

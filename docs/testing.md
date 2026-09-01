@@ -24,10 +24,6 @@ The smoke test verifies:
 - Next.js/React/web app files are not present
 - all unit tests pass
 - all Python files compile
-- initiative-mode validation produces a complete report bundle
-- follow-on validation against saved state reports expected manager-review categories
-- fixVersion-mode validation produces a complete report bundle and default multi-fixVersion reference rows
-- per-project-key split CSVs are written
 - large 1,200-line baseline/update CSV fixtures have not drifted
 - large scenario reports expected manager-review categories and per-project-key CSVs
 - manager HTML reports are self-contained
@@ -62,8 +58,8 @@ Run a documented validation example:
 
 ```powershell
 py -3.14 -m j2p validate `
-  --jira-csv .\examples\project-wide-jira-update.csv `
-  --config .\examples\config.example.yaml `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output `
   --run-id local-check
 ```
@@ -76,9 +72,9 @@ The cross-platform smoke test does not open Microsoft Project. Before a release 
 py -3.14 -m pip install -e ".[project]"
 
 py -3.14 -m j2p update `
-  --jira-csv .\examples\project-wide-jira-update.csv `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --main-project .\path\to\sanitized-source-of-truth.mpp `
-  --config .\examples\config.example.yaml `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 

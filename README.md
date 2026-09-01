@@ -2,22 +2,24 @@
 
 Jira CSV to Microsoft Project sandbox review tooling.
 
-This repository contains a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It rolls child story/task points and logged hours up to epic and summary rows, then calculates hours accuracy against the configured hours-per-story-point rule. It is intentionally limited to the Jira-to-Project workflow and does not contain any web app, Next.js, or React assets.
+j2p is a Python CLI for creating manager-reviewable Microsoft Project sandbox schedules from project-wide Jira CSV exports. It rolls child story/task points and logged hours up to epic and summary rows, calculates hours accuracy against the configured hours-per-story-point rule, and produces HTML/CSV review packets.
+
+The repository is intentionally limited to the Jira-to-Project workflow. It does not contain a web app, Next.js, React, or browser runtime.
 
 ## Start Here
 
+For product users and schedule reviewers:
+
+- Large project walkthrough: `examples/large-scenario/README.md`
 - Product user guide: `docs/user-guide.md`
 - YAML configuration reference: `docs/configuration-reference.md`
-- Quick start: `docs/quick-start.md`
-- Manager review guide: `docs/manager-review-guide.md`
-- Testing and pre-merge checks: `docs/testing.md`
+
+For contributors:
+
+- Developer Project field reference: `docs/project-fields.md`
 - Contributor guide: `docs/contributing.md`
+- Testing and pre-merge checks: `docs/testing.md`
 - Requirements and design decisions: `docs/requirements.md`
-- Complete worked example: `examples/test.md`
-- Full manager report example: `examples/manager-report-example/j2p-run-follow-on-manager-review/Manager-Review-Report.html`
-- Large 1,200-line walkthrough: `examples/large-scenario/README.md`
-- Large manager report example: `examples/large-scenario/report-example/j2p-run-updated-1200/Manager-Review-Report.html`
-- Example configuration: `examples/config.example.yaml`
 
 ## Requirements
 
@@ -27,12 +29,6 @@ This repository contains a Python CLI for creating manager-reviewable Microsoft 
 - No React, Next.js, node runtime, browser app, or web server
 
 Validation/report generation does not require Microsoft Project and can run on any machine with Python.
-
-## Documentation Audiences
-
-Product users and schedule reviewers should use `docs/user-guide.md`, `docs/configuration-reference.md`, and `docs/manager-review-guide.md`.
-
-Contributors changing code, tests, fixtures, or generated examples should use `docs/contributing.md` and `docs/testing.md`.
 
 ## Install
 
@@ -50,22 +46,22 @@ py -3.14 -m pip install -e .
 
 ## Typical Usage
 
-Validate a Jira CSV and generate manager/audit reports without opening Microsoft Project:
+The supported end-user walkthrough uses the large project-wide example:
 
 ```powershell
 py -3.14 -m j2p validate `
-  --jira-csv .\examples\project-wide-jira-update.csv `
-  --config .\examples\config.example.yaml `
+  --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 
-Create a timestamped sandbox from the source-of-truth Project file and apply Jira updates:
+Create a timestamped sandbox from a source-of-truth Project file and apply Jira updates:
 
 ```powershell
 py -3.14 -m j2p update `
   --jira-csv .\path\to\jira-export.csv `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
-  --config .\examples\config.example.yaml `
+  --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output
 ```
 
@@ -81,4 +77,4 @@ Run the local smoke test before merging or handing off changes:
 py -3.14 .\scripts\smoke_tests.py
 ```
 
-This runs unit tests, syntax compilation, example validations, report-bundle checks, and repository hygiene checks. See `docs/testing.md` for the full checklist.
+This runs unit tests, syntax compilation, large-scenario validations, report-bundle checks, and repository hygiene checks. See `docs/testing.md` for the full checklist.
