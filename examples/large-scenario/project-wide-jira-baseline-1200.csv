@@ -34,170 +34,170 @@ PLAT-4029,200159,Epic,Client Walkthrough - Deployment runner fixVersion example,
 OPS-5019,200179,Epic,Client Walkthrough - Shop deliverable split fixVersion example,,INIT-400,Qualification Event 2,,,In Progress,,2026-08-24,2026-10-19,,
 UNK-9000,200180,Epic,Client Walkthrough - Unknown team prefix example,,INIT-100,Portfolio 2026,,,To Do,,2026-08-31,2026-09-28,,
 WEB-2000,200050,Epic,Scale Rows - Web Experience - Search results tuning wave 01,,INIT-500,Portfolio 2026,,,To Do,,2026-07-27,2026-08-24,,
-WEB-2001,200051,Epic,Scale Rows - Web Experience - Checkout web flow wave 02,,INIT-100,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,
-WEB-2020,200070,Epic,Scale Rows - Web Experience - Content publishing wave 21,,INIT-1200,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,
-WEB-2011,200061,Epic,Scale Rows - Web Experience - Accessibility remediation wave 12,,INIT-1200,Portfolio 2026,,,In Progress,,2026-04-20,2026-05-25,,
-WEB-2002,200052,Epic,Scale Rows - Web Experience - Homepage personalization wave 03,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-10,2026-09-21,,
+WEB-2001,200051,Epic,Scale Rows - Web Experience - Checkout web flow wave 02,,INIT-100,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,WEB-2000
+WEB-2020,200070,Epic,Scale Rows - Web Experience - Content publishing wave 21,,INIT-1200,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,WEB-2019
+WEB-2011,200061,Epic,Scale Rows - Web Experience - Accessibility remediation wave 12,,INIT-1200,Portfolio 2026,,,In Progress,,2026-04-20,2026-05-25,,WEB-2009
+WEB-2002,200052,Epic,Scale Rows - Web Experience - Homepage personalization wave 03,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-10,2026-09-21,,WEB-2001
 WEB-2030,200080,Epic,Scale Rows - Web Experience - Localization pass wave 31,,INIT-500,Portfolio 2026,,,To Do,,2026-08-31,2026-09-28,,
-WEB-2021,200071,Epic,Scale Rows - Web Experience - Navigation refresh wave 22,,INIT-500,Portfolio 2026,,,To Do,,2026-06-29,2026-08-03,,
-WEB-2012,200062,Epic,Scale Rows - Web Experience - Content publishing wave 13,,INIT-500,Portfolio 2026,,,To Do,,2026-04-27,2026-06-08,,
-WEB-2003,200053,Epic,Scale Rows - Web Experience - Accessibility remediation wave 04,,INIT-500,Portfolio 2026,,,To Do,,2026-08-17,2026-10-05,,
+WEB-2021,200071,Epic,Scale Rows - Web Experience - Navigation refresh wave 22,,INIT-500,Portfolio 2026,,,To Do,,2026-06-29,2026-08-03,,WEB-2020
+WEB-2012,200062,Epic,Scale Rows - Web Experience - Content publishing wave 13,,INIT-500,Portfolio 2026,,,To Do,,2026-04-27,2026-06-08,,WEB-2011
+WEB-2003,200053,Epic,Scale Rows - Web Experience - Accessibility remediation wave 04,,INIT-500,Portfolio 2026,,,To Do,,2026-08-17,2026-10-05,,WEB-2002
 WEB-2040,200090,Epic,Scale Rows - Web Experience - Search results tuning wave 41,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-18,2026-06-15,,
 WEB-2031,200081,Epic,Scale Rows - Web Experience - Experiment cleanup wave 32,,INIT-100,Portfolio 2026,,,In Progress,,2026-09-07,2026-10-12,,
-WEB-2022,200072,Epic,Scale Rows - Web Experience - Localization pass wave 23,,INIT-100,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,
-WEB-2013,200063,Epic,Scale Rows - Web Experience - Navigation refresh wave 14,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,
-WEB-2004,200054,Epic,Scale Rows - Web Experience - Content publishing wave 05,,INIT-100,Portfolio 2026,,,In Progress,,2026-08-24,2026-10-19,,
+WEB-2022,200072,Epic,Scale Rows - Web Experience - Localization pass wave 23,,INIT-100,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,WEB-2021
+WEB-2013,200063,Epic,Scale Rows - Web Experience - Navigation refresh wave 14,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,WEB-2012
+WEB-2004,200054,Epic,Scale Rows - Web Experience - Content publishing wave 05,,INIT-100,Portfolio 2026,,,In Progress,,2026-08-24,2026-10-19,,WEB-2003
 WEB-2041,200091,Epic,Scale Rows - Web Experience - Checkout web flow wave 42,,INIT-1200,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,
 WEB-2032,200082,Epic,Scale Rows - Web Experience - Search results tuning wave 33,,INIT-1200,Portfolio 2026,,,In Progress,,2026-09-14,2026-10-26,,
-WEB-2023,200073,Epic,Scale Rows - Web Experience - Experiment cleanup wave 24,,INIT-1200,Portfolio 2026,,,In Progress,,2026-07-13,2026-08-31,,
-WEB-2014,200064,Epic,Scale Rows - Web Experience - Localization pass wave 15,,INIT-1200,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,
-WEB-2005,200055,Epic,Scale Rows - Web Experience - Navigation refresh wave 06,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-31,2026-09-28,,
+WEB-2023,200073,Epic,Scale Rows - Web Experience - Experiment cleanup wave 24,,INIT-1200,Portfolio 2026,,,In Progress,,2026-07-13,2026-08-31,,WEB-2022
+WEB-2014,200064,Epic,Scale Rows - Web Experience - Localization pass wave 15,,INIT-1200,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,WEB-2013
+WEB-2005,200055,Epic,Scale Rows - Web Experience - Navigation refresh wave 06,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-31,2026-09-28,,WEB-2004
 WEB-2042,200092,Epic,Scale Rows - Web Experience - Homepage personalization wave 43,,INIT-500,Portfolio 2026,,,To Do,,2026-06-01,2026-07-13,,
 WEB-2033,200083,Epic,Scale Rows - Web Experience - Checkout web flow wave 34,,INIT-500,Portfolio 2026,,,To Do,,2026-09-21,2026-11-09,,
-WEB-2024,200074,Epic,Scale Rows - Web Experience - Search results tuning wave 25,,INIT-500,Portfolio 2026,,,To Do,,2026-07-20,2026-09-14,,
-WEB-2015,200065,Epic,Scale Rows - Web Experience - Experiment cleanup wave 16,,INIT-500,Portfolio 2026,,,To Do,,2026-05-18,2026-06-15,,
-WEB-2006,200056,Epic,Scale Rows - Web Experience - Localization pass wave 07,,INIT-500,Portfolio 2026,,,To Do,,2026-03-16,2026-04-20,,
+WEB-2024,200074,Epic,Scale Rows - Web Experience - Search results tuning wave 25,,INIT-500,Portfolio 2026,,,To Do,,2026-07-20,2026-09-14,,WEB-2023
+WEB-2015,200065,Epic,Scale Rows - Web Experience - Experiment cleanup wave 16,,INIT-500,Portfolio 2026,,,To Do,,2026-05-18,2026-06-15,,WEB-2014
+WEB-2006,200056,Epic,Scale Rows - Web Experience - Localization pass wave 07,,INIT-500,Portfolio 2026,,,To Do,,2026-03-16,2026-04-20,,WEB-2005
 WEB-2043,200093,Epic,Scale Rows - Web Experience - Accessibility remediation wave 44,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-08,2026-07-27,,
 WEB-2034,200084,Epic,Scale Rows - Web Experience - Homepage personalization wave 35,,INIT-100,Portfolio 2026,,,In Progress,,2026-04-06,2026-06-01,,
-WEB-2025,200075,Epic,Scale Rows - Web Experience - Checkout web flow wave 26,,INIT-100,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,
-WEB-2016,200066,Epic,Scale Rows - Web Experience - Search results tuning wave 17,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,
-WEB-2007,200057,Epic,Scale Rows - Web Experience - Experiment cleanup wave 08,,INIT-100,Portfolio 2026,,,In Progress,,2026-03-23,2026-05-04,,
+WEB-2025,200075,Epic,Scale Rows - Web Experience - Checkout web flow wave 26,,INIT-100,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,WEB-2024
+WEB-2016,200066,Epic,Scale Rows - Web Experience - Search results tuning wave 17,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,WEB-2015
+WEB-2007,200057,Epic,Scale Rows - Web Experience - Experiment cleanup wave 08,,INIT-100,Portfolio 2026,,,In Progress,,2026-03-23,2026-05-04,,WEB-2006
 WEB-2044,200094,Epic,Scale Rows - Web Experience - Content publishing wave 45,,INIT-1200,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,
 WEB-2035,200085,Epic,Scale Rows - Web Experience - Accessibility remediation wave 36,,INIT-1200,Portfolio 2026,,,In Progress,,2026-04-13,2026-05-11,,
-WEB-2026,200076,Epic,Scale Rows - Web Experience - Homepage personalization wave 27,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,
-WEB-2017,200067,Epic,Scale Rows - Web Experience - Checkout web flow wave 18,,INIT-1200,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,
+WEB-2026,200076,Epic,Scale Rows - Web Experience - Homepage personalization wave 27,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,WEB-2025
+WEB-2017,200067,Epic,Scale Rows - Web Experience - Checkout web flow wave 18,,INIT-1200,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,WEB-2016
 WEB-2036,200086,Epic,Scale Rows - Web Experience - Content publishing wave 37,,INIT-500,Portfolio 2026,,,To Do,,2026-04-20,2026-05-25,,
 WEB-2027,200077,Epic,Scale Rows - Web Experience - Accessibility remediation wave 28,,INIT-500,Portfolio 2026,,,To Do,,2026-08-10,2026-09-21,,
-WEB-2018,200068,Epic,Scale Rows - Web Experience - Homepage personalization wave 19,,INIT-500,Portfolio 2026,,,To Do,,2026-06-08,2026-07-27,,
-WEB-2009,200059,Epic,Scale Rows - Web Experience - Checkout web flow wave 10,,INIT-500,Portfolio 2026,,,To Do,,2026-04-06,2026-06-01,,
+WEB-2018,200068,Epic,Scale Rows - Web Experience - Homepage personalization wave 19,,INIT-500,Portfolio 2026,,,To Do,,2026-06-08,2026-07-27,,WEB-2017
+WEB-2009,200059,Epic,Scale Rows - Web Experience - Checkout web flow wave 10,,INIT-500,Portfolio 2026,,,To Do,,2026-04-06,2026-06-01,,WEB-2007
 WEB-2037,200087,Epic,Scale Rows - Web Experience - Navigation refresh wave 38,,INIT-100,Portfolio 2026,,,In Progress,,2026-04-27,2026-06-08,,
 WEB-2028,200078,Epic,Scale Rows - Web Experience - Content publishing wave 29,,INIT-100,Portfolio 2026,,,In Progress,,2026-08-17,2026-10-05,,
-WEB-2019,200069,Epic,Scale Rows - Web Experience - Accessibility remediation wave 20,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,
+WEB-2019,200069,Epic,Scale Rows - Web Experience - Accessibility remediation wave 20,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,WEB-2018
 OPS-5000,200160,Epic,Scale Rows - Operations - Release checklist automation wave 01,,INIT-400,Operations Q1,,,To Do,,2026-10-05,2026-11-02,,
 WEB-2038,200088,Epic,Scale Rows - Web Experience - Localization pass wave 39,,INIT-1200,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,
 UNK-9001,200181,Epic,Scale Rows - Unknown Prefix - Legacy partner request wave 02,,INIT-100,Portfolio 2026,,,In Progress,,2026-09-07,2026-10-12,,
 WEB-2029,200079,Epic,Scale Rows - Web Experience - Navigation refresh wave 30,,INIT-1200,Portfolio 2026,,,In Progress,,2026-08-24,2026-10-19,,
-OPS-5010,200170,Epic,Scale Rows - Operations - Support workflow routing wave 11,,INIT-400,Operations Q1,,,In Progress,,2026-06-22,2026-07-20,,
-OPS-5001,200161,Epic,Scale Rows - Operations - Incident readiness wave 02,,INIT-400,Operations Q2,,,In Progress,,2026-10-12,2026-11-16,,
+OPS-5010,200170,Epic,Scale Rows - Operations - Support workflow routing wave 11,,INIT-400,Operations Q1,,,In Progress,,2026-06-22,2026-07-20,,OPS-5009
+OPS-5001,200161,Epic,Scale Rows - Operations - Incident readiness wave 02,,INIT-400,Operations Q2,,,In Progress,,2026-10-12,2026-11-16,,OPS-5000
 WEB-2039,200089,Epic,Scale Rows - Web Experience - Experiment cleanup wave 40,,INIT-500,Portfolio 2026,,,To Do,,2026-05-11,2026-07-06,,
 UNK-9002,200182,Epic,Scale Rows - Unknown Prefix - Triage placeholder wave 03,,INIT-100,Portfolio 2026,,,In Progress,,2026-09-14,2026-10-26,,
-OPS-5011,200171,Epic,Scale Rows - Operations - Change advisory preparation wave 12,,INIT-400,Operations Q2,,,In Progress,,2026-06-29,2026-08-03,,
-OPS-5002,200162,Epic,Scale Rows - Operations - Support workflow routing wave 03,,INIT-400,Operations Q1,,,In Progress,,2026-10-19,2026-11-30,,
+OPS-5011,200171,Epic,Scale Rows - Operations - Change advisory preparation wave 12,,INIT-400,Operations Q2,,,In Progress,,2026-06-29,2026-08-03,,OPS-5010
+OPS-5002,200162,Epic,Scale Rows - Operations - Support workflow routing wave 03,,INIT-400,Operations Q1,,,In Progress,,2026-10-19,2026-11-30,,OPS-5001
 UNK-9003,200183,Epic,Scale Rows - Unknown Prefix - Unassigned portfolio item wave 04,,INIT-100,Portfolio 2026,,,To Do,,2026-09-21,2026-11-09,,
-OPS-5012,200172,Epic,Scale Rows - Operations - Runbook modernization wave 13,,INIT-400,Operations Q1,,,To Do,,2026-07-06,2026-08-17,,
-OPS-5003,200163,Epic,Scale Rows - Operations - Change advisory preparation wave 04,,INIT-400,Operations Q2,,,To Do,,2026-10-26,2026-12-14,,
-OPS-5013,200173,Epic,Scale Rows - Operations - Capacity review wave 14,,INIT-400,Operations Q2,,,In Progress,,2026-07-13,2026-08-31,,
-OPS-5004,200164,Epic,Scale Rows - Operations - Runbook modernization wave 05,,INIT-400,Operations Q1,,,In Progress,,2026-11-02,2026-12-28,,
-OPS-5014,200174,Epic,Scale Rows - Operations - Monitoring handoff wave 15,,INIT-400,Operations Q1,,,In Progress,,2026-07-20,2026-09-14,,
-OPS-5005,200165,Epic,Scale Rows - Operations - Capacity review wave 06,,INIT-400,Operations Q2,,,In Progress,,2026-11-09,2026-12-07,,
-OPS-5015,200175,Epic,Scale Rows - Operations - Service review cadence wave 16,,INIT-400,Operations Q2,,,To Do,,2026-07-27,2026-08-24,,
-OPS-5006,200166,Epic,Scale Rows - Operations - Monitoring handoff wave 07,,INIT-400,Operations Q1,,,To Do,,2026-11-16,2026-12-21,,
-OPS-5016,200176,Epic,Scale Rows - Operations - Release checklist automation wave 17,,INIT-400,Operations Q1,,,In Progress,,2026-08-03,2026-09-07,,
-OPS-5007,200167,Epic,Scale Rows - Operations - Service review cadence wave 08,,INIT-400,Operations Q2,,,In Progress,,2026-11-23,2027-01-04,,
-OPS-5017,200177,Epic,Scale Rows - Operations - Incident readiness wave 18,,INIT-400,Operations Q2,,,In Progress,,2026-08-10,2026-09-21,,
-OPS-5008,200168,Epic,Scale Rows - Operations - Release checklist automation wave 09,,INIT-400,Operations Q1,,,In Progress,,2026-06-08,2026-07-27,,
-OPS-5018,200178,Epic,Scale Rows - Operations - Support workflow routing wave 19,,INIT-400,Operations Q1,,,To Do,,2026-08-17,2026-10-05,,
-OPS-5009,200169,Epic,Scale Rows - Operations - Incident readiness wave 10,,INIT-400,Operations Q2,,,To Do,,2026-06-15,2026-08-10,,
+OPS-5012,200172,Epic,Scale Rows - Operations - Runbook modernization wave 13,,INIT-400,Operations Q1,,,To Do,,2026-07-06,2026-08-17,,OPS-5011
+OPS-5003,200163,Epic,Scale Rows - Operations - Change advisory preparation wave 04,,INIT-400,Operations Q2,,,To Do,,2026-10-26,2026-12-14,,OPS-5002
+OPS-5013,200173,Epic,Scale Rows - Operations - Capacity review wave 14,,INIT-400,Operations Q2,,,In Progress,,2026-07-13,2026-08-31,,OPS-5012
+OPS-5004,200164,Epic,Scale Rows - Operations - Runbook modernization wave 05,,INIT-400,Operations Q1,,,In Progress,,2026-11-02,2026-12-28,,OPS-5003
+OPS-5014,200174,Epic,Scale Rows - Operations - Monitoring handoff wave 15,,INIT-400,Operations Q1,,,In Progress,,2026-07-20,2026-09-14,,OPS-5013
+OPS-5005,200165,Epic,Scale Rows - Operations - Capacity review wave 06,,INIT-400,Operations Q2,,,In Progress,,2026-11-09,2026-12-07,,OPS-5004
+OPS-5015,200175,Epic,Scale Rows - Operations - Service review cadence wave 16,,INIT-400,Operations Q2,,,To Do,,2026-07-27,2026-08-24,,OPS-5014
+OPS-5006,200166,Epic,Scale Rows - Operations - Monitoring handoff wave 07,,INIT-400,Operations Q1,,,To Do,,2026-11-16,2026-12-21,,OPS-5005
+OPS-5016,200176,Epic,Scale Rows - Operations - Release checklist automation wave 17,,INIT-400,Operations Q1,,,In Progress,,2026-08-03,2026-09-07,,OPS-5015
+OPS-5007,200167,Epic,Scale Rows - Operations - Service review cadence wave 08,,INIT-400,Operations Q2,,,In Progress,,2026-11-23,2027-01-04,,OPS-5006
+OPS-5017,200177,Epic,Scale Rows - Operations - Incident readiness wave 18,,INIT-400,Operations Q2,,,In Progress,,2026-08-10,2026-09-21,,OPS-5016
+OPS-5008,200168,Epic,Scale Rows - Operations - Release checklist automation wave 09,,INIT-400,Operations Q1,,,In Progress,,2026-06-08,2026-07-27,,OPS-5007
+OPS-5018,200178,Epic,Scale Rows - Operations - Support workflow routing wave 19,,INIT-400,Operations Q1,,,To Do,,2026-08-17,2026-10-05,,OPS-5017
+OPS-5009,200169,Epic,Scale Rows - Operations - Incident readiness wave 10,,INIT-400,Operations Q2,,,To Do,,2026-06-15,2026-08-10,,OPS-5008
 DATA-3000,200095,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 01,,INIT-300,Portfolio 2026,,,To Do,,2026-06-22,2026-07-20,,
-DATA-3010,200105,Epic,Scale Rows - Data Platform - Metrics certification wave 11,,INIT-600,Portfolio 2026,,,In Progress,,2026-08-31,2026-09-28,,
-DATA-3001,200096,Epic,Scale Rows - Data Platform - Pipeline observability wave 02,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-29,2026-08-03,,
-DATA-3020,200115,Epic,Scale Rows - Data Platform - Streaming ingestion wave 21,,INIT-1500,Portfolio 2026,,,In Progress,,2026-05-18,2026-06-15,,
-DATA-3011,200106,Epic,Scale Rows - Data Platform - Forecast data mart wave 12,,INIT-1500,Portfolio 2026,,,In Progress,,2026-09-07,2026-10-12,,
-DATA-3002,200097,Epic,Scale Rows - Data Platform - Metrics certification wave 03,,INIT-1500,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,
+DATA-3010,200105,Epic,Scale Rows - Data Platform - Metrics certification wave 11,,INIT-600,Portfolio 2026,,,In Progress,,2026-08-31,2026-09-28,,DATA-3007
+DATA-3001,200096,Epic,Scale Rows - Data Platform - Pipeline observability wave 02,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-29,2026-08-03,,DATA-3000
+DATA-3020,200115,Epic,Scale Rows - Data Platform - Streaming ingestion wave 21,,INIT-1500,Portfolio 2026,,,In Progress,,2026-05-18,2026-06-15,,DATA-3019
+DATA-3011,200106,Epic,Scale Rows - Data Platform - Forecast data mart wave 12,,INIT-1500,Portfolio 2026,,,In Progress,,2026-09-07,2026-10-12,,DATA-3010
+DATA-3002,200097,Epic,Scale Rows - Data Platform - Metrics certification wave 03,,INIT-1500,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,DATA-3001
 DATA-3030,200125,Epic,Scale Rows - Data Platform - Quality rule expansion wave 31,,INIT-300,Portfolio 2026,,,To Do,,2026-07-27,2026-08-24,,
-DATA-3021,200116,Epic,Scale Rows - Data Platform - Retention model update wave 22,,INIT-300,Portfolio 2026,,,To Do,,2026-05-25,2026-06-29,,
-DATA-3012,200107,Epic,Scale Rows - Data Platform - Streaming ingestion wave 13,,INIT-300,Portfolio 2026,,,To Do,,2026-09-14,2026-10-26,,
-DATA-3003,200098,Epic,Scale Rows - Data Platform - Forecast data mart wave 04,,INIT-300,Portfolio 2026,,,To Do,,2026-07-13,2026-08-31,,
-CORE-1010,200010,Epic,Scale Rows - Core Product - Notification routing wave 11,,INIT-700,Portfolio 2026,,,In Progress,,2026-04-13,2026-05-11,,
+DATA-3021,200116,Epic,Scale Rows - Data Platform - Retention model update wave 22,,INIT-300,Portfolio 2026,,,To Do,,2026-05-25,2026-06-29,,DATA-3020
+DATA-3012,200107,Epic,Scale Rows - Data Platform - Streaming ingestion wave 13,,INIT-300,Portfolio 2026,,,To Do,,2026-09-14,2026-10-26,,DATA-3011
+DATA-3003,200098,Epic,Scale Rows - Data Platform - Forecast data mart wave 04,,INIT-300,Portfolio 2026,,,To Do,,2026-07-13,2026-08-31,,DATA-3002
+CORE-1010,200010,Epic,Scale Rows - Core Product - Notification routing wave 11,,INIT-700,Portfolio 2026,,,In Progress,,2026-04-13,2026-05-11,,CORE-1009
 DATA-3031,200126,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 32,,INIT-600,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,
-DATA-3022,200117,Epic,Scale Rows - Data Platform - Quality rule expansion wave 23,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,
-DATA-3013,200108,Epic,Scale Rows - Data Platform - Retention model update wave 14,,INIT-600,Portfolio 2026,,,In Progress,,2026-09-21,2026-11-09,,
-DATA-3004,200099,Epic,Scale Rows - Data Platform - Streaming ingestion wave 05,,INIT-600,Portfolio 2026,,,In Progress,,2026-07-20,2026-09-14,,
-CORE-1020,200020,Epic,Scale Rows - Core Product - Account recovery wave 21,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,
-CORE-1011,200011,Epic,Scale Rows - Core Product - Session management wave 12,,INIT-800,Portfolio 2026,,,In Progress,,2026-04-20,2026-05-25,,
+DATA-3022,200117,Epic,Scale Rows - Data Platform - Quality rule expansion wave 23,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,DATA-3021
+DATA-3013,200108,Epic,Scale Rows - Data Platform - Retention model update wave 14,,INIT-600,Portfolio 2026,,,In Progress,,2026-09-21,2026-11-09,,DATA-3012
+DATA-3004,200099,Epic,Scale Rows - Data Platform - Streaming ingestion wave 05,,INIT-600,Portfolio 2026,,,In Progress,,2026-07-20,2026-09-14,,DATA-3003
+CORE-1020,200020,Epic,Scale Rows - Core Product - Account recovery wave 21,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,CORE-1019
+CORE-1011,200011,Epic,Scale Rows - Core Product - Session management wave 12,,INIT-800,Portfolio 2026,,,In Progress,,2026-04-20,2026-05-25,,CORE-1010
 DATA-3032,200127,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 33,,INIT-1500,Portfolio 2026,,,In Progress,,2026-08-10,2026-09-21,,
-DATA-3023,200118,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 24,,INIT-1500,Portfolio 2026,,,In Progress,,2026-06-08,2026-07-27,,
-DATA-3014,200109,Epic,Scale Rows - Data Platform - Quality rule expansion wave 15,,INIT-1500,Portfolio 2026,,,In Progress,,2026-09-28,2026-11-23,,
-DATA-3005,200100,Epic,Scale Rows - Data Platform - Retention model update wave 06,,INIT-1500,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,
-CORE-1030,200030,Epic,Scale Rows - Core Product - Consent preference updates wave 31,,INIT-700,Portfolio 2026,,,To Do,,2026-03-09,2026-04-06,,
-CORE-1021,200021,Epic,Scale Rows - Core Product - API gateway refresh wave 22,,INIT-200,Portfolio 2026,,,To Do,,2026-06-29,2026-08-03,,
-CORE-1012,200012,Epic,Scale Rows - Core Product - Account recovery wave 13,,INIT-100,Portfolio 2026,,,To Do,,2026-04-27,2026-06-08,,
+DATA-3023,200118,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 24,,INIT-1500,Portfolio 2026,,,In Progress,,2026-06-08,2026-07-27,,DATA-3022
+DATA-3014,200109,Epic,Scale Rows - Data Platform - Quality rule expansion wave 15,,INIT-1500,Portfolio 2026,,,In Progress,,2026-09-28,2026-11-23,,DATA-3013
+DATA-3005,200100,Epic,Scale Rows - Data Platform - Retention model update wave 06,,INIT-1500,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,DATA-3004
+CORE-1030,200030,Epic,Scale Rows - Core Product - Consent preference updates wave 31,,INIT-700,Portfolio 2026,,,To Do,,2026-03-09,2026-04-06,,CORE-1029
+CORE-1021,200021,Epic,Scale Rows - Core Product - API gateway refresh wave 22,,INIT-200,Portfolio 2026,,,To Do,,2026-06-29,2026-08-03,,CORE-1020
+CORE-1012,200012,Epic,Scale Rows - Core Product - Account recovery wave 13,,INIT-100,Portfolio 2026,,,To Do,,2026-04-27,2026-06-08,,CORE-1011
 DATA-3033,200128,Epic,Scale Rows - Data Platform - Pipeline observability wave 34,,INIT-300,Portfolio 2026,,,To Do,,2026-08-17,2026-10-05,,
-DATA-3024,200119,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 25,,INIT-300,Portfolio 2026,,,To Do,,2026-06-15,2026-08-10,,
-DATA-3015,200110,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 16,,INIT-300,Portfolio 2026,,,To Do,,2026-10-05,2026-11-02,,
-DATA-3006,200101,Epic,Scale Rows - Data Platform - Quality rule expansion wave 07,,INIT-300,Portfolio 2026,,,To Do,,2026-08-03,2026-09-07,,
+DATA-3024,200119,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 25,,INIT-300,Portfolio 2026,,,To Do,,2026-06-15,2026-08-10,,DATA-3023
+DATA-3015,200110,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 16,,INIT-300,Portfolio 2026,,,To Do,,2026-10-05,2026-11-02,,DATA-3014
+DATA-3006,200101,Epic,Scale Rows - Data Platform - Quality rule expansion wave 07,,INIT-300,Portfolio 2026,,,To Do,,2026-08-03,2026-09-07,,DATA-3005
 CORE-1040,200040,Epic,Scale Rows - Core Product - Profile service rollout wave 41,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-18,2026-06-15,,
-CORE-1031,200031,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 32,,INIT-800,Portfolio 2026,,,In Progress,,2026-03-16,2026-04-20,,
-CORE-1022,200022,Epic,Scale Rows - Core Product - Consent preference updates wave 23,,INIT-700,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,
+CORE-1031,200031,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 32,,INIT-800,Portfolio 2026,,,In Progress,,2026-03-16,2026-04-20,,CORE-1030
+CORE-1022,200022,Epic,Scale Rows - Core Product - Consent preference updates wave 23,,INIT-700,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,CORE-1021
 PLAT-4000,200130,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 01,,INIT-400,Platform Q1,,,To Do,,2026-08-31,2026-09-28,,
-CORE-1013,200013,Epic,Scale Rows - Core Product - API gateway refresh wave 14,,INIT-200,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,
-DATA-3025,200120,Epic,Scale Rows - Data Platform - Pipeline observability wave 26,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,
-DATA-3016,200111,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 17,,INIT-600,Portfolio 2026,,,In Progress,,2026-10-12,2026-11-16,,
-DATA-3007,200102,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 08,,INIT-600,Portfolio 2026,,,In Progress,,2026-08-10,2026-09-21,,
+CORE-1013,200013,Epic,Scale Rows - Core Product - API gateway refresh wave 14,,INIT-200,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,CORE-1012
+DATA-3025,200120,Epic,Scale Rows - Data Platform - Pipeline observability wave 26,,INIT-600,Portfolio 2026,,,In Progress,,2026-06-22,2026-07-20,,DATA-3024
+DATA-3016,200111,Epic,Scale Rows - Data Platform - Warehouse model refresh wave 17,,INIT-600,Portfolio 2026,,,In Progress,,2026-10-12,2026-11-16,,DATA-3015
+DATA-3007,200102,Epic,Scale Rows - Data Platform - Analytics contract cleanup wave 08,,INIT-600,Portfolio 2026,,,In Progress,,2026-08-10,2026-09-21,,DATA-3006
 CORE-1041,200041,Epic,Scale Rows - Core Product - Entitlement cleanup wave 42,,INIT-200,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,
-CORE-1032,200032,Epic,Scale Rows - Core Product - Profile service rollout wave 33,,INIT-100,Portfolio 2026,,,In Progress,,2026-03-23,2026-05-04,,
-PLAT-4010,200140,Epic,Scale Rows - Platform Services - Secrets management wave 11,,INIT-400,Platform Q2,,,In Progress,,2026-05-18,2026-06-15,,
-CORE-1023,200023,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 24,,INIT-800,Portfolio 2026,,,In Progress,,2026-07-13,2026-08-31,,
-PLAT-4001,200131,Epic,Scale Rows - Platform Services - Build runner rotation wave 02,,INIT-400,Platform Q2,,,In Progress,,2026-09-07,2026-10-12,,
-CORE-1014,200014,Epic,Scale Rows - Core Product - Consent preference updates wave 15,,INIT-700,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,
+CORE-1032,200032,Epic,Scale Rows - Core Product - Profile service rollout wave 33,,INIT-100,Portfolio 2026,,,In Progress,,2026-03-23,2026-05-04,,CORE-1031
+PLAT-4010,200140,Epic,Scale Rows - Platform Services - Secrets management wave 11,,INIT-400,Platform Q2,,,In Progress,,2026-05-18,2026-06-15,,PLAT-4009
+CORE-1023,200023,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 24,,INIT-800,Portfolio 2026,,,In Progress,,2026-07-13,2026-08-31,,CORE-1022
+PLAT-4001,200131,Epic,Scale Rows - Platform Services - Build runner rotation wave 02,,INIT-400,Platform Q2,,,In Progress,,2026-09-07,2026-10-12,,PLAT-4000
+CORE-1014,200014,Epic,Scale Rows - Core Product - Consent preference updates wave 15,,INIT-700,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,CORE-1013
 DATA-3026,200121,Epic,Scale Rows - Data Platform - Metrics certification wave 27,,INIT-1500,Portfolio 2026,,,In Progress,,2026-06-29,2026-08-03,,
-DATA-3017,200112,Epic,Scale Rows - Data Platform - Pipeline observability wave 18,,INIT-1500,Portfolio 2026,,,In Progress,,2026-04-27,2026-06-08,,
+DATA-3017,200112,Epic,Scale Rows - Data Platform - Pipeline observability wave 18,,INIT-1500,Portfolio 2026,,,In Progress,,2026-04-27,2026-06-08,,DATA-3016
 CORE-1042,200042,Epic,Scale Rows - Core Product - Notification routing wave 43,,INIT-700,Portfolio 2026,,,To Do,,2026-06-01,2026-07-13,,
-PLAT-4020,200150,Epic,Scale Rows - Platform Services - Service mesh controls wave 21,,INIT-400,Shared Services 2026,,,In Progress,,2026-07-27,2026-08-24,,
+PLAT-4020,200150,Epic,Scale Rows - Platform Services - Service mesh controls wave 21,,INIT-400,Shared Services 2026,,,In Progress,,2026-07-27,2026-08-24,,PLAT-4019
 CORE-1033,200033,Epic,Scale Rows - Core Product - Entitlement cleanup wave 34,,INIT-200,Portfolio 2026,,,To Do,,2026-03-30,2026-05-18,,
-PLAT-4011,200141,Epic,Scale Rows - Platform Services - Shared logging wave 12,,INIT-400,Shared Services 2026,,,In Progress,,2026-05-25,2026-06-29,,
-CORE-1024,200024,Epic,Scale Rows - Core Product - Profile service rollout wave 25,,INIT-100,Portfolio 2026,,,To Do,,2026-07-20,2026-09-14,,
-PLAT-4002,200132,Epic,Scale Rows - Platform Services - Secrets management wave 03,,INIT-400,Shared Services 2026,,,In Progress,,2026-09-14,2026-10-26,,
-CORE-1015,200015,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 16,,INIT-800,Portfolio 2026,,,To Do,,2026-05-18,2026-06-15,,
+PLAT-4011,200141,Epic,Scale Rows - Platform Services - Shared logging wave 12,,INIT-400,Shared Services 2026,,,In Progress,,2026-05-25,2026-06-29,,PLAT-4010
+CORE-1024,200024,Epic,Scale Rows - Core Product - Profile service rollout wave 25,,INIT-100,Portfolio 2026,,,To Do,,2026-07-20,2026-09-14,,CORE-1023
+PLAT-4002,200132,Epic,Scale Rows - Platform Services - Secrets management wave 03,,INIT-400,Shared Services 2026,,,In Progress,,2026-09-14,2026-10-26,,PLAT-4001
+CORE-1015,200015,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 16,,INIT-800,Portfolio 2026,,,To Do,,2026-05-18,2026-06-15,,CORE-1014
 DATA-3027,200122,Epic,Scale Rows - Data Platform - Forecast data mart wave 28,,INIT-300,Portfolio 2026,,,To Do,,2026-07-06,2026-08-17,,
-DATA-3018,200113,Epic,Scale Rows - Data Platform - Metrics certification wave 19,,INIT-300,Portfolio 2026,,,To Do,,2026-05-04,2026-06-22,,
+DATA-3018,200113,Epic,Scale Rows - Data Platform - Metrics certification wave 19,,INIT-300,Portfolio 2026,,,To Do,,2026-05-04,2026-06-22,,DATA-3017
 CORE-1043,200043,Epic,Scale Rows - Core Product - Session management wave 44,,INIT-800,Portfolio 2026,,,In Progress,,2026-06-08,2026-07-27,,
-PLAT-4021,200151,Epic,Scale Rows - Platform Services - Environment provisioning wave 22,,INIT-400,Platform Q1,,,To Do,,2026-08-03,2026-09-07,,
+PLAT-4021,200151,Epic,Scale Rows - Platform Services - Environment provisioning wave 22,,INIT-400,Platform Q1,,,To Do,,2026-08-03,2026-09-07,,PLAT-4020
 CORE-1034,200034,Epic,Scale Rows - Core Product - Notification routing wave 35,,INIT-700,Portfolio 2026,,,In Progress,,2026-04-06,2026-06-01,,
-PLAT-4012,200142,Epic,Scale Rows - Platform Services - Service mesh controls wave 13,,INIT-400,Platform Q1,,,To Do,,2026-06-01,2026-07-13,,
-CORE-1025,200025,Epic,Scale Rows - Core Product - Entitlement cleanup wave 26,,INIT-200,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,
-PLAT-4003,200133,Epic,Scale Rows - Platform Services - Shared logging wave 04,,INIT-400,Platform Q1,,,To Do,,2026-09-21,2026-11-09,,
-CORE-1016,200016,Epic,Scale Rows - Core Product - Profile service rollout wave 17,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,
+PLAT-4012,200142,Epic,Scale Rows - Platform Services - Service mesh controls wave 13,,INIT-400,Platform Q1,,,To Do,,2026-06-01,2026-07-13,,PLAT-4011
+CORE-1025,200025,Epic,Scale Rows - Core Product - Entitlement cleanup wave 26,,INIT-200,Portfolio 2026,,,In Progress,,2026-07-27,2026-08-24,,CORE-1024
+PLAT-4003,200133,Epic,Scale Rows - Platform Services - Shared logging wave 04,,INIT-400,Platform Q1,,,To Do,,2026-09-21,2026-11-09,,PLAT-4002
+CORE-1016,200016,Epic,Scale Rows - Core Product - Profile service rollout wave 17,,INIT-100,Portfolio 2026,,,In Progress,,2026-05-25,2026-06-29,,CORE-1015
 DATA-3028,200123,Epic,Scale Rows - Data Platform - Streaming ingestion wave 29,,INIT-600,Portfolio 2026,,,In Progress,,2026-07-13,2026-08-31,,
-DATA-3019,200114,Epic,Scale Rows - Data Platform - Forecast data mart wave 20,,INIT-600,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,
+DATA-3019,200114,Epic,Scale Rows - Data Platform - Forecast data mart wave 20,,INIT-600,Portfolio 2026,,,In Progress,,2026-05-11,2026-07-06,,DATA-3018
 CORE-1044,200044,Epic,Scale Rows - Core Product - Account recovery wave 45,,INIT-100,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,
-PLAT-4022,200152,Epic,Scale Rows - Platform Services - Artifact retention wave 23,,INIT-400,Platform Q2,,,In Progress,,2026-08-10,2026-09-21,,
+PLAT-4022,200152,Epic,Scale Rows - Platform Services - Artifact retention wave 23,,INIT-400,Platform Q2,,,In Progress,,2026-08-10,2026-09-21,,PLAT-4021
 CORE-1035,200035,Epic,Scale Rows - Core Product - Session management wave 36,,INIT-800,Portfolio 2026,,,In Progress,,2026-04-13,2026-05-11,,
-PLAT-4013,200143,Epic,Scale Rows - Platform Services - Environment provisioning wave 14,,INIT-400,Platform Q2,,,In Progress,,2026-06-08,2026-07-27,,
-CORE-1026,200026,Epic,Scale Rows - Core Product - Notification routing wave 27,,INIT-700,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,
-PLAT-4004,200134,Epic,Scale Rows - Platform Services - Service mesh controls wave 05,,INIT-400,Platform Q2,,,In Progress,,2026-09-28,2026-11-23,,
-CORE-1017,200017,Epic,Scale Rows - Core Product - Entitlement cleanup wave 18,,INIT-200,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,
+PLAT-4013,200143,Epic,Scale Rows - Platform Services - Environment provisioning wave 14,,INIT-400,Platform Q2,,,In Progress,,2026-06-08,2026-07-27,,PLAT-4012
+CORE-1026,200026,Epic,Scale Rows - Core Product - Notification routing wave 27,,INIT-700,Portfolio 2026,,,In Progress,,2026-08-03,2026-09-07,,CORE-1025
+PLAT-4004,200134,Epic,Scale Rows - Platform Services - Service mesh controls wave 05,,INIT-400,Platform Q2,,,In Progress,,2026-09-28,2026-11-23,,PLAT-4003
+CORE-1017,200017,Epic,Scale Rows - Core Product - Entitlement cleanup wave 18,,INIT-200,Portfolio 2026,,,In Progress,,2026-06-01,2026-07-13,,CORE-1016
 CORE-1008,200008,Epic,Scale Rows - Core Product - Profile service rollout wave 09,,INIT-100,Portfolio 2026,,,In Progress,,2026-03-30,2026-05-18,,
 DATA-3029,200124,Epic,Scale Rows - Data Platform - Retention model update wave 30,,INIT-1500,Portfolio 2026,,,In Progress,,2026-07-20,2026-09-14,,
 CORE-1045,200045,Epic,Scale Rows - Core Product - API gateway refresh wave 46,,INIT-200,Portfolio 2026,,,To Do,,2026-06-22,2026-07-20,,
-PLAT-4023,200153,Epic,Scale Rows - Platform Services - Deployment guardrails wave 24,,INIT-400,Shared Services 2026,,,In Progress,,2026-08-17,2026-10-05,,
+PLAT-4023,200153,Epic,Scale Rows - Platform Services - Deployment guardrails wave 24,,INIT-400,Shared Services 2026,,,In Progress,,2026-08-17,2026-10-05,,PLAT-4022
 CORE-1036,200036,Epic,Scale Rows - Core Product - Account recovery wave 37,,INIT-100,Portfolio 2026,,,To Do,,2026-04-20,2026-05-25,,
-PLAT-4014,200144,Epic,Scale Rows - Platform Services - Artifact retention wave 15,,INIT-400,Shared Services 2026,,,In Progress,,2026-06-15,2026-08-10,,
-CORE-1027,200027,Epic,Scale Rows - Core Product - Session management wave 28,,INIT-800,Portfolio 2026,,,To Do,,2026-08-10,2026-09-21,,
-PLAT-4005,200135,Epic,Scale Rows - Platform Services - Environment provisioning wave 06,,INIT-400,Shared Services 2026,,,In Progress,,2026-10-05,2026-11-02,,
-CORE-1018,200018,Epic,Scale Rows - Core Product - Notification routing wave 19,,INIT-700,Portfolio 2026,,,To Do,,2026-06-08,2026-07-27,,
-CORE-1009,200009,Epic,Scale Rows - Core Product - Entitlement cleanup wave 10,,INIT-200,Portfolio 2026,,,To Do,,2026-04-06,2026-06-01,,
+PLAT-4014,200144,Epic,Scale Rows - Platform Services - Artifact retention wave 15,,INIT-400,Shared Services 2026,,,In Progress,,2026-06-15,2026-08-10,,PLAT-4013
+CORE-1027,200027,Epic,Scale Rows - Core Product - Session management wave 28,,INIT-800,Portfolio 2026,,,To Do,,2026-08-10,2026-09-21,,CORE-1026
+PLAT-4005,200135,Epic,Scale Rows - Platform Services - Environment provisioning wave 06,,INIT-400,Shared Services 2026,,,In Progress,,2026-10-05,2026-11-02,,PLAT-4004
+CORE-1018,200018,Epic,Scale Rows - Core Product - Notification routing wave 19,,INIT-700,Portfolio 2026,,,To Do,,2026-06-08,2026-07-27,,CORE-1017
+CORE-1009,200009,Epic,Scale Rows - Core Product - Entitlement cleanup wave 10,,INIT-200,Portfolio 2026,,,To Do,,2026-04-06,2026-06-01,,CORE-1008
 CORE-1046,200046,Epic,Scale Rows - Core Product - Consent preference updates wave 47,,INIT-700,Portfolio 2026,,,In Progress,,2026-06-29,2026-08-03,,
 PLAT-4024,200154,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 25,,INIT-400,Platform Q1,,,To Do,,2026-08-24,2026-10-19,,
 CORE-1037,200037,Epic,Scale Rows - Core Product - API gateway refresh wave 38,,INIT-200,Portfolio 2026,,,In Progress,,2026-04-27,2026-06-08,,
-PLAT-4015,200145,Epic,Scale Rows - Platform Services - Deployment guardrails wave 16,,INIT-400,Platform Q1,,,To Do,,2026-06-22,2026-07-20,,
-CORE-1028,200028,Epic,Scale Rows - Core Product - Account recovery wave 29,,INIT-100,Portfolio 2026,,,In Progress,,2026-02-23,2026-04-13,,
-PLAT-4006,200136,Epic,Scale Rows - Platform Services - Artifact retention wave 07,,INIT-400,Platform Q1,,,To Do,,2026-10-12,2026-11-16,,
-CORE-1019,200019,Epic,Scale Rows - Core Product - Session management wave 20,,INIT-800,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,
+PLAT-4015,200145,Epic,Scale Rows - Platform Services - Deployment guardrails wave 16,,INIT-400,Platform Q1,,,To Do,,2026-06-22,2026-07-20,,PLAT-4014
+CORE-1028,200028,Epic,Scale Rows - Core Product - Account recovery wave 29,,INIT-100,Portfolio 2026,,,In Progress,,2026-02-23,2026-04-13,,CORE-1027
+PLAT-4006,200136,Epic,Scale Rows - Platform Services - Artifact retention wave 07,,INIT-400,Platform Q1,,,To Do,,2026-10-12,2026-11-16,,PLAT-4005
+CORE-1019,200019,Epic,Scale Rows - Core Product - Session management wave 20,,INIT-800,Portfolio 2026,,,In Progress,,2026-06-15,2026-08-10,,CORE-1018
 CORE-1047,200047,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 48,,INIT-800,Portfolio 2026,,,In Progress,,2026-07-06,2026-08-17,,
 PLAT-4025,200155,Epic,Scale Rows - Platform Services - Build runner rotation wave 26,,INIT-400,Platform Q2,,,In Progress,,2026-08-31,2026-09-28,,
 CORE-1038,200038,Epic,Scale Rows - Core Product - Consent preference updates wave 39,,INIT-700,Portfolio 2026,,,In Progress,,2026-05-04,2026-06-22,,
-PLAT-4016,200146,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 17,,INIT-400,Platform Q2,,,In Progress,,2026-06-29,2026-08-03,,
-CORE-1029,200029,Epic,Scale Rows - Core Product - API gateway refresh wave 30,,INIT-200,Portfolio 2026,,,In Progress,,2026-03-02,2026-04-27,,
-PLAT-4007,200137,Epic,Scale Rows - Platform Services - Deployment guardrails wave 08,,INIT-400,Platform Q2,,,In Progress,,2026-10-19,2026-11-30,,
+PLAT-4016,200146,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 17,,INIT-400,Platform Q2,,,In Progress,,2026-06-29,2026-08-03,,PLAT-4015
+CORE-1029,200029,Epic,Scale Rows - Core Product - API gateway refresh wave 30,,INIT-200,Portfolio 2026,,,In Progress,,2026-03-02,2026-04-27,,CORE-1028
+PLAT-4007,200137,Epic,Scale Rows - Platform Services - Deployment guardrails wave 08,,INIT-400,Platform Q2,,,In Progress,,2026-10-19,2026-11-30,,PLAT-4006
 PLAT-4026,200156,Epic,Scale Rows - Platform Services - Secrets management wave 27,,INIT-400,Shared Services 2026,,,In Progress,,2026-09-07,2026-10-12,,
 CORE-1039,200039,Epic,Scale Rows - Core Product - Fraud signal ingestion wave 40,,INIT-800,Portfolio 2026,,,To Do,,2026-05-11,2026-07-06,,
-PLAT-4017,200147,Epic,Scale Rows - Platform Services - Build runner rotation wave 18,,INIT-400,Shared Services 2026,,,In Progress,,2026-07-06,2026-08-17,,
-PLAT-4008,200138,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 09,,INIT-400,Shared Services 2026,,,In Progress,,2026-10-26,2026-12-14,,
+PLAT-4017,200147,Epic,Scale Rows - Platform Services - Build runner rotation wave 18,,INIT-400,Shared Services 2026,,,In Progress,,2026-07-06,2026-08-17,,PLAT-4016
+PLAT-4008,200138,Epic,Scale Rows - Platform Services - Kubernetes platform upgrade wave 09,,INIT-400,Shared Services 2026,,,In Progress,,2026-10-26,2026-12-14,,PLAT-4007
 PLAT-4027,200157,Epic,Scale Rows - Platform Services - Shared logging wave 28,,INIT-400,Platform Q1,,,To Do,,2026-09-14,2026-10-26,,
-PLAT-4018,200148,Epic,Scale Rows - Platform Services - Secrets management wave 19,,INIT-400,Platform Q1,,,To Do,,2026-07-13,2026-08-31,,
-PLAT-4009,200139,Epic,Scale Rows - Platform Services - Build runner rotation wave 10,,INIT-400,Platform Q1,,,To Do,,2026-11-02,2026-12-28,,
-PLAT-4019,200149,Epic,Scale Rows - Platform Services - Shared logging wave 20,,INIT-400,Platform Q2,,,In Progress,,2026-07-20,2026-09-14,,
+PLAT-4018,200148,Epic,Scale Rows - Platform Services - Secrets management wave 19,,INIT-400,Platform Q1,,,To Do,,2026-07-13,2026-08-31,,PLAT-4017
+PLAT-4009,200139,Epic,Scale Rows - Platform Services - Build runner rotation wave 10,,INIT-400,Platform Q1,,,To Do,,2026-11-02,2026-12-28,,PLAT-4008
+PLAT-4019,200149,Epic,Scale Rows - Platform Services - Shared logging wave 20,,INIT-400,Platform Q2,,,In Progress,,2026-07-20,2026-09-14,,PLAT-4018
 ,399998,Story,Client Walkthrough - Blank-key story row for CSV quality warning,,,,3,0.5,To Do,,,,,
 CORE-899999,399999,Story,Client Walkthrough - Orphan child story with no Epic Link,,,,5,1h 15m,Done,Done,,,,
 CORE-700001,400001,Task,Discovery task for Identity API name before Jira rename,CORE-1000,,Portfolio 2026,5,0h,Done,Done,,,,

@@ -268,7 +268,9 @@
       "row_role": "Scheduled",
       "source_row": 170,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1009"
+      ],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 09",
       "target_end": "2026-05-18",
       "target_start": "2026-03-30",
@@ -289,7 +291,9 @@
       "key_prefix": "CORE",
       "logged_hours": 18.5,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1008"
+      ],
       "primary_schedule_key": "CORE-1009",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -298,7 +302,9 @@
       "row_role": "Scheduled",
       "source_row": 179,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1010"
+      ],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 10",
       "target_end": "2026-06-01",
       "target_start": "2026-04-06",
@@ -319,7 +325,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.5,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1009"
+      ],
       "primary_schedule_key": "CORE-1010",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -328,7 +336,9 @@
       "row_role": "Scheduled",
       "source_row": 111,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1011"
+      ],
       "summary": "Scale Rows - Core Product - Notification routing wave 11",
       "target_end": "2026-05-11",
       "target_start": "2026-04-13",
@@ -349,7 +359,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.0,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1010"
+      ],
       "primary_schedule_key": "CORE-1011",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -358,7 +370,9 @@
       "row_role": "Scheduled",
       "source_row": 117,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1012"
+      ],
       "summary": "Scale Rows - Core Product - Session management wave 12",
       "target_end": "2026-05-25",
       "target_start": "2026-04-20",
@@ -379,7 +393,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1011"
+      ],
       "primary_schedule_key": "CORE-1012",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -388,7 +404,9 @@
       "row_role": "Scheduled",
       "source_row": 124,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1013"
+      ],
       "summary": "Scale Rows - Core Product - Account recovery wave 13",
       "target_end": "2026-06-08",
       "target_start": "2026-04-27",
@@ -409,7 +427,9 @@
       "key_prefix": "CORE",
       "logged_hours": 23.5,
       "percent_complete": 46,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1012"
+      ],
       "primary_schedule_key": "CORE-1013",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -418,7 +438,9 @@
       "row_role": "Scheduled",
       "source_row": 133,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1014"
+      ],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 14",
       "target_end": "2026-06-22",
       "target_start": "2026-05-04",
@@ -439,7 +461,9 @@
       "key_prefix": "CORE",
       "logged_hours": 14.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1013"
+      ],
       "primary_schedule_key": "CORE-1014",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -448,7 +472,9 @@
       "row_role": "Scheduled",
       "source_row": 142,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1015"
+      ],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 15",
       "target_end": "2026-07-06",
       "target_start": "2026-05-11",
@@ -469,7 +495,9 @@
       "key_prefix": "CORE",
       "logged_hours": 12.5,
       "percent_complete": 19,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1014"
+      ],
       "primary_schedule_key": "CORE-1015",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -478,7 +506,9 @@
       "row_role": "Scheduled",
       "source_row": 151,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1016"
+      ],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 16",
       "target_end": "2026-06-15",
       "target_start": "2026-05-18",
@@ -499,7 +529,9 @@
       "key_prefix": "CORE",
       "logged_hours": 14.0,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1015"
+      ],
       "primary_schedule_key": "CORE-1016",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -508,7 +540,9 @@
       "row_role": "Scheduled",
       "source_row": 160,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1017"
+      ],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 17",
       "target_end": "2026-06-29",
       "target_start": "2026-05-25",
@@ -529,7 +563,9 @@
       "key_prefix": "CORE",
       "logged_hours": 21.0,
       "percent_complete": 22,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1016"
+      ],
       "primary_schedule_key": "CORE-1017",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -538,7 +574,9 @@
       "row_role": "Scheduled",
       "source_row": 169,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1018"
+      ],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 18",
       "target_end": "2026-07-13",
       "target_start": "2026-06-01",
@@ -559,7 +597,9 @@
       "key_prefix": "CORE",
       "logged_hours": 13.5,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1017"
+      ],
       "primary_schedule_key": "CORE-1018",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -568,7 +608,9 @@
       "row_role": "Scheduled",
       "source_row": 178,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1019"
+      ],
       "summary": "Scale Rows - Core Product - Notification routing wave 19",
       "target_end": "2026-07-27",
       "target_start": "2026-06-08",
@@ -589,7 +631,9 @@
       "key_prefix": "CORE",
       "logged_hours": 16.5,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1018"
+      ],
       "primary_schedule_key": "CORE-1019",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -598,7 +642,9 @@
       "row_role": "Scheduled",
       "source_row": 186,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1020"
+      ],
       "summary": "Scale Rows - Core Product - Session management wave 20",
       "target_end": "2026-08-10",
       "target_start": "2026-06-15",
@@ -619,7 +665,9 @@
       "key_prefix": "CORE",
       "logged_hours": 16.0,
       "percent_complete": 11,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1019"
+      ],
       "primary_schedule_key": "CORE-1020",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -628,7 +676,9 @@
       "row_role": "Scheduled",
       "source_row": 116,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1021"
+      ],
       "summary": "Scale Rows - Core Product - Account recovery wave 21",
       "target_end": "2026-07-20",
       "target_start": "2026-06-22",
@@ -649,7 +699,9 @@
       "key_prefix": "CORE",
       "logged_hours": 19.5,
       "percent_complete": 25,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1020"
+      ],
       "primary_schedule_key": "CORE-1021",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -658,7 +710,9 @@
       "row_role": "Scheduled",
       "source_row": 123,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1022"
+      ],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 22",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
@@ -679,7 +733,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.5,
       "percent_complete": 42,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1021"
+      ],
       "primary_schedule_key": "CORE-1022",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -688,7 +744,9 @@
       "row_role": "Scheduled",
       "source_row": 131,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1023"
+      ],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 23",
       "target_end": "2026-08-17",
       "target_start": "2026-07-06",
@@ -709,7 +767,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.0,
       "percent_complete": 33,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1022"
+      ],
       "primary_schedule_key": "CORE-1023",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -718,7 +778,9 @@
       "row_role": "Scheduled",
       "source_row": 140,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1024"
+      ],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 24",
       "target_end": "2026-08-31",
       "target_start": "2026-07-13",
@@ -739,7 +801,9 @@
       "key_prefix": "CORE",
       "logged_hours": 15.0,
       "percent_complete": 16,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1023"
+      ],
       "primary_schedule_key": "CORE-1024",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -748,7 +812,9 @@
       "row_role": "Scheduled",
       "source_row": 149,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1025"
+      ],
       "summary": "Scale Rows - Core Product - Profile service rollout wave 25",
       "target_end": "2026-09-14",
       "target_start": "2026-07-20",
@@ -769,7 +835,9 @@
       "key_prefix": "CORE",
       "logged_hours": 23.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1024"
+      ],
       "primary_schedule_key": "CORE-1025",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -778,7 +846,9 @@
       "row_role": "Scheduled",
       "source_row": 158,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1026"
+      ],
       "summary": "Scale Rows - Core Product - Entitlement cleanup wave 26",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -799,7 +869,9 @@
       "key_prefix": "CORE",
       "logged_hours": 14.5,
       "percent_complete": 5,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1025"
+      ],
       "primary_schedule_key": "CORE-1026",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -808,7 +880,9 @@
       "row_role": "Scheduled",
       "source_row": 167,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1027"
+      ],
       "summary": "Scale Rows - Core Product - Notification routing wave 27",
       "target_end": "2026-09-07",
       "target_start": "2026-08-03",
@@ -829,7 +903,9 @@
       "key_prefix": "CORE",
       "logged_hours": 12.5,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1026"
+      ],
       "primary_schedule_key": "CORE-1027",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -838,7 +914,9 @@
       "row_role": "Scheduled",
       "source_row": 176,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1028"
+      ],
       "summary": "Scale Rows - Core Product - Session management wave 28",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
@@ -859,7 +937,9 @@
       "key_prefix": "CORE",
       "logged_hours": 14.0,
       "percent_complete": 26,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1027"
+      ],
       "primary_schedule_key": "CORE-1028",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -868,7 +948,9 @@
       "row_role": "Scheduled",
       "source_row": 184,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1029"
+      ],
       "summary": "Scale Rows - Core Product - Account recovery wave 29",
       "target_end": "2026-04-13",
       "target_start": "2026-02-23",
@@ -889,7 +971,9 @@
       "key_prefix": "CORE",
       "logged_hours": 21.0,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1028"
+      ],
       "primary_schedule_key": "CORE-1029",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-200",
@@ -898,7 +982,9 @@
       "row_role": "Scheduled",
       "source_row": 191,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1030"
+      ],
       "summary": "Scale Rows - Core Product - API gateway refresh wave 30",
       "target_end": "2026-04-27",
       "target_start": "2026-03-02",
@@ -919,7 +1005,9 @@
       "key_prefix": "CORE",
       "logged_hours": 16.5,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1029"
+      ],
       "primary_schedule_key": "CORE-1030",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-700",
@@ -928,7 +1016,9 @@
       "row_role": "Scheduled",
       "source_row": 122,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "CORE-1031"
+      ],
       "summary": "Scale Rows - Core Product - Consent preference updates wave 31",
       "target_end": "2026-04-06",
       "target_start": "2026-03-09",
@@ -949,7 +1039,9 @@
       "key_prefix": "CORE",
       "logged_hours": 17.5,
       "percent_complete": 48,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1030"
+      ],
       "primary_schedule_key": "CORE-1031",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-800",
@@ -958,7 +1050,9 @@
       "row_role": "Scheduled",
       "source_row": 130,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "CORE-1032"
+      ],
       "summary": "Scale Rows - Core Product - Fraud signal ingestion wave 32",
       "target_end": "2026-04-20",
       "target_start": "2026-03-16",
@@ -979,7 +1073,9 @@
       "key_prefix": "CORE",
       "logged_hours": 16.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "CORE-1031"
+      ],
       "primary_schedule_key": "CORE-1032",
       "resource_group": "Core Product Engineering",
       "rollup_key": "INIT-100",
@@ -1528,7 +1624,9 @@
       "row_role": "Scheduled",
       "source_row": 101,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3001"
+      ],
       "summary": "Scale Rows - Data Platform - Warehouse model refresh wave 01",
       "target_end": "2026-07-20",
       "target_start": "2026-06-22",
@@ -1549,7 +1647,9 @@
       "key_prefix": "DATA",
       "logged_hours": 14.0,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3000"
+      ],
       "primary_schedule_key": "DATA-3001",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -1558,7 +1658,9 @@
       "row_role": "Scheduled",
       "source_row": 103,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3002"
+      ],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 02",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
@@ -1579,7 +1681,9 @@
       "key_prefix": "DATA",
       "logged_hours": 21.0,
       "percent_complete": 19,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3001"
+      ],
       "primary_schedule_key": "DATA-3002",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -1588,7 +1692,9 @@
       "row_role": "Scheduled",
       "source_row": 106,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3003"
+      ],
       "summary": "Scale Rows - Data Platform - Metrics certification wave 03",
       "target_end": "2026-08-17",
       "target_start": "2026-07-06",
@@ -1609,7 +1715,9 @@
       "key_prefix": "DATA",
       "logged_hours": 13.5,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3002"
+      ],
       "primary_schedule_key": "DATA-3003",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -1618,7 +1726,9 @@
       "row_role": "Scheduled",
       "source_row": 110,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3004"
+      ],
       "summary": "Scale Rows - Data Platform - Forecast data mart wave 04",
       "target_end": "2026-08-31",
       "target_start": "2026-07-13",
@@ -1639,7 +1749,9 @@
       "key_prefix": "DATA",
       "logged_hours": 16.5,
       "percent_complete": 22,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3003"
+      ],
       "primary_schedule_key": "DATA-3004",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -1648,7 +1760,9 @@
       "row_role": "Scheduled",
       "source_row": 115,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3005"
+      ],
       "summary": "Scale Rows - Data Platform - Streaming ingestion wave 05",
       "target_end": "2026-09-14",
       "target_start": "2026-07-20",
@@ -1669,7 +1783,9 @@
       "key_prefix": "DATA",
       "logged_hours": 13.0,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3004"
+      ],
       "primary_schedule_key": "DATA-3005",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -1678,7 +1794,9 @@
       "row_role": "Scheduled",
       "source_row": 121,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3006"
+      ],
       "summary": "Scale Rows - Data Platform - Retention model update wave 06",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -1699,7 +1817,9 @@
       "key_prefix": "DATA",
       "logged_hours": 18.5,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3005"
+      ],
       "primary_schedule_key": "DATA-3006",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -1708,7 +1828,9 @@
       "row_role": "Scheduled",
       "source_row": 128,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3007"
+      ],
       "summary": "Scale Rows - Data Platform - Quality rule expansion wave 07",
       "target_end": "2026-09-07",
       "target_start": "2026-08-03",
@@ -1729,7 +1851,9 @@
       "key_prefix": "DATA",
       "logged_hours": 19.0,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3006"
+      ],
       "primary_schedule_key": "DATA-3007",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -1738,7 +1862,9 @@
       "row_role": "Scheduled",
       "source_row": 136,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3010"
+      ],
       "summary": "Scale Rows - Data Platform - Analytics contract cleanup wave 08",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
@@ -1819,7 +1945,9 @@
       "key_prefix": "DATA",
       "logged_hours": 23.5,
       "percent_complete": 33,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3007"
+      ],
       "primary_schedule_key": "DATA-3010",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -1828,7 +1956,9 @@
       "row_role": "Scheduled",
       "source_row": 102,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3011"
+      ],
       "summary": "Scale Rows - Data Platform - Metrics certification wave 11",
       "target_end": "2026-09-28",
       "target_start": "2026-08-31",
@@ -1849,7 +1979,9 @@
       "key_prefix": "DATA",
       "logged_hours": 14.5,
       "percent_complete": 16,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3010"
+      ],
       "primary_schedule_key": "DATA-3011",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -1858,7 +1990,9 @@
       "row_role": "Scheduled",
       "source_row": 105,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3012"
+      ],
       "summary": "Scale Rows - Data Platform - Forecast data mart wave 12",
       "target_end": "2026-10-12",
       "target_start": "2026-09-07",
@@ -1879,7 +2013,9 @@
       "key_prefix": "DATA",
       "logged_hours": 12.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3011"
+      ],
       "primary_schedule_key": "DATA-3012",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -1888,7 +2024,9 @@
       "row_role": "Scheduled",
       "source_row": 109,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3013"
+      ],
       "summary": "Scale Rows - Data Platform - Streaming ingestion wave 13",
       "target_end": "2026-10-26",
       "target_start": "2026-09-14",
@@ -1909,7 +2047,9 @@
       "key_prefix": "DATA",
       "logged_hours": 14.0,
       "percent_complete": 5,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3012"
+      ],
       "primary_schedule_key": "DATA-3013",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -1918,7 +2058,9 @@
       "row_role": "Scheduled",
       "source_row": 114,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3014"
+      ],
       "summary": "Scale Rows - Data Platform - Retention model update wave 14",
       "target_end": "2026-11-09",
       "target_start": "2026-09-21",
@@ -1939,7 +2081,9 @@
       "key_prefix": "DATA",
       "logged_hours": 21.0,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3013"
+      ],
       "primary_schedule_key": "DATA-3014",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -1948,7 +2092,9 @@
       "row_role": "Scheduled",
       "source_row": 120,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3015"
+      ],
       "summary": "Scale Rows - Data Platform - Quality rule expansion wave 15",
       "target_end": "2026-11-23",
       "target_start": "2026-09-28",
@@ -1969,7 +2115,9 @@
       "key_prefix": "DATA",
       "logged_hours": 13.5,
       "percent_complete": 26,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3014"
+      ],
       "primary_schedule_key": "DATA-3015",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -1978,7 +2126,9 @@
       "row_role": "Scheduled",
       "source_row": 127,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3016"
+      ],
       "summary": "Scale Rows - Data Platform - Analytics contract cleanup wave 16",
       "target_end": "2026-11-02",
       "target_start": "2026-10-05",
@@ -1999,7 +2149,9 @@
       "key_prefix": "DATA",
       "logged_hours": 16.5,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3015"
+      ],
       "primary_schedule_key": "DATA-3016",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -2008,7 +2160,9 @@
       "row_role": "Scheduled",
       "source_row": 135,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3017"
+      ],
       "summary": "Scale Rows - Data Platform - Warehouse model refresh wave 17",
       "target_end": "2026-11-16",
       "target_start": "2026-10-12",
@@ -2029,7 +2183,9 @@
       "key_prefix": "DATA",
       "logged_hours": 13.0,
       "percent_complete": 11,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3016"
+      ],
       "primary_schedule_key": "DATA-3017",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -2038,7 +2194,9 @@
       "row_role": "Scheduled",
       "source_row": 144,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3018"
+      ],
       "summary": "Scale Rows - Data Platform - Pipeline observability wave 18",
       "target_end": "2026-06-08",
       "target_start": "2026-04-27",
@@ -2059,7 +2217,9 @@
       "key_prefix": "DATA",
       "logged_hours": 18.5,
       "percent_complete": 25,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3017"
+      ],
       "primary_schedule_key": "DATA-3018",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -2068,7 +2228,9 @@
       "row_role": "Scheduled",
       "source_row": 153,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3019"
+      ],
       "summary": "Scale Rows - Data Platform - Metrics certification wave 19",
       "target_end": "2026-06-22",
       "target_start": "2026-05-04",
@@ -2089,7 +2251,9 @@
       "key_prefix": "DATA",
       "logged_hours": 19.0,
       "percent_complete": 42,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3018"
+      ],
       "primary_schedule_key": "DATA-3019",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -2098,7 +2262,9 @@
       "row_role": "Scheduled",
       "source_row": 162,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3020"
+      ],
       "summary": "Scale Rows - Data Platform - Forecast data mart wave 20",
       "target_end": "2026-07-06",
       "target_start": "2026-05-11",
@@ -2119,7 +2285,9 @@
       "key_prefix": "DATA",
       "logged_hours": 15.0,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3019"
+      ],
       "primary_schedule_key": "DATA-3020",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -2128,7 +2296,9 @@
       "row_role": "Scheduled",
       "source_row": 104,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3021"
+      ],
       "summary": "Scale Rows - Data Platform - Streaming ingestion wave 21",
       "target_end": "2026-06-15",
       "target_start": "2026-05-18",
@@ -2149,7 +2319,9 @@
       "key_prefix": "DATA",
       "logged_hours": 15.0,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3020"
+      ],
       "primary_schedule_key": "DATA-3021",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -2158,7 +2330,9 @@
       "row_role": "Scheduled",
       "source_row": 108,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3022"
+      ],
       "summary": "Scale Rows - Data Platform - Retention model update wave 22",
       "target_end": "2026-06-29",
       "target_start": "2026-05-25",
@@ -2179,7 +2353,9 @@
       "key_prefix": "DATA",
       "logged_hours": 23.5,
       "percent_complete": 18,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3021"
+      ],
       "primary_schedule_key": "DATA-3022",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -2188,7 +2364,9 @@
       "row_role": "Scheduled",
       "source_row": 113,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3023"
+      ],
       "summary": "Scale Rows - Data Platform - Quality rule expansion wave 23",
       "target_end": "2026-07-13",
       "target_start": "2026-06-01",
@@ -2209,7 +2387,9 @@
       "key_prefix": "DATA",
       "logged_hours": 14.5,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3022"
+      ],
       "primary_schedule_key": "DATA-3023",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-1500",
@@ -2218,7 +2398,9 @@
       "row_role": "Scheduled",
       "source_row": 119,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "DATA-3024"
+      ],
       "summary": "Scale Rows - Data Platform - Analytics contract cleanup wave 24",
       "target_end": "2026-07-27",
       "target_start": "2026-06-08",
@@ -2239,7 +2421,9 @@
       "key_prefix": "DATA",
       "logged_hours": 12.5,
       "percent_complete": 30,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3023"
+      ],
       "primary_schedule_key": "DATA-3024",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-300",
@@ -2248,7 +2432,9 @@
       "row_role": "Scheduled",
       "source_row": 126,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "DATA-3025"
+      ],
       "summary": "Scale Rows - Data Platform - Warehouse model refresh wave 25",
       "target_end": "2026-08-10",
       "target_start": "2026-06-15",
@@ -2269,7 +2455,9 @@
       "key_prefix": "DATA",
       "logged_hours": 14.0,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "DATA-3024"
+      ],
       "primary_schedule_key": "DATA-3025",
       "resource_group": "Data Engineering",
       "rollup_key": "INIT-600",
@@ -2578,7 +2766,9 @@
       "row_role": "Scheduled",
       "source_row": 76,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5001"
+      ],
       "summary": "Scale Rows - Operations - Release checklist automation wave 01",
       "target_end": "2026-11-02",
       "target_start": "2026-10-05",
@@ -2599,7 +2789,9 @@
       "key_prefix": "OPS",
       "logged_hours": 19.5,
       "percent_complete": 22,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5000"
+      ],
       "primary_schedule_key": "OPS-5001",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2608,7 +2800,9 @@
       "row_role": "Scheduled",
       "source_row": 81,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5002"
+      ],
       "summary": "Scale Rows - Operations - Incident readiness wave 02",
       "target_end": "2026-11-16",
       "target_start": "2026-10-12",
@@ -2629,7 +2823,9 @@
       "key_prefix": "OPS",
       "logged_hours": 17.5,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5001"
+      ],
       "primary_schedule_key": "OPS-5002",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2638,7 +2834,9 @@
       "row_role": "Scheduled",
       "source_row": 85,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5003"
+      ],
       "summary": "Scale Rows - Operations - Support workflow routing wave 03",
       "target_end": "2026-11-30",
       "target_start": "2026-10-19",
@@ -2659,7 +2857,9 @@
       "key_prefix": "OPS",
       "logged_hours": 15.5,
       "percent_complete": 30,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5002"
+      ],
       "primary_schedule_key": "OPS-5003",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2668,7 +2868,9 @@
       "row_role": "Scheduled",
       "source_row": 88,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5004"
+      ],
       "summary": "Scale Rows - Operations - Change advisory preparation wave 04",
       "target_end": "2026-12-14",
       "target_start": "2026-10-26",
@@ -2689,7 +2891,9 @@
       "key_prefix": "OPS",
       "logged_hours": 20.0,
       "percent_complete": 46,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5003"
+      ],
       "primary_schedule_key": "OPS-5004",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2698,7 +2902,9 @@
       "row_role": "Scheduled",
       "source_row": 90,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5005"
+      ],
       "summary": "Scale Rows - Operations - Runbook modernization wave 05",
       "target_end": "2026-12-28",
       "target_start": "2026-11-02",
@@ -2719,7 +2925,9 @@
       "key_prefix": "OPS",
       "logged_hours": 18.0,
       "percent_complete": 33,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5004"
+      ],
       "primary_schedule_key": "OPS-5005",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2728,7 +2936,9 @@
       "row_role": "Scheduled",
       "source_row": 92,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5006"
+      ],
       "summary": "Scale Rows - Operations - Capacity review wave 06",
       "target_end": "2026-12-07",
       "target_start": "2026-11-09",
@@ -2749,7 +2959,9 @@
       "key_prefix": "OPS",
       "logged_hours": 16.0,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5005"
+      ],
       "primary_schedule_key": "OPS-5006",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2758,7 +2970,9 @@
       "row_role": "Scheduled",
       "source_row": 94,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5007"
+      ],
       "summary": "Scale Rows - Operations - Monitoring handoff wave 07",
       "target_end": "2026-12-21",
       "target_start": "2026-11-16",
@@ -2779,7 +2993,9 @@
       "key_prefix": "OPS",
       "logged_hours": 20.5,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5006"
+      ],
       "primary_schedule_key": "OPS-5007",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2788,7 +3004,9 @@
       "row_role": "Scheduled",
       "source_row": 96,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5008"
+      ],
       "summary": "Scale Rows - Operations - Service review cadence wave 08",
       "target_end": "2027-01-04",
       "target_start": "2026-11-23",
@@ -2809,7 +3027,9 @@
       "key_prefix": "OPS",
       "logged_hours": 18.5,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5007"
+      ],
       "primary_schedule_key": "OPS-5008",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2818,7 +3038,9 @@
       "row_role": "Scheduled",
       "source_row": 98,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5009"
+      ],
       "summary": "Scale Rows - Operations - Release checklist automation wave 09",
       "target_end": "2026-07-27",
       "target_start": "2026-06-08",
@@ -2839,7 +3061,9 @@
       "key_prefix": "OPS",
       "logged_hours": 16.5,
       "percent_complete": 29,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5008"
+      ],
       "primary_schedule_key": "OPS-5009",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2848,7 +3072,9 @@
       "row_role": "Scheduled",
       "source_row": 100,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5010"
+      ],
       "summary": "Scale Rows - Operations - Incident readiness wave 10",
       "target_end": "2026-08-10",
       "target_start": "2026-06-15",
@@ -2869,7 +3095,9 @@
       "key_prefix": "OPS",
       "logged_hours": 16.5,
       "percent_complete": 5,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5009"
+      ],
       "primary_schedule_key": "OPS-5010",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2878,7 +3106,9 @@
       "row_role": "Scheduled",
       "source_row": 80,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5011"
+      ],
       "summary": "Scale Rows - Operations - Support workflow routing wave 11",
       "target_end": "2026-07-20",
       "target_start": "2026-06-22",
@@ -2899,7 +3129,9 @@
       "key_prefix": "OPS",
       "logged_hours": 17.0,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5010"
+      ],
       "primary_schedule_key": "OPS-5011",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2908,7 +3140,9 @@
       "row_role": "Scheduled",
       "source_row": 84,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5012"
+      ],
       "summary": "Scale Rows - Operations - Change advisory preparation wave 12",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
@@ -2929,7 +3163,9 @@
       "key_prefix": "OPS",
       "logged_hours": 11.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5011"
+      ],
       "primary_schedule_key": "OPS-5012",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2938,7 +3174,9 @@
       "row_role": "Scheduled",
       "source_row": 87,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5013"
+      ],
       "summary": "Scale Rows - Operations - Runbook modernization wave 13",
       "target_end": "2026-08-17",
       "target_start": "2026-07-06",
@@ -2959,7 +3197,9 @@
       "key_prefix": "OPS",
       "logged_hours": 18.0,
       "percent_complete": 42,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5012"
+      ],
       "primary_schedule_key": "OPS-5013",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -2968,7 +3208,9 @@
       "row_role": "Scheduled",
       "source_row": 89,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5014"
+      ],
       "summary": "Scale Rows - Operations - Capacity review wave 14",
       "target_end": "2026-08-31",
       "target_start": "2026-07-13",
@@ -2989,7 +3231,9 @@
       "key_prefix": "OPS",
       "logged_hours": 12.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5013"
+      ],
       "primary_schedule_key": "OPS-5014",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -2998,7 +3242,9 @@
       "row_role": "Scheduled",
       "source_row": 91,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5015"
+      ],
       "summary": "Scale Rows - Operations - Monitoring handoff wave 15",
       "target_end": "2026-09-14",
       "target_start": "2026-07-20",
@@ -3019,7 +3265,9 @@
       "key_prefix": "OPS",
       "logged_hours": 19.0,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5014"
+      ],
       "primary_schedule_key": "OPS-5015",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -3028,7 +3276,9 @@
       "row_role": "Scheduled",
       "source_row": 93,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "OPS-5016"
+      ],
       "summary": "Scale Rows - Operations - Service review cadence wave 16",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -3049,7 +3299,9 @@
       "key_prefix": "OPS",
       "logged_hours": 13.0,
       "percent_complete": 26,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5015"
+      ],
       "primary_schedule_key": "OPS-5016",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -3058,7 +3310,9 @@
       "row_role": "Scheduled",
       "source_row": 95,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5017"
+      ],
       "summary": "Scale Rows - Operations - Release checklist automation wave 17",
       "target_end": "2026-09-07",
       "target_start": "2026-08-03",
@@ -3079,7 +3333,9 @@
       "key_prefix": "OPS",
       "logged_hours": 13.5,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5016"
+      ],
       "primary_schedule_key": "OPS-5017",
       "resource_group": "Operations",
       "rollup_key": "Operations Q2",
@@ -3088,7 +3344,9 @@
       "row_role": "Scheduled",
       "source_row": 97,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "OPS-5018"
+      ],
       "summary": "Scale Rows - Operations - Incident readiness wave 18",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
@@ -3109,7 +3367,9 @@
       "key_prefix": "OPS",
       "logged_hours": 14.0,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "OPS-5017"
+      ],
       "primary_schedule_key": "OPS-5018",
       "resource_group": "Operations",
       "rollup_key": "Operations Q1",
@@ -3178,7 +3438,9 @@
       "row_role": "Scheduled",
       "source_row": 132,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4001"
+      ],
       "summary": "Scale Rows - Platform Services - Kubernetes platform upgrade wave 01",
       "target_end": "2026-09-28",
       "target_start": "2026-08-31",
@@ -3199,7 +3461,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 15.0,
       "percent_complete": 33,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4000"
+      ],
       "primary_schedule_key": "PLAT-4001",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3208,7 +3472,9 @@
       "row_role": "Scheduled",
       "source_row": 141,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4002"
+      ],
       "summary": "Scale Rows - Platform Services - Build runner rotation wave 02",
       "target_end": "2026-10-12",
       "target_start": "2026-09-07",
@@ -3229,7 +3495,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 15.0,
       "percent_complete": 16,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4001"
+      ],
       "primary_schedule_key": "PLAT-4002",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3238,7 +3506,9 @@
       "row_role": "Scheduled",
       "source_row": 150,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4003"
+      ],
       "summary": "Scale Rows - Platform Services - Secrets management wave 03",
       "target_end": "2026-10-26",
       "target_start": "2026-09-14",
@@ -3259,7 +3529,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 23.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4002"
+      ],
       "primary_schedule_key": "PLAT-4003",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3268,7 +3540,9 @@
       "row_role": "Scheduled",
       "source_row": 159,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4004"
+      ],
       "summary": "Scale Rows - Platform Services - Shared logging wave 04",
       "target_end": "2026-11-09",
       "target_start": "2026-09-21",
@@ -3289,7 +3563,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 14.5,
       "percent_complete": 5,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4003"
+      ],
       "primary_schedule_key": "PLAT-4004",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3298,7 +3574,9 @@
       "row_role": "Scheduled",
       "source_row": 168,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4005"
+      ],
       "summary": "Scale Rows - Platform Services - Service mesh controls wave 05",
       "target_end": "2026-11-23",
       "target_start": "2026-09-28",
@@ -3319,7 +3597,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 12.5,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4004"
+      ],
       "primary_schedule_key": "PLAT-4005",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3328,7 +3608,9 @@
       "row_role": "Scheduled",
       "source_row": 177,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4006"
+      ],
       "summary": "Scale Rows - Platform Services - Environment provisioning wave 06",
       "target_end": "2026-11-02",
       "target_start": "2026-10-05",
@@ -3349,7 +3631,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 14.0,
       "percent_complete": 26,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4005"
+      ],
       "primary_schedule_key": "PLAT-4006",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3358,7 +3642,9 @@
       "row_role": "Scheduled",
       "source_row": 185,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4007"
+      ],
       "summary": "Scale Rows - Platform Services - Artifact retention wave 07",
       "target_end": "2026-11-16",
       "target_start": "2026-10-12",
@@ -3379,7 +3665,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 21.0,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4006"
+      ],
       "primary_schedule_key": "PLAT-4007",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3388,7 +3676,9 @@
       "row_role": "Scheduled",
       "source_row": 192,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4008"
+      ],
       "summary": "Scale Rows - Platform Services - Deployment guardrails wave 08",
       "target_end": "2026-11-30",
       "target_start": "2026-10-19",
@@ -3409,7 +3699,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 13.5,
       "percent_complete": 11,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4007"
+      ],
       "primary_schedule_key": "PLAT-4008",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3418,7 +3710,9 @@
       "row_role": "Scheduled",
       "source_row": 196,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4009"
+      ],
       "summary": "Scale Rows - Platform Services - Kubernetes platform upgrade wave 09",
       "target_end": "2026-12-14",
       "target_start": "2026-10-26",
@@ -3439,7 +3733,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 16.5,
       "percent_complete": 25,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4008"
+      ],
       "primary_schedule_key": "PLAT-4009",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3448,7 +3744,9 @@
       "row_role": "Scheduled",
       "source_row": 199,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4010"
+      ],
       "summary": "Scale Rows - Platform Services - Build runner rotation wave 10",
       "target_end": "2026-12-28",
       "target_start": "2026-11-02",
@@ -3469,7 +3767,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 16.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4009"
+      ],
       "primary_schedule_key": "PLAT-4010",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3478,7 +3778,9 @@
       "row_role": "Scheduled",
       "source_row": 139,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4011"
+      ],
       "summary": "Scale Rows - Platform Services - Secrets management wave 11",
       "target_end": "2026-06-15",
       "target_start": "2026-05-18",
@@ -3499,7 +3801,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 19.5,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4010"
+      ],
       "primary_schedule_key": "PLAT-4011",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3508,7 +3812,9 @@
       "row_role": "Scheduled",
       "source_row": 148,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4012"
+      ],
       "summary": "Scale Rows - Platform Services - Shared logging wave 12",
       "target_end": "2026-06-29",
       "target_start": "2026-05-25",
@@ -3529,7 +3835,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 15.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4011"
+      ],
       "primary_schedule_key": "PLAT-4012",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3538,7 +3846,9 @@
       "row_role": "Scheduled",
       "source_row": 157,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4013"
+      ],
       "summary": "Scale Rows - Platform Services - Service mesh controls wave 13",
       "target_end": "2026-07-13",
       "target_start": "2026-06-01",
@@ -3559,7 +3869,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 15.0,
       "percent_complete": 18,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4012"
+      ],
       "primary_schedule_key": "PLAT-4013",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3568,7 +3880,9 @@
       "row_role": "Scheduled",
       "source_row": 166,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4014"
+      ],
       "summary": "Scale Rows - Platform Services - Environment provisioning wave 14",
       "target_end": "2026-07-27",
       "target_start": "2026-06-08",
@@ -3589,7 +3903,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 15.0,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4013"
+      ],
       "primary_schedule_key": "PLAT-4014",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3598,7 +3914,9 @@
       "row_role": "Scheduled",
       "source_row": 175,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4015"
+      ],
       "summary": "Scale Rows - Platform Services - Artifact retention wave 15",
       "target_end": "2026-08-10",
       "target_start": "2026-06-15",
@@ -3619,7 +3937,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 23.5,
       "percent_complete": 30,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4014"
+      ],
       "primary_schedule_key": "PLAT-4015",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3628,7 +3948,9 @@
       "row_role": "Scheduled",
       "source_row": 183,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4016"
+      ],
       "summary": "Scale Rows - Platform Services - Deployment guardrails wave 16",
       "target_end": "2026-07-20",
       "target_start": "2026-06-22",
@@ -3649,7 +3971,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 14.5,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4015"
+      ],
       "primary_schedule_key": "PLAT-4016",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3658,7 +3982,9 @@
       "row_role": "Scheduled",
       "source_row": 190,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4017"
+      ],
       "summary": "Scale Rows - Platform Services - Kubernetes platform upgrade wave 17",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
@@ -3679,7 +4005,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 12.5,
       "percent_complete": 29,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4016"
+      ],
       "primary_schedule_key": "PLAT-4017",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3688,7 +4016,9 @@
       "row_role": "Scheduled",
       "source_row": 195,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4018"
+      ],
       "summary": "Scale Rows - Platform Services - Build runner rotation wave 18",
       "target_end": "2026-08-17",
       "target_start": "2026-07-06",
@@ -3709,7 +4039,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 14.0,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4017"
+      ],
       "primary_schedule_key": "PLAT-4018",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3718,7 +4050,9 @@
       "row_role": "Scheduled",
       "source_row": 198,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4019"
+      ],
       "summary": "Scale Rows - Platform Services - Secrets management wave 19",
       "target_end": "2026-08-31",
       "target_start": "2026-07-13",
@@ -3739,7 +4073,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 21.0,
       "percent_complete": 48,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4018"
+      ],
       "primary_schedule_key": "PLAT-4019",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3748,7 +4084,9 @@
       "row_role": "Scheduled",
       "source_row": 200,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4020"
+      ],
       "summary": "Scale Rows - Platform Services - Shared logging wave 20",
       "target_end": "2026-09-14",
       "target_start": "2026-07-20",
@@ -3769,7 +4107,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 16.5,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4019"
+      ],
       "primary_schedule_key": "PLAT-4020",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -3778,7 +4118,9 @@
       "row_role": "Scheduled",
       "source_row": 146,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4021"
+      ],
       "summary": "Scale Rows - Platform Services - Service mesh controls wave 21",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -3799,7 +4141,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 17.5,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4020"
+      ],
       "primary_schedule_key": "PLAT-4021",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q1",
@@ -3808,7 +4152,9 @@
       "row_role": "Scheduled",
       "source_row": 155,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "PLAT-4022"
+      ],
       "summary": "Scale Rows - Platform Services - Environment provisioning wave 22",
       "target_end": "2026-09-07",
       "target_start": "2026-08-03",
@@ -3829,7 +4175,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 16.0,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4021"
+      ],
       "primary_schedule_key": "PLAT-4022",
       "resource_group": "Platform Engineering",
       "rollup_key": "Platform Q2",
@@ -3838,7 +4186,9 @@
       "row_role": "Scheduled",
       "source_row": 164,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "PLAT-4023"
+      ],
       "summary": "Scale Rows - Platform Services - Artifact retention wave 23",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
@@ -3859,7 +4209,9 @@
       "key_prefix": "PLAT",
       "logged_hours": 19.5,
       "percent_complete": 50,
-      "predecessors": [],
+      "predecessors": [
+        "PLAT-4022"
+      ],
       "primary_schedule_key": "PLAT-4023",
       "resource_group": "Platform Engineering",
       "rollup_key": "Shared Services 2026",
@@ -4078,7 +4430,9 @@
       "row_role": "Scheduled",
       "source_row": 36,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2001"
+      ],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 01",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -4099,7 +4453,9 @@
       "key_prefix": "WEB",
       "logged_hours": 20.0,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2000"
+      ],
       "primary_schedule_key": "WEB-2001",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4108,7 +4464,9 @@
       "row_role": "Scheduled",
       "source_row": 37,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2002"
+      ],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 02",
       "target_end": "2026-09-07",
       "target_start": "2026-08-03",
@@ -4129,7 +4487,9 @@
       "key_prefix": "WEB",
       "logged_hours": 18.0,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2001"
+      ],
       "primary_schedule_key": "WEB-2002",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4138,7 +4498,9 @@
       "row_role": "Scheduled",
       "source_row": 40,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2003"
+      ],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 03",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
@@ -4159,7 +4521,9 @@
       "key_prefix": "WEB",
       "logged_hours": 16.0,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2002"
+      ],
       "primary_schedule_key": "WEB-2003",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4168,7 +4532,9 @@
       "row_role": "Scheduled",
       "source_row": 44,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2004"
+      ],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 04",
       "target_end": "2026-10-05",
       "target_start": "2026-08-17",
@@ -4189,7 +4555,9 @@
       "key_prefix": "WEB",
       "logged_hours": 20.5,
       "percent_complete": 29,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2003"
+      ],
       "primary_schedule_key": "WEB-2004",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4198,7 +4566,9 @@
       "row_role": "Scheduled",
       "source_row": 49,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2005"
+      ],
       "summary": "Scale Rows - Web Experience - Content publishing wave 05",
       "target_end": "2026-10-19",
       "target_start": "2026-08-24",
@@ -4219,7 +4589,9 @@
       "key_prefix": "WEB",
       "logged_hours": 18.5,
       "percent_complete": 19,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2004"
+      ],
       "primary_schedule_key": "WEB-2005",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4228,7 +4600,9 @@
       "row_role": "Scheduled",
       "source_row": 54,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2006"
+      ],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 06",
       "target_end": "2026-09-28",
       "target_start": "2026-08-31",
@@ -4249,7 +4623,9 @@
       "key_prefix": "WEB",
       "logged_hours": 16.5,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2005"
+      ],
       "primary_schedule_key": "WEB-2006",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4258,7 +4634,9 @@
       "row_role": "Scheduled",
       "source_row": 59,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2007"
+      ],
       "summary": "Scale Rows - Web Experience - Localization pass wave 07",
       "target_end": "2026-04-20",
       "target_start": "2026-03-16",
@@ -4279,7 +4657,9 @@
       "key_prefix": "WEB",
       "logged_hours": 21.0,
       "percent_complete": 18,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2006"
+      ],
       "primary_schedule_key": "WEB-2007",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4288,7 +4668,9 @@
       "row_role": "Scheduled",
       "source_row": 64,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2009"
+      ],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 08",
       "target_end": "2026-05-04",
       "target_start": "2026-03-23",
@@ -4339,7 +4721,9 @@
       "key_prefix": "WEB",
       "logged_hours": 23.5,
       "percent_complete": 25,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2007"
+      ],
       "primary_schedule_key": "WEB-2009",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4348,7 +4732,9 @@
       "row_role": "Scheduled",
       "source_row": 72,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2011"
+      ],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 10",
       "target_end": "2026-06-01",
       "target_start": "2026-04-06",
@@ -4399,7 +4785,9 @@
       "key_prefix": "WEB",
       "logged_hours": 12.0,
       "percent_complete": 26,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2009"
+      ],
       "primary_schedule_key": "WEB-2011",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4408,7 +4796,9 @@
       "row_role": "Scheduled",
       "source_row": 39,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2012"
+      ],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 12",
       "target_end": "2026-05-25",
       "target_start": "2026-04-20",
@@ -4429,7 +4819,9 @@
       "key_prefix": "WEB",
       "logged_hours": 19.0,
       "percent_complete": 58,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2011"
+      ],
       "primary_schedule_key": "WEB-2012",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4438,7 +4830,9 @@
       "row_role": "Scheduled",
       "source_row": 43,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2013"
+      ],
       "summary": "Scale Rows - Web Experience - Content publishing wave 13",
       "target_end": "2026-06-08",
       "target_start": "2026-04-27",
@@ -4459,7 +4853,9 @@
       "key_prefix": "WEB",
       "logged_hours": 13.0,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2012"
+      ],
       "primary_schedule_key": "WEB-2013",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4468,7 +4864,9 @@
       "row_role": "Scheduled",
       "source_row": 48,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2014"
+      ],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 14",
       "target_end": "2026-06-22",
       "target_start": "2026-05-04",
@@ -4489,7 +4887,9 @@
       "key_prefix": "WEB",
       "logged_hours": 13.5,
       "percent_complete": 16,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2013"
+      ],
       "primary_schedule_key": "WEB-2014",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4498,7 +4898,9 @@
       "row_role": "Scheduled",
       "source_row": 53,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2015"
+      ],
       "summary": "Scale Rows - Web Experience - Localization pass wave 15",
       "target_end": "2026-07-06",
       "target_start": "2026-05-11",
@@ -4519,7 +4921,9 @@
       "key_prefix": "WEB",
       "logged_hours": 14.0,
       "percent_complete": 37,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2014"
+      ],
       "primary_schedule_key": "WEB-2015",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4528,7 +4932,9 @@
       "row_role": "Scheduled",
       "source_row": 58,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2016"
+      ],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 16",
       "target_end": "2026-06-15",
       "target_start": "2026-05-18",
@@ -4549,7 +4955,9 @@
       "key_prefix": "WEB",
       "logged_hours": 14.5,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2015"
+      ],
       "primary_schedule_key": "WEB-2016",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4558,7 +4966,9 @@
       "row_role": "Scheduled",
       "source_row": 63,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2017"
+      ],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 17",
       "target_end": "2026-06-29",
       "target_start": "2026-05-25",
@@ -4579,7 +4989,9 @@
       "key_prefix": "WEB",
       "logged_hours": 15.0,
       "percent_complete": 11,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2016"
+      ],
       "primary_schedule_key": "WEB-2017",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4588,7 +5000,9 @@
       "row_role": "Scheduled",
       "source_row": 68,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2018"
+      ],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 18",
       "target_end": "2026-07-13",
       "target_start": "2026-06-01",
@@ -4609,7 +5023,9 @@
       "key_prefix": "WEB",
       "logged_hours": 15.5,
       "percent_complete": 21,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2017"
+      ],
       "primary_schedule_key": "WEB-2018",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4618,7 +5034,9 @@
       "row_role": "Scheduled",
       "source_row": 71,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2019"
+      ],
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 19",
       "target_end": "2026-07-27",
       "target_start": "2026-06-08",
@@ -4639,7 +5057,9 @@
       "key_prefix": "WEB",
       "logged_hours": 16.0,
       "percent_complete": 53,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2018"
+      ],
       "primary_schedule_key": "WEB-2019",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4648,7 +5068,9 @@
       "row_role": "Scheduled",
       "source_row": 75,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2020"
+      ],
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 20",
       "target_end": "2026-08-10",
       "target_start": "2026-06-15",
@@ -4669,7 +5091,9 @@
       "key_prefix": "WEB",
       "logged_hours": 18.5,
       "percent_complete": 30,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2019"
+      ],
       "primary_schedule_key": "WEB-2020",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4678,7 +5102,9 @@
       "row_role": "Scheduled",
       "source_row": 38,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2021"
+      ],
       "summary": "Scale Rows - Web Experience - Content publishing wave 21",
       "target_end": "2026-07-20",
       "target_start": "2026-06-22",
@@ -4699,7 +5125,9 @@
       "key_prefix": "WEB",
       "logged_hours": 16.5,
       "percent_complete": 46,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2020"
+      ],
       "primary_schedule_key": "WEB-2021",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4708,7 +5136,9 @@
       "row_role": "Scheduled",
       "source_row": 42,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2022"
+      ],
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 22",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
@@ -4729,7 +5159,9 @@
       "key_prefix": "WEB",
       "logged_hours": 21.0,
       "percent_complete": 33,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2021"
+      ],
       "primary_schedule_key": "WEB-2022",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4738,7 +5170,9 @@
       "row_role": "Scheduled",
       "source_row": 47,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2023"
+      ],
       "summary": "Scale Rows - Web Experience - Localization pass wave 23",
       "target_end": "2026-08-17",
       "target_start": "2026-07-06",
@@ -4759,7 +5193,9 @@
       "key_prefix": "WEB",
       "logged_hours": 12.5,
       "percent_complete": 41,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2022"
+      ],
       "primary_schedule_key": "WEB-2023",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -4768,7 +5204,9 @@
       "row_role": "Scheduled",
       "source_row": 52,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2024"
+      ],
       "summary": "Scale Rows - Web Experience - Experiment cleanup wave 24",
       "target_end": "2026-08-31",
       "target_start": "2026-07-13",
@@ -4789,7 +5227,9 @@
       "key_prefix": "WEB",
       "logged_hours": 23.5,
       "percent_complete": 32,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2023"
+      ],
       "primary_schedule_key": "WEB-2024",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-500",
@@ -4798,7 +5238,9 @@
       "row_role": "Scheduled",
       "source_row": 57,
       "status": "To Do",
-      "successors": [],
+      "successors": [
+        "WEB-2025"
+      ],
       "summary": "Scale Rows - Web Experience - Search results tuning wave 25",
       "target_end": "2026-09-14",
       "target_start": "2026-07-20",
@@ -4819,7 +5261,9 @@
       "key_prefix": "WEB",
       "logged_hours": 15.0,
       "percent_complete": 20,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2024"
+      ],
       "primary_schedule_key": "WEB-2025",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-100",
@@ -4828,7 +5272,9 @@
       "row_role": "Scheduled",
       "source_row": 62,
       "status": "In Progress",
-      "successors": [],
+      "successors": [
+        "WEB-2026"
+      ],
       "summary": "Scale Rows - Web Experience - Checkout web flow wave 26",
       "target_end": "2026-08-24",
       "target_start": "2026-07-27",
@@ -4849,7 +5295,9 @@
       "key_prefix": "WEB",
       "logged_hours": 19.5,
       "percent_complete": 29,
-      "predecessors": [],
+      "predecessors": [
+        "WEB-2025"
+      ],
       "primary_schedule_key": "WEB-2026",
       "resource_group": "Web Experience",
       "rollup_key": "INIT-1200",
@@ -5405,7 +5853,7 @@
       "total_story_points": 21.0
     }
   },
-  "generated_at": "2026-09-01T12:35:37",
+  "generated_at": "2026-09-01T13:54:13",
   "jira_csv": "examples/large-scenario/project-wide-jira-baseline-1200.csv",
   "rollup_mode": "mixed",
   "summaries": {

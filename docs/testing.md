@@ -25,6 +25,7 @@ The smoke test verifies:
 - all unit tests pass
 - all Python files compile
 - large 1,200-line baseline/update CSV fixtures have not drifted
+- at least 60% of large-scenario driving epic rows have predecessors
 - large scenario reports expected manager-review categories and per-project-key CSVs
 - manager HTML reports are self-contained
 

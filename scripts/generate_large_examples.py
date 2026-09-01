@@ -17,6 +17,8 @@ UPDATED_CSV = OUTPUT_DIR / "project-wide-jira-updated-1200.csv"
 LINE_TARGET = 1200
 DATA_ROW_TARGET = LINE_TARGET - 1
 STORY_ROW_TARGET = 1000
+PREDECESSOR_COVERAGE_TARGET = 0.62
+PREDECESSOR_TARGET_MINIMUM_COUNT = 112
 
 CSV_COLUMNS = [
     "Issue key",
@@ -205,6 +207,8 @@ STORY_PHASES = [
     "Post-release check",
 ]
 
+AUTO_DEPENDENCY_EXCLUDED_KEYS = set(CURATED_ORDER)
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate authored 1,200-line Jira CSV examples.")
@@ -273,7 +277,67 @@ def epic_rows(variant: str) -> List[Dict[str, str]]:
                 key = "CORE-1980"
             epics.append(make_epic(spec, key, offset, sequence, variant))
             sequence += 1
-    return sorted(epics, key=epic_sort_key)
+    epics = sorted(epics, key=epic_sort_key)
+    apply_scale_predecessors(epics)
+    return epics
+
+
+def apply_scale_predecessors(epics: List[Dict[str, str]]) -> None:
+    scheduled_epics = [epic for epic in epics if is_schedule_included_epic(epic)]
+    target_count = max(
+        PREDECESSOR_TARGET_MINIMUM_COUNT,
+        round_up(len(scheduled_epics) * PREDECESSOR_COVERAGE_TARGET),
+    )
+    groups: Dict[str, List[Dict[str, str]]] = {}
+    for epic in epics:
+        if is_auto_dependency_candidate(epic):
+            groups.setdefault(project_key(epic["Issue key"]), []).append(epic)
+
+    for group in groups.values():
+        group.sort(key=lambda epic: jira_number(epic["Issue key"]))
+
+    created = 0
+    positions = {prefix: 1 for prefix in groups}
+    prefixes = [spec.prefix for spec in PREFIX_SPECS if spec.prefix in groups]
+    while created < target_count:
+        progressed = False
+        for prefix in prefixes:
+            position = positions[prefix]
+            group = groups[prefix]
+            if position >= len(group):
+                continue
+            predecessor = group[position - 1]["Issue key"]
+            target = group[position]
+            target["Inward issue link (Blocks)"] = predecessor
+            positions[prefix] += 1
+            created += 1
+            progressed = True
+            if created >= target_count:
+                break
+        if not progressed:
+            break
+
+
+def is_auto_dependency_candidate(epic: Dict[str, str]) -> bool:
+    key = epic["Issue key"]
+    return (
+        is_schedule_included_epic(epic)
+        and key not in AUTO_DEPENDENCY_EXCLUDED_KEYS
+        and not epic["Inward issue link (Blocks)"]
+        and not epic["Outward issue link (Blocks)"]
+    )
+
+
+def is_schedule_included_epic(epic: Dict[str, str]) -> bool:
+    key = epic["Issue key"]
+    prefix = project_key(key)
+    if prefix == "UNK":
+        return False
+    if prefix in {"CORE", "WEB", "DATA"}:
+        return bool(epic["Parent"])
+    if prefix in {"PLAT", "OPS"}:
+        return bool(epic["Fix versions"])
+    return False
 
 
 def epic_sort_key(epic: Dict[str, str]) -> tuple[int, str]:
@@ -505,6 +569,22 @@ def team_name(prefix: str) -> str:
 
 def stable_number(value: str) -> int:
     return sum((index + 1) * ord(character) for index, character in enumerate(value))
+
+
+def project_key(value: str) -> str:
+    return value.split("-", 1)[0].upper() if "-" in value else value.upper()
+
+
+def jira_number(value: str) -> int:
+    try:
+        return int(value.split("-", 1)[1])
+    except (IndexError, ValueError):
+        return stable_number(value)
+
+
+def round_up(value: float) -> int:
+    whole = int(value)
+    return whole if value == whole else whole + 1
 
 
 def row(

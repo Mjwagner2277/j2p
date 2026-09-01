@@ -4,6 +4,8 @@ This folder is the full training scenario for j2p. It gives reviewers a project-
 
 Rows 2-35 start the client walkthrough. Rows 17-35 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
 
+At least 60% of included schedule-driving epic rows have valid predecessors. This is intentional so the Microsoft Project sandbox visibly exercises dependency population at portfolio scale, not just the handful of authored teaching rows.
+
 ## Files
 
 | File | Purpose |
@@ -28,6 +30,8 @@ Verify they have not drifted from the committed expected files:
 ```powershell
 py -3.14 .\scripts\generate_large_examples.py --check
 ```
+
+The smoke test also validates that predecessor coverage remains at or above 60% of driving epic rows.
 
 ## Step 1: Confirm The CSV Size
 

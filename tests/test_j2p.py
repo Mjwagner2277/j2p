@@ -38,6 +38,14 @@ EXAMPLES = ROOT / "examples"
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
+def predecessor_coverage_ratio(plan: RunPlan) -> float:
+    driving_epics = [epic for epic in plan.epics.values() if epic.drives_schedule]
+    if not driving_epics:
+        return 0.0
+    with_predecessors = [epic for epic in driving_epics if epic.predecessors]
+    return len(with_predecessors) / len(driving_epics)
+
+
 class J2PPlanningTests(unittest.TestCase):
     def test_initiative_mode_rollups_dependencies_and_exclusions(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
@@ -404,6 +412,7 @@ class J2PPlanningTests(unittest.TestCase):
 
         config = load_config(EXAMPLES / "large-scenario" / "config.large-example.yaml")
         baseline = build_run_plan(baseline_csv, config)
+        self.assertGreaterEqual(predecessor_coverage_ratio(baseline), 0.60)
         with tempfile.TemporaryDirectory() as temp:
             state_path = Path(temp) / "j2p-state.json"
             write_json(state_path, run_plan_to_state(baseline))
@@ -415,6 +424,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertNotIn("CORE-1049", follow_on.epics)
         self.assertEqual(follow_on.epics["WEB-2010"].in_planning, True)
         self.assertEqual(follow_on.epics["PLAT-4000"].rollup_mode, "fixVersion")
+        self.assertGreaterEqual(predecessor_coverage_ratio(follow_on), 0.60)
 
         categories = {item.category for item in follow_on.audit_items}
         self.assertTrue(

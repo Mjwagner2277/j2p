@@ -88,6 +88,7 @@ def run_smoke(output_dir: Path) -> int:
         ["--write-state"],
     )
     assert_report_bundle(large_baseline_dir)
+    assert_predecessor_coverage(large_baseline_dir / "planned-epics.csv", 0.60)
     large_updated_dir = run_validate(
         output_dir,
         "large-updated-1200",
@@ -96,6 +97,7 @@ def run_smoke(output_dir: Path) -> int:
         ["--compare-state"],
     )
     assert_report_bundle(large_updated_dir)
+    assert_predecessor_coverage(large_updated_dir / "planned-epics.csv", 0.60)
     assert_project_key_outputs(
         large_updated_dir,
         {"CORE", "DATA", "OPS", "PLAT", "UNASSIGNED", "UNK", "WEB"},
@@ -242,6 +244,19 @@ def assert_line_count(path: Path, expected_count: int) -> None:
         actual_count = sum(1 for _line in handle)
     if actual_count != expected_count:
         raise AssertionError(f"{path} has {actual_count} lines; expected {expected_count}.")
+
+
+def assert_predecessor_coverage(path: Path, minimum_ratio: float) -> None:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    driving_rows = [row for row in rows if row["drives_schedule"] == "Yes"]
+    with_predecessors = [row for row in driving_rows if row["predecessors"]]
+    ratio = len(with_predecessors) / len(driving_rows) if driving_rows else 0
+    if ratio < minimum_ratio:
+        raise AssertionError(
+            f"{path} predecessor coverage is {ratio:.1%}; expected at least {minimum_ratio:.0%}. "
+            f"{len(with_predecessors)} of {len(driving_rows)} driving epic rows have predecessors."
+        )
 
 
 def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path: Path) -> None:
