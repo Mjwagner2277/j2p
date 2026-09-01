@@ -113,6 +113,38 @@
       padding: 10px;
       background: #ffffff;
     }
+    details.cascade-branch {
+      padding: 0;
+    }
+    details.cascade-branch > summary {
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      padding: 10px;
+      font-weight: 600;
+    }
+    details.cascade-branch > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.cascade-branch > summary::before {
+      content: "+";
+      color: var(--cascade);
+      margin-right: 2px;
+    }
+    details.cascade-branch[open] > summary::before {
+      content: "-";
+    }
+    .cascade-branch-body {
+      border-top: 1px solid var(--border);
+      padding: 10px;
+    }
+    .cascade-branch-count {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: normal;
+    }
     .cascade-node {
       border: 1px solid var(--border);
       border-left: 5px solid var(--changed);

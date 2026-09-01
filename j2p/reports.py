@@ -494,6 +494,38 @@ def write_manager_html(
       padding: 10px;
       background: #ffffff;
     }}
+    details.cascade-branch {{
+      padding: 0;
+    }}
+    details.cascade-branch > summary {{
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      padding: 10px;
+      font-weight: 600;
+    }}
+    details.cascade-branch > summary::-webkit-details-marker {{
+      display: none;
+    }}
+    details.cascade-branch > summary::before {{
+      content: "+";
+      color: var(--cascade);
+      margin-right: 2px;
+    }}
+    details.cascade-branch[open] > summary::before {{
+      content: "-";
+    }}
+    .cascade-branch-body {{
+      border-top: 1px solid var(--border);
+      padding: 10px;
+    }}
+    .cascade-branch-count {{
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: normal;
+    }}
     .cascade-node {{
       border: 1px solid var(--border);
       border-left: 5px solid var(--changed);
@@ -713,16 +745,21 @@ def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = Fal
     }
     leaf_keys = changed_keys - driver_keys
     roots = cascade_root_keys(plan, changed_keys)
+    downstream_counts = cascade_downstream_counts(plan, changed_keys)
     branch_roots = [
         key for key in roots if key in driver_keys or changed_successors(plan, key, changed_keys)
     ]
+    branch_roots = sorted(
+        branch_roots,
+        key=lambda key: (-downstream_counts.get(key, 0), key),
+    )
     metrics = [
         ("Finish Changes", len(changed_keys), "Changed after Project recalculated the sandbox"),
         ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
         ("Green Finish Changes", len(leaf_keys), "Changed leaves or independent rows"),
     ]
     branch_html = "".join(
-        f"<div class=\"cascade-branch\">{render_cascade_node(plan, cascade_items, root_key, set())}</div>"
+        render_cascade_branch(plan, cascade_items, root_key, downstream_counts)
         for root_key in branch_roots
     )
     if not branch_html:
@@ -777,11 +814,68 @@ def changed_successors(plan: RunPlan, key: str, changed_keys: set[str]) -> List[
     return sorted(successor_key for successor_key in epic.successors if successor_key in changed_keys)
 
 
+def cascade_downstream_counts(plan: RunPlan, changed_keys: set[str]) -> Dict[str, int]:
+    return {key: len(cascade_downstream_keys(plan, key, changed_keys)) for key in changed_keys}
+
+
+def cascade_downstream_keys(plan: RunPlan, key: str, changed_keys: set[str]) -> set[str]:
+    downstream: set[str] = set()
+    stack = list(changed_successors(plan, key, changed_keys))
+    while stack:
+        successor_key = stack.pop()
+        if successor_key == key or successor_key in downstream:
+            continue
+        downstream.add(successor_key)
+        stack.extend(changed_successors(plan, successor_key, changed_keys))
+    return downstream
+
+
+def sorted_changed_successors(
+    plan: RunPlan,
+    key: str,
+    changed_keys: set[str],
+    downstream_counts: Dict[str, int],
+) -> List[str]:
+    return sorted(
+        changed_successors(plan, key, changed_keys),
+        key=lambda successor_key: (-downstream_counts.get(successor_key, 0), successor_key),
+    )
+
+
+def render_cascade_branch(
+    plan: RunPlan,
+    cascade_items: Dict[str, AuditItem],
+    root_key: str,
+    downstream_counts: Dict[str, int],
+) -> str:
+    downstream_count = downstream_counts.get(root_key, 0)
+    branch_body = render_cascade_node(plan, cascade_items, root_key, set(), downstream_counts)
+    if downstream_count <= 5:
+        return f"<div class=\"cascade-branch\">{branch_body}</div>"
+
+    item = cascade_items[root_key]
+    epic = plan.epics.get(root_key)
+    jira_key = item.jira_key or (epic.jira_key if epic else "") or root_key
+    summary = item.summary or (epic.summary if epic else "")
+    return (
+        "<details class=\"cascade-branch\">"
+        "<summary>"
+        f"<span>{html_escape(jira_key)}: {html_escape(summary)}</span>"
+        f"<span class=\"cascade-branch-count\">"
+        f"{html_escape(pluralize(downstream_count, 'downstream affected issue'))}"
+        "</span>"
+        "</summary>"
+        f"<div class=\"cascade-branch-body\">{branch_body}</div>"
+        "</details>"
+    )
+
+
 def render_cascade_node(
     plan: RunPlan,
     cascade_items: Dict[str, AuditItem],
     key: str,
     path: set[str],
+    downstream_counts: Dict[str, int],
 ) -> str:
     item = cascade_items[key]
     is_driver = item.category == "CascadeBranchDriver"
@@ -790,7 +884,7 @@ def render_cascade_node(
     schedule_key = item.schedule_key or key
     summary = item.summary or (epic.summary if epic else "")
     changed_keys = set(cascade_items)
-    successor_keys = [] if key in path else changed_successors(plan, key, changed_keys)
+    successor_keys = [] if key in path else sorted_changed_successors(plan, key, changed_keys, downstream_counts)
     label = "Driver" if is_driver else "Changed"
     node_html = (
         f"<div class=\"cascade-node {'driver' if is_driver else 'changed'}\">"
@@ -807,7 +901,7 @@ def render_cascade_node(
         child_path = set(path)
         child_path.add(key)
         children = "".join(
-            render_cascade_node(plan, cascade_items, successor_key, child_path)
+            render_cascade_node(plan, cascade_items, successor_key, child_path, downstream_counts)
             for successor_key in successor_keys
         )
         node_html += f"<div class=\"cascade-children\">{children}</div>"

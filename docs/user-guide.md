@@ -214,7 +214,7 @@ Open `Manager-Review-Report.html` first.
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
-`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
+`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. Branches are ordered from most downstream affected issues to least downstream affected issues. Any branch with more than five downstream affected issues starts collapsed so managers can review the largest movements without losing the rest of the report. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
 
 ## Color Key
 

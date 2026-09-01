@@ -568,6 +568,85 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Nested branch driver", html)
         self.assertIn("Changed Downstream Successors", html)
 
+    def test_schedule_cascade_review_collapses_and_sorts_large_branches(self) -> None:
+        def epic(key: str, summary: str, successors: list[str] | None = None) -> PlanEpic:
+            return PlanEpic(
+                key=key,
+                issue_id=key,
+                summary=summary,
+                status="In Progress",
+                rollup_mode="initiative",
+                rollup_key="PROD-100",
+                rollup_name="Program",
+                resource_group="Product Delivery",
+                key_prefix="TEAM",
+                total_story_points=8,
+                completed_story_points=0,
+                logged_hours=0,
+                completed_logged_hours=0,
+                story_point_ratio=0,
+                percent_complete=0,
+                in_planning=False,
+                completed=False,
+                target_start="2026-01-01",
+                target_end="2026-01-31",
+                successors=successors or [],
+            )
+
+        def schedule_item(key: str, category: str) -> AuditItem:
+            return AuditItem(
+                severity="info",
+                category=category,
+                jira_key=key,
+                schedule_key=key,
+                summary=f"{key} summary",
+                old_value="2026-01-01",
+                new_value="2026-02-01",
+            )
+
+        plan = RunPlan(
+            generated_at="2026-01-01T00:00:00",
+            jira_csv="unit.csv",
+            rollup_mode="initiative",
+            column_map={},
+            stats={},
+            summaries={},
+            epics={
+                "TEAM-A": epic(
+                    "TEAM-A",
+                    "Large branch",
+                    ["TEAM-B", "TEAM-C", "TEAM-D", "TEAM-E", "TEAM-F", "TEAM-G"],
+                ),
+                "TEAM-B": epic("TEAM-B", "Affected one"),
+                "TEAM-C": epic("TEAM-C", "Affected two"),
+                "TEAM-D": epic("TEAM-D", "Affected three"),
+                "TEAM-E": epic("TEAM-E", "Affected four"),
+                "TEAM-F": epic("TEAM-F", "Affected five"),
+                "TEAM-G": epic("TEAM-G", "Affected six"),
+                "TEAM-X": epic("TEAM-X", "Small branch", ["TEAM-Y", "TEAM-Z"]),
+                "TEAM-Y": epic("TEAM-Y", "Small affected one"),
+                "TEAM-Z": epic("TEAM-Z", "Small affected two"),
+            },
+            audit_items=[
+                schedule_item("TEAM-A", "CascadeBranchDriver"),
+                schedule_item("TEAM-B", "CascadingDateChange"),
+                schedule_item("TEAM-C", "CascadingDateChange"),
+                schedule_item("TEAM-D", "CascadingDateChange"),
+                schedule_item("TEAM-E", "CascadingDateChange"),
+                schedule_item("TEAM-F", "CascadingDateChange"),
+                schedule_item("TEAM-G", "CascadingDateChange"),
+                schedule_item("TEAM-X", "CascadeBranchDriver"),
+                schedule_item("TEAM-Y", "CascadingDateChange"),
+                schedule_item("TEAM-Z", "CascadingDateChange"),
+            ],
+        )
+
+        html = render_schedule_cascade_review(plan, project_update_run=True)
+
+        self.assertEqual(html.count('<details class="cascade-branch">'), 1)
+        self.assertIn("6 downstream affected issues", html)
+        self.assertLess(html.index("TEAM-A: TEAM-A summary"), html.index("TEAM-X"))
+
     def test_resource_group_uses_project_resource_assignment(self) -> None:
         session = object.__new__(MicrosoftProjectSession)
         session.project = FakeProject()
