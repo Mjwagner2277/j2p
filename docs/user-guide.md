@@ -161,6 +161,8 @@ Common arguments:
 
 During normal runs, j2p prints timestamped progress messages in the terminal so users can see that the run is still moving through CSV parsing, Project automation, state writing, and report generation.
 
+During Project automation, the slowest phases are usually Project recalculation, review cell coloring, and saving the `.mpp`. `--debug-visible` makes these phases easier to observe but can also make them slower because Microsoft Project is actively repainting its window while COM commands run.
+
 For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. Rerun with `--dependency-write-mode diagnostic` only when you need the full Project API fallback trace.
 
 ## Output Folder

@@ -36,6 +36,10 @@ PROJECT_ENTRY_TABLE_COLUMNS = {
 }
 
 
+def project_progress(message: str) -> None:
+    print(f"[j2p] {datetime.now().strftime('%H:%M:%S')} {message}", flush=True)
+
+
 class ProjectAutomationError(RuntimeError):
     """Raised when Microsoft Project automation is unavailable or fails."""
 
@@ -66,14 +70,23 @@ def apply_plan_to_sandbox(
     dependency_write_mode: str = "fast",
 ) -> List[AuditItem]:
     with MicrosoftProjectSession(visible=visible) as session:
+        project_progress(f"Opening sandbox MPP: {sandbox_path}")
         session.open(sandbox_path)
+        project_progress("Reading existing Project task state")
         before = session.snapshot_tasks(config)
+        project_progress("Configuring Project custom fields")
         session.configure_custom_fields(config)
+        project_progress("Applying Jira updates to Project rows")
         session.apply_plan(plan, config, dependency_write_mode=dependency_write_mode)
+        project_progress("Recalculating Project after Jira updates")
         session.recalculate()
+        project_progress("Analyzing schedule date changes")
         session.add_schedule_review_items(plan, before, config)
+        project_progress("Applying Project review table and cell colors")
         session.apply_review_formatting(plan, config)
+        project_progress("Saving sandbox MPP")
         session.save()
+        project_progress("Finished Project sandbox update")
     return plan.audit_items
 
 
@@ -85,15 +98,25 @@ def create_project_from_plan(
     dependency_write_mode: str = "fast",
 ) -> List[AuditItem]:
     with MicrosoftProjectSession(visible=visible) as session:
+        project_progress("Creating blank Microsoft Project file")
         session.new()
+        project_progress("Configuring Project custom fields")
         session.configure_custom_fields(config)
+        project_progress("Creating initial Project rows from Jira")
         session.apply_plan(plan, config, write_dependencies=False)
+        project_progress("Recalculating initial Project schedule")
         session.recalculate()
+        project_progress(f"Saving initial sandbox MPP: {output_project}")
         session.save_as(output_project)
+        project_progress("Writing Project predecessor links")
         session.apply_plan_dependencies(plan, config, dependency_write_mode)
+        project_progress("Recalculating Project after predecessor links")
         session.recalculate()
+        project_progress("Applying Project review table and cell colors")
         session.apply_review_formatting(plan, config)
+        project_progress("Saving initial sandbox MPP")
         session.save()
+        project_progress("Finished initial Project file creation")
     return plan.audit_items
 
 
@@ -186,6 +209,7 @@ class MicrosoftProjectSession:
             self.app.FileOpen(str(path))
         self.project = self.app.ActiveProject
         self.apply_gantt_chart_view()
+        project_progress("Project file opened")
 
     def new(self) -> None:
         self.project = self.create_blank_project()
@@ -197,6 +221,7 @@ class MicrosoftProjectSession:
                 f"{PROJECT_TASK_MANAGER_RESOLUTION}"
             )
         self.apply_gantt_chart_view()
+        project_progress("Blank Project file ready")
 
     def create_blank_project(self) -> Any:
         errors = []
@@ -254,6 +279,7 @@ class MicrosoftProjectSession:
     def save(self) -> None:
         self.app.FileSave()
         self.saved_successfully = True
+        project_progress("Project save complete")
 
     def save_as(self, path: Path) -> None:
         path = path.expanduser().resolve()
@@ -263,6 +289,7 @@ class MicrosoftProjectSession:
         except Exception:
             self.app.FileSaveAs(str(path))
         self.saved_successfully = True
+        project_progress("Project Save As complete")
 
     def close_project(self, save_changes: bool) -> None:
         save_option = 1 if save_changes else 0
@@ -284,19 +311,28 @@ class MicrosoftProjectSession:
         self.app.FileClose()
 
     def recalculate(self) -> None:
+        project_progress("Project recalculation started")
         try:
             self.app.CalculateProject()
+            project_progress("Project recalculation complete")
         except Exception:
             try:
                 self.app.CalculateAll()
+                project_progress("Project recalculation complete")
             except Exception:
+                project_progress("Project recalculation command was rejected; continuing")
                 pass
 
     def configure_custom_fields(self, config: Dict[str, Any]) -> None:
-        for logical_name, project_field in config.get("project_fields", {}).items():
+        configured = [
+            (logical_name, project_field)
+            for logical_name, project_field in config.get("project_fields", {}).items()
+            if config.get("project_field_names", {}).get(logical_name)
+        ]
+        if configured:
+            project_progress(f"Configuring {len(configured)} named custom Project field(s)")
+        for logical_name, project_field in configured:
             friendly_name = config.get("project_field_names", {}).get(logical_name)
-            if not friendly_name:
-                continue
             try:
                 field_id = self.app.FieldNameToFieldConstant(project_field)
                 self.app.CustomFieldRename(field_id, friendly_name)
@@ -304,6 +340,8 @@ class MicrosoftProjectSession:
                 raise ProjectAutomationError(
                     f"Could not configure Project custom field {project_field} as {friendly_name}: {exc}"
                 ) from exc
+        if configured:
+            project_progress("Custom Project field configuration complete")
 
     def snapshot_tasks(self, config: Dict[str, Any]) -> Dict[str, ProjectTaskSnapshot]:
         snapshots: Dict[str, ProjectTaskSnapshot] = {}
@@ -358,12 +396,21 @@ class MicrosoftProjectSession:
         write_dependencies: bool = True,
         dependency_write_mode: str = "fast",
     ) -> None:
+        project_progress("Setting existing Project tasks to auto scheduled")
         self.set_auto_scheduled()
+        project_progress("Indexing Project tasks by Jira key")
         task_by_key = self.index_tasks_by_key(config)
+        project_progress("Ensuring rollup summary rows")
         summary_tasks = self.ensure_summaries(plan, config, task_by_key)
         task_by_key = self.index_tasks_by_key(config)
 
-        for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key)):
+        epics = sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key))
+        total_epics = len(epics)
+        if total_epics:
+            project_progress(f"Writing {total_epics} epic row(s)")
+        for index, epic in enumerate(epics, start=1):
+            if index == 1 or index % 50 == 0 or index == total_epics:
+                project_progress(f"Epic row write progress: {index}/{total_epics} row(s)")
             parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
             task = task_by_key.get(epic.key)
             if task is None:
@@ -373,9 +420,12 @@ class MicrosoftProjectSession:
                 task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
                 task_by_key[epic.key] = task
             self.update_epic_task(task, epic, config, plan)
+        if total_epics:
+            project_progress("Epic row writes complete")
 
         if not write_dependencies:
             task_by_key = self.index_tasks_by_key(config)
+            project_progress("Marking Project rows that no longer match Jira")
             self.mark_unmatched_tasks(plan, config, task_by_key)
             return
         self.apply_plan_dependencies(plan, config, dependency_write_mode)
@@ -386,9 +436,12 @@ class MicrosoftProjectSession:
         config: Dict[str, Any],
         dependency_write_mode: str = "fast",
     ) -> None:
+        project_progress("Recalculating before dependency write")
         self.recalculate()
+        project_progress("Indexing Project tasks for dependency write")
         task_by_key = self.index_tasks_by_key(config)
         self.apply_dependencies(plan, task_by_key, dependency_write_mode)
+        project_progress("Marking Project rows that no longer match Jira")
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
     def set_auto_scheduled(self) -> None:
@@ -766,20 +819,14 @@ class MicrosoftProjectSession:
                 writable_items.append((epic, task))
         total = len(writable_items)
         if total:
-            print(
-                f"[j2p] {datetime.now().strftime('%H:%M:%S')} Writing Project predecessor fields for "
-                f"{total} task(s) using {dependency_write_mode} mode...",
-                flush=True,
+            project_progress(
+                f"Writing Project predecessor fields for {total} task(s) using {dependency_write_mode} mode"
             )
         processed = 0
         for epic, task in writable_items:
             processed += 1
             if processed == 1 or processed % 25 == 0 or processed == total:
-                print(
-                    f"[j2p] {datetime.now().strftime('%H:%M:%S')} Project predecessor write progress: "
-                    f"{processed}/{total} task(s)...",
-                    flush=True,
-                )
+                project_progress(f"Project predecessor write progress: {processed}/{total} task(s)")
             predecessor_ids: List[str] = []
             predecessor_tasks: List[Any] = []
             missing_predecessors: List[str] = []
@@ -840,6 +887,8 @@ class MicrosoftProjectSession:
                         source_row=epic.source_row,
                     )
                 )
+        if total:
+            project_progress("Project predecessor writes complete")
 
     def write_project_predecessors(
         self,
@@ -1158,8 +1207,10 @@ class MicrosoftProjectSession:
         before: Dict[str, ProjectTaskSnapshot],
         config: Dict[str, Any],
     ) -> None:
+        project_progress("Reading post-update Project task state")
         after = self.snapshot_tasks(config)
         changed_finishes = []
+        project_progress("Comparing Project finish dates for schedule review")
         for key, epic in plan.epics.items():
             if not epic.drives_schedule:
                 continue
@@ -1185,8 +1236,10 @@ class MicrosoftProjectSession:
                 )
 
         if not changed_finishes:
+            project_progress("Schedule review found no Project finish-date shifts")
             return
         changed_finishes.sort(key=lambda item: (not item[3], item[2], item[0]))
+        project_progress(f"Schedule review found {len(changed_finishes)} Project finish-date shift(s)")
         root_key, old_finish, new_finish, _critical = changed_finishes[0]
         root_epic = plan.epics.get(root_key)
         plan.audit_items.append(
@@ -1232,6 +1285,7 @@ class MicrosoftProjectSession:
             return False
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+        project_progress("Indexing Project tasks for review formatting")
         task_by_key = self.index_tasks_by_key(config)
         formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
         for item in list(plan.audit_items):
@@ -1248,6 +1302,8 @@ class MicrosoftProjectSession:
             column_aliases = project_column_aliases(column, config)
             formatting_items.append((item, task, column, color, column_aliases))
 
+        project_progress(f"Preparing to color {len(formatting_items)} Project review cell(s)")
+        project_progress("Preparing j2p Review table")
         table_errors = self.prepare_formatting_view(
             review_table_columns(config, [column for _item, _task, column, _color, _aliases in formatting_items]),
             config,
@@ -1272,7 +1328,12 @@ class MicrosoftProjectSession:
 
         failed_columns: Dict[str, int] = {}
         failed_examples: List[str] = []
-        for item, task, column, color, column_aliases in formatting_items:
+        total = len(formatting_items)
+        if total:
+            project_progress("Project cell coloring started")
+        for index, (item, task, column, color, column_aliases) in enumerate(formatting_items, start=1):
+            if index == 1 or index % 50 == 0 or index == total:
+                project_progress(f"Project cell coloring progress: {index}/{total} cell(s)")
             error = self.color_project_cell_error(task, column, color, column_aliases)
             if not error:
                 continue
@@ -1301,6 +1362,8 @@ class MicrosoftProjectSession:
                     ),
                 )
             )
+        if total:
+            project_progress("Project cell coloring complete")
 
     def prepare_formatting_view(self, columns: List[str], config: Dict[str, Any]) -> List[str]:
         errors: List[str] = []
