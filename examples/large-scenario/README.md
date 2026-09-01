@@ -257,19 +257,16 @@ Confirm these high-level expectations:
 
 Then read sections in this order:
 
-1. `Color Case Examples`
-2. `Project Key Rollup Mapping`
-3. `Reviewer Action Needed`
-4. `Changed Names`
-5. `Added Epics`
-6. `Multi-FixVersion Epics`
-7. `Parent Or Rollup Moves`
-8. `Completed Since Last Update`
-9. `In Planning`
-10. `Dependency Review`
-11. `Date Review`
-12. `Unmatched Project Tasks`
-13. `Excluded Items`
+1. `Rollup Status`
+2. `Reviewer Action Needed`
+3. `Review Type Summary`
+4. `Project Key Rollup Mapping`
+5. `Color Case Examples`
+6. Expand `Detailed Review Sections` for `Changed Names`, `Added Epics`, `Multi-FixVersion Epics`, `Parent Or Rollup Moves`, `Completed Since Last Update`, `In Planning`, `Dependency Review`, `Date Review`, `Unmatched Project Tasks`, and `Excluded Items`.
+7. Expand `Full Planned Epic Rows` only when you want to inspect every planned schedule row.
+8. Expand `CSV Column Mapping Used` only when you want to confirm how the Jira CSV headers were interpreted.
+
+The large planned-epic table is intentionally collapsed so managers see rollup status and required-review items before the full detail.
 
 ## Color And Review Cases In This Scenario
 

@@ -111,8 +111,12 @@ def run_smoke(output_dir: Path) -> int:
         follow_on_dir / "Manager-Review-Report.html",
         [
             "Reviewer Action Needed",
+            "Rollup Status",
+            "Review Type Summary",
             "Color Key",
             "Project Key Rollup Mapping",
+            "Full Planned Epic Rows",
+            "<details class=\"detail-block\">",
             "Changed Names",
             "Completed Since Last Update",
             "Dependency Review",
@@ -187,8 +191,13 @@ def run_smoke(output_dir: Path) -> int:
     assert_report_contains(
         large_updated_dir / "Manager-Review-Report.html",
         [
+            "Rollup Status",
+            "Reviewer Action Needed",
+            "Review Type Summary",
             "Color Case Examples",
             "Project update only",
+            "Full Planned Epic Rows",
+            "<details class=\"detail-block\">",
             "CORE-1000",
             "CORE-1004",
             "CORE-1980",

@@ -7,7 +7,15 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from .core import AuditItem, RunPlan, calculate_percent, html_escape, multi_fixversion_policy_for_prefix, summary_id
+from .core import (
+    AuditItem,
+    RunPlan,
+    calculate_percent,
+    format_number,
+    html_escape,
+    multi_fixversion_policy_for_prefix,
+    summary_id,
+)
 
 
 AUDIT_COLUMNS = [
@@ -292,8 +300,7 @@ def write_manager_html(
     action_needed = [
         item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}
     ]
-    sections = [
-        ("Reviewer Action Needed", action_needed),
+    detail_sections = [
         ("Changed Names", by_category(plan.audit_items, "ChangedName")),
         ("Added Epics", by_category(plan.audit_items, "AddedEpic")),
         (
@@ -372,6 +379,10 @@ def write_manager_html(
       margin: 28px 0 10px;
       font-size: 20px;
     }}
+    h3 {{
+      margin: 18px 0 8px;
+      font-size: 16px;
+    }}
     p {{
       margin: 6px 0;
     }}
@@ -393,6 +404,10 @@ def write_manager_html(
     .metric strong {{
       display: block;
       font-size: 24px;
+    }}
+    .table-wrap {{
+      width: 100%;
+      overflow-x: auto;
     }}
     table {{
       width: 100%;
@@ -438,6 +453,33 @@ def write_manager_html(
     .review {{ background: var(--review); }}
     .dependency {{ background: var(--dependency); }}
     .planning {{ background: var(--planning); }}
+    details.detail-block {{
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin: 20px 0;
+      background: white;
+    }}
+    details.detail-block > summary {{
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      background: var(--section);
+      font-weight: bold;
+    }}
+    details.detail-block[open] > summary {{
+      border-bottom: 1px solid var(--border);
+    }}
+    .detail-body {{
+      padding: 0 14px 14px;
+    }}
+    .summary-note {{
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--muted);
+    }}
   </style>
 </head>
 <body>
@@ -452,12 +494,15 @@ def write_manager_html(
   </header>
   <main>
     {summary_grid(plan)}
+    {render_rollup_status(plan)}
+    {render_sections([("Reviewer Action Needed", action_needed)])}
+    {render_review_type_summary(plan)}
+    {render_prefix_rollup_map(plan, config)}
     {color_key()}
     {render_color_examples(plan)}
-    {render_prefix_rollup_map(plan, config)}
-    {render_planned_epics(plan)}
-    {render_sections(sections)}
-    {render_column_map(plan)}
+    {render_collapsible("Detailed Review Sections", render_sections(detail_sections), detail_summary(detail_sections))}
+    {render_planned_epics(plan, collapsible=True)}
+    {render_column_map(plan, collapsible=True)}
   </main>
 </body>
 </html>
@@ -481,6 +526,110 @@ def summary_grid(plan: RunPlan) -> str:
         for label, value in metrics
     )
     return f"<section><h2>Executive Summary</h2><div class=\"summary-grid\">{cards}</div></section>"
+
+
+def render_rollup_status(plan: RunPlan) -> str:
+    rows = []
+    for summary in sorted(plan.summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
+        rows.append(
+            [
+                summary.name,
+                summary.key,
+                summary.project_key,
+                summary.rollup_mode,
+                rollup_status(summary),
+                f"{summary.percent_complete}%",
+                f"{format_number(summary.completed_story_points)} / {format_number(summary.total_story_points)}",
+                summary.driving_epic_count,
+                summary.reference_epic_count,
+                summary.child_epic_count,
+            ]
+        )
+    return render_table(
+        "Rollup Status",
+        [
+            "Rollup",
+            "Rollup Key",
+            "Project Key",
+            "Mode",
+            "Status",
+            "% Complete",
+            "Completed / Total Points",
+            "Driving Rows",
+            "Reference Rows",
+            "Total Rows",
+        ],
+        rows,
+    )
+
+
+def rollup_status(summary: Any) -> str:
+    if summary.driving_epic_count == 0 and summary.reference_epic_count > 0:
+        return "Reference only"
+    if summary.total_story_points <= 0:
+        return "In planning / no counted points"
+    if summary.percent_complete >= 100:
+        return "Complete"
+    if summary.percent_complete <= 0:
+        return "Not started"
+    return "In progress"
+
+
+def render_review_type_summary(plan: RunPlan) -> str:
+    categories: Dict[str, Dict[str, Any]] = {}
+    for item in plan.audit_items:
+        bucket = categories.setdefault(
+            item.category,
+            {
+                "count": 0,
+                "severity": item.severity,
+                "color": item.color,
+                "reviewer_action": item.reviewer_action,
+            },
+        )
+        bucket["count"] += 1
+        bucket["severity"] = highest_severity(bucket["severity"], item.severity)
+        if not bucket["color"] and item.color:
+            bucket["color"] = item.color
+        if not bucket["reviewer_action"] and item.reviewer_action:
+            bucket["reviewer_action"] = item.reviewer_action
+
+    rows = [
+        [
+            category,
+            bucket["count"],
+            bucket["severity"],
+            color_label(bucket["color"]),
+            bucket["reviewer_action"],
+        ]
+        for category, bucket in sorted(
+            categories.items(),
+            key=lambda entry: (severity_rank(entry[1]["severity"]), entry[0]),
+        )
+    ]
+    return render_table(
+        "Review Type Summary",
+        ["Category", "Items", "Highest Severity", "Color", "Typical Reviewer Action"],
+        rows,
+    )
+
+
+def highest_severity(current: str, candidate: str) -> str:
+    return current if severity_rank(current) <= severity_rank(candidate) else candidate
+
+
+def severity_rank(severity: str) -> int:
+    return {"Error": 0, "Warning": 1, "Review": 2, "Info": 3}.get(severity, 4)
+
+
+def color_label(color: str) -> str:
+    return {
+        "changed_cell": "Green",
+        "cascade_root": "Red",
+        "review_needed": "Yellow/amber",
+        "dependency_review": "Blue",
+        "in_planning": "Gray/green-gray",
+    }.get(color, "")
 
 
 def color_key() -> str:
@@ -598,7 +747,7 @@ def schedule_driver_candidate(plan: RunPlan) -> Optional[AuditItem]:
     return (preferred or date_changes or [None])[0]
 
 
-def render_planned_epics(plan: RunPlan) -> str:
+def render_planned_epics(plan: RunPlan, collapsible: bool = False) -> str:
     rows = []
     for epic in sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key)):
         rows.append(
@@ -622,7 +771,7 @@ def render_planned_epics(plan: RunPlan) -> str:
                 epic.dependency_review,
             ]
         )
-    return render_table(
+    table = render_table(
         "Planned Epic Rows",
         [
             "Jira Key",
@@ -644,6 +793,13 @@ def render_planned_epics(plan: RunPlan) -> str:
             "Dependency Review",
         ],
         rows,
+    )
+    if not collapsible:
+        return table
+    return render_collapsible(
+        "Full Planned Epic Rows",
+        table,
+        f"{len(rows)} rows. Open for full row-level schedule detail.",
     )
 
 
@@ -708,9 +864,32 @@ def render_sections(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
     return "\n".join(html_parts)
 
 
-def render_column_map(plan: RunPlan) -> str:
+def render_column_map(plan: RunPlan, collapsible: bool = False) -> str:
     rows = [[key, value or "not present"] for key, value in sorted(plan.column_map.items())]
-    return render_table("CSV Column Mapping Used", ["Logical Field", "CSV Header"], rows)
+    table = render_table("CSV Column Mapping Used", ["Logical Field", "CSV Header"], rows)
+    if not collapsible:
+        return table
+    return render_collapsible(
+        "CSV Column Mapping Used",
+        table,
+        f"{len(rows)} logical fields. Open to verify Jira CSV header mapping.",
+    )
+
+
+def render_collapsible(title: str, content: str, summary_note: str = "") -> str:
+    note = f"<span class=\"summary-note\">{html_escape(summary_note)}</span>" if summary_note else ""
+    return (
+        "<details class=\"detail-block\">"
+        f"<summary><span>{html_escape(title)}</span>{note}</summary>"
+        f"<div class=\"detail-body\">{content}</div>"
+        "</details>"
+    )
+
+
+def detail_summary(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
+    item_count = sum(len(items) for _title, items in sections)
+    section_count = len(sections)
+    return f"{item_count} items across {section_count} review sections."
 
 
 def render_table(title: str, headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> str:
@@ -721,8 +900,8 @@ def render_table(title: str, headers: Sequence[str], rows: Sequence[Sequence[Any
     for row in rows:
         row_html.append("<tr>" + "".join(f"<td>{html_escape(value)}</td>" for value in row) + "</tr>")
     return (
-        f"<section><h2>{html_escape(title)}</h2><table><thead><tr>{header_html}</tr></thead>"
-        f"<tbody>{''.join(row_html)}</tbody></table></section>"
+        f"<section><h2>{html_escape(title)}</h2><div class=\"table-wrap\"><table><thead><tr>{header_html}</tr></thead>"
+        f"<tbody>{''.join(row_html)}</tbody></table></div></section>"
     )
 
 

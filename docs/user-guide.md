@@ -191,20 +191,17 @@ The state file lets future report-only validation compare against the last saved
 Open `Manager-Review-Report.html` first.
 
 1. Review `Executive Summary`.
-2. Review `Color Key` and `Color Case Examples`.
-3. Review `Project Key Rollup Mapping`.
-4. Review `Reviewer Action Needed`.
-5. Review `Changed Names`.
-6. Review `Added Epics`.
-7. Review `Multi-FixVersion Epics`.
-8. Review `Parent Or Rollup Moves`.
-9. Review `Completed Since Last Update`.
-10. Review `In Planning`.
-11. Review `Dependency Review`.
-12. Review `Date Review`.
-13. Review `Unmatched Project Tasks`.
-14. Review `Excluded Items`.
-15. Open the sandbox `.mpp` and compare colored cells with the report.
+2. Review `Rollup Status` for initiative/fixVersion progress.
+3. Review `Reviewer Action Needed`.
+4. Review `Review Type Summary` to see counts by issue category.
+5. Review `Project Key Rollup Mapping`.
+6. Review `Color Key` and `Color Case Examples`.
+7. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
+8. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
+9. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
+10. Open the sandbox `.mpp` and compare colored cells with the report.
+
+The manager report intentionally keeps rollup status and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
 ## Color Key
 

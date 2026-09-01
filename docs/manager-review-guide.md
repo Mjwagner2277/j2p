@@ -4,14 +4,19 @@ Open `Manager-Review-Report.html` first. It is self-contained and can be emailed
 
 ## Review Order
 
-1. Review `Reviewer Action Needed`.
-2. Check `Color Key` and `Color Case Examples`.
-3. Open the sandbox `.mpp`.
-4. Review changed green cells.
-5. Review red finish-date cells first.
-6. Review amber unmatched or excluded items.
-7. Review blue dependency review markers.
-8. Use `audit-detail.csv` only when you need row-level evidence.
+1. Review `Executive Summary`.
+2. Review `Rollup Status`.
+3. Review `Reviewer Action Needed`.
+4. Review `Review Type Summary`.
+5. Check `Project Key Rollup Mapping`.
+6. Check `Color Key` and `Color Case Examples`.
+7. Expand `Detailed Review Sections` only when you need the category-level tables.
+8. Expand `Full Planned Epic Rows` only when you need every planned schedule row.
+9. Open the sandbox `.mpp`.
+10. Review red finish-date cells first, then changed green cells, amber review cells, blue dependency cells, and in-planning rows.
+11. Use `audit-detail.csv` only when you need row-level evidence outside the HTML report.
+
+Large detail tables are collapsed by default so manager-level status and required-review items stay at the top of the report.
 
 ## Report Files
 
