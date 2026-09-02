@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 from .formatting import format_number, html_escape
 from .metrics import calculate_percent, calculate_story_point_ratio
 from .models import AuditItem, RunPlan
-from .rollups import multi_fixversion_policy_for_prefix, summary_id
+from .rollups import build_summaries, multi_fixversion_policy_for_prefix, summary_id
 
 
 AUDIT_COLUMNS = [
@@ -85,8 +85,14 @@ def write_reports(
     state_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     run_dir.mkdir(parents=True, exist_ok=True)
+    remove_legacy_html_outputs(run_dir)
+    html_report_dir = run_dir / "html-report"
+    html_report_dir.mkdir(parents=True, exist_ok=True)
     paths = {
-        "manager_report": run_dir / "Manager-Review-Report.html",
+        "html_report": html_report_dir,
+        "html_report_index": html_report_dir / "index.html",
+        "manager_report": html_report_dir / "Manager-Review-Report.html",
+        "resource_group_reports": html_report_dir / "resource-groups",
         "audit_detail": run_dir / "audit-detail.csv",
         "planned_epics": run_dir / "planned-epics.csv",
         "summary_rollups": run_dir / "summary-rollups.csv",
@@ -100,7 +106,23 @@ def write_reports(
     write_dependency_review(paths["dependency_review"], plan.audit_items)
     write_field_mapping(paths["field_mapping"], config)
     write_per_project_key_csvs(run_dir / "by-project-key", plan)
-    write_manager_html(paths["manager_report"], plan, config, sandbox_path, state_path)
+    resource_group_reports = write_resource_group_html_reports(
+        paths["resource_group_reports"],
+        plan,
+        config,
+        sandbox_path,
+        state_path,
+        run_dir / "by-project-key",
+    )
+    write_manager_html(
+        paths["manager_report"],
+        plan,
+        config,
+        sandbox_path,
+        state_path,
+        by_project_key_path=run_dir / "by-project-key",
+    )
+    write_html_report_index(paths["html_report_index"], paths["manager_report"], resource_group_reports)
     paths["by_project_key"] = run_dir / "by-project-key"
     return paths
 
@@ -190,6 +212,181 @@ def write_per_project_key_csvs(base_dir: Path, plan: RunPlan) -> None:
         ["project_key", "audit_detail", "planned_epics", "summary_rollups", "dependency_review"],
         index_rows,
     )
+
+
+def write_resource_group_html_reports(
+    base_dir: Path,
+    plan: RunPlan,
+    config: Dict[str, Any],
+    sandbox_path: Optional[Path],
+    state_path: Optional[Path],
+    by_project_key_path: Path,
+) -> List[tuple[str, Path]]:
+    base_dir.mkdir(parents=True, exist_ok=True)
+    for stale_report in base_dir.glob("*.html"):
+        stale_report.unlink()
+    resource_groups = sorted(
+        {epic.resource_group for epic in plan.epics.values() if epic.resource_group}
+    )
+    if not resource_groups:
+        return []
+
+    reports: List[tuple[str, Path]] = []
+    used_filenames: set[str] = set()
+    for resource_group in resource_groups:
+        report_plan = resource_group_run_plan(plan, config, resource_group)
+        report_path = base_dir / unique_report_filename(resource_group, used_filenames)
+        write_manager_html(
+            report_path,
+            report_plan,
+            config,
+            sandbox_path,
+            state_path,
+            report_scope=f"Resource Group: {resource_group}",
+            cascade_plan=plan,
+            cascade_root_resource_group=resource_group,
+            by_project_key_path=by_project_key_path,
+        )
+        reports.append((resource_group, report_path))
+    return reports
+
+
+def remove_legacy_html_outputs(run_dir: Path) -> None:
+    legacy_report = run_dir / "Manager-Review-Report.html"
+    if legacy_report.exists():
+        legacy_report.unlink()
+
+
+def write_html_report_index(
+    path: Path,
+    manager_report: Path,
+    resource_group_reports: Sequence[tuple[str, Path]],
+) -> None:
+    resource_rows = "\n".join(
+        (
+            "<tr>"
+            f"<td>{html_escape(resource_group)}</td>"
+            f"<td><a href=\"{html_escape(relative_html_path(path.parent, report_path))}\">Open report</a></td>"
+            "</tr>"
+        )
+        for resource_group, report_path in resource_group_reports
+    )
+    if not resource_rows:
+        resource_rows = "<tr><td colspan=\"2\">No resource-group reports were generated.</td></tr>"
+    html_text = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>j2p HTML Reports</title>
+  <style>
+    body {{ font-family: Arial, Helvetica, sans-serif; margin: 24px 32px; color: #1f2328; }}
+    h1 {{ margin: 0 0 8px; font-size: 24px; }}
+    p {{ color: #59636e; }}
+    table {{ border-collapse: collapse; width: 100%; max-width: 900px; margin-top: 16px; }}
+    th, td {{ border: 1px solid #d0d7de; padding: 8px 10px; text-align: left; }}
+    th {{ background: #f6f8fa; }}
+    a {{ color: #0969da; }}
+  </style>
+</head>
+<body>
+  <h1>j2p HTML Reports</h1>
+  <p>Open the overall manager report first, then use resource-group reports when reviewing team-specific items.</p>
+  <table>
+    <thead><tr><th>Report</th><th>Link</th></tr></thead>
+    <tbody>
+      <tr><td>Overall Manager Report</td><td><a href="{html_escape(relative_html_path(path.parent, manager_report))}">Open report</a></td></tr>
+    </tbody>
+  </table>
+  <h2>Resource Group Reports</h2>
+  <table>
+    <thead><tr><th>Resource Group</th><th>Link</th></tr></thead>
+    <tbody>{resource_rows}</tbody>
+  </table>
+</body>
+</html>
+"""
+    path.write_text(html_text, encoding="utf-8")
+
+
+def unique_report_filename(label: str, used_filenames: set[str]) -> str:
+    base = safe_filename(label)
+    filename = f"{base}.html"
+    index = 2
+    while filename in used_filenames:
+        filename = f"{base}-{index}.html"
+        index += 1
+    used_filenames.add(filename)
+    return filename
+
+
+def relative_html_path(base_dir: Path, target: Path) -> str:
+    try:
+        return target.relative_to(base_dir).as_posix()
+    except ValueError:
+        return target.as_posix()
+
+
+def resource_group_run_plan(plan: RunPlan, config: Dict[str, Any], resource_group: str) -> RunPlan:
+    epics = {
+        key: epic
+        for key, epic in plan.epics.items()
+        if epic.resource_group == resource_group
+    }
+    summaries = build_summaries(epics, config)
+    audit_items = [
+        item for item in plan.audit_items if audit_item_resource_group(plan, item) == resource_group
+    ]
+    driving_epics = [epic for epic in epics.values() if epic.drives_schedule]
+    completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
+    completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
+    stats = dict(plan.stats)
+    stats.update(
+        {
+            "epics_included": len({epic.jira_key or epic.key for epic in epics.values()}),
+            "planned_epic_rows": len(epics),
+            "summary_rows": len(summaries),
+            "audit_items": len(audit_items),
+            "project_keys": sorted({epic.key_prefix for epic in epics.values() if epic.key_prefix}),
+            "logged_hours": round(sum(epic.logged_hours for epic in driving_epics), 2),
+            "completed_logged_hours": completed_logged_hours,
+            "story_point_ratio": calculate_story_point_ratio(
+                completed_logged_hours,
+                completed_points,
+                float(plan.stats.get("hours_per_story_point", 8.0)),
+            ),
+        }
+    )
+    return RunPlan(
+        generated_at=plan.generated_at,
+        jira_csv=plan.jira_csv,
+        rollup_mode=plan.rollup_mode,
+        column_map=plan.column_map,
+        stats=stats,
+        summaries=summaries,
+        epics=epics,
+        audit_items=audit_items,
+    )
+
+
+def audit_item_resource_group(plan: RunPlan, item: AuditItem) -> str:
+    for key in (item.schedule_key, item.jira_key):
+        epic = epic_for_key(plan, key)
+        if epic:
+            return epic.resource_group
+    return ""
+
+
+def epic_for_key(plan: RunPlan, key: str) -> Any:
+    if not key:
+        return None
+    normalized_key = key.upper()
+    direct = plan.epics.get(normalized_key)
+    if direct:
+        return direct
+    for epic in plan.epics.values():
+        if (epic.jira_key or epic.key).upper() == normalized_key:
+            return epic
+    return None
 
 
 def planned_epic_rows(plan: RunPlan) -> List[Dict[str, Any]]:
@@ -337,6 +534,10 @@ def write_manager_html(
     config: Dict[str, Any],
     sandbox_path: Optional[Path],
     state_path: Optional[Path],
+    report_scope: str = "Overall Manager Report",
+    cascade_plan: Optional[RunPlan] = None,
+    cascade_root_resource_group: Optional[str] = None,
+    by_project_key_path: Optional[Path] = None,
 ) -> None:
     action_needed = [
         item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}
@@ -378,6 +579,18 @@ def write_manager_html(
             ],
         ),
     ]
+    cascade_section = render_schedule_cascade_review(
+        cascade_plan or plan,
+        project_update_run=sandbox_path is not None,
+        root_resource_group=cascade_root_resource_group,
+    )
+    report_context_section = render_report_context(
+        plan,
+        sandbox_path,
+        state_path,
+        by_project_key_path or path.parent.parent / "by-project-key",
+        report_scope,
+    )
 
     html_text = f"""<!doctype html>
 <html lang="en">
@@ -656,12 +869,13 @@ def write_manager_html(
   <header>
     <div class="headline">
       <div>
-        <h1>Schedule Review Report</h1>
+        <h1>{html_escape(report_title(report_scope))}</h1>
         <p class="muted">Jira-to-Project sandbox review packet</p>
       </div>
       <div class="headline-meta">
         <p>Generated {html_escape(plan.generated_at)}</p>
         <p>Rollup mode: {html_escape(plan.rollup_mode)}</p>
+        <p>Scope: {html_escape(report_scope)}</p>
       </div>
     </div>
   </header>
@@ -669,11 +883,11 @@ def write_manager_html(
     {decision_briefing(plan)}
     {render_story_point_ratio_breakdown(plan)}
     {render_rollup_status(plan)}
-    {render_schedule_cascade_review(plan, project_update_run=sandbox_path is not None)}
+    {cascade_section}
     {render_sections([("Reviewer Action Needed", action_needed)])}
     {render_review_type_summary(plan)}
     {render_prefix_rollup_map(plan, config)}
-    {render_report_context(plan, sandbox_path, state_path, path.parent / "by-project-key")}
+    {report_context_section}
     {color_key()}
     {render_color_examples(plan)}
     {render_collapsible("Detailed Review Sections", render_sections(detail_sections), detail_summary(detail_sections))}
@@ -684,6 +898,12 @@ def write_manager_html(
 </html>
 """
     path.write_text(html_text, encoding="utf-8")
+
+
+def report_title(report_scope: str) -> str:
+    if report_scope == "Overall Manager Report":
+        return "Schedule Review Report"
+    return f"Schedule Review Report - {report_scope}"
 
 
 def decision_briefing(plan: RunPlan) -> str:
@@ -726,7 +946,11 @@ def render_metric_cards(metrics: Sequence[Sequence[Any]]) -> str:
     return cards
 
 
-def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = False) -> str:
+def render_schedule_cascade_review(
+    plan: RunPlan,
+    project_update_run: bool = False,
+    root_resource_group: Optional[str] = None,
+) -> str:
     cascade_items = schedule_cascade_change_items(plan)
     if not cascade_items:
         message = (
@@ -749,10 +973,24 @@ def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = Fal
     branch_roots = [
         key for key in roots if key in driver_keys or changed_successors(plan, key, changed_keys)
     ]
+    if root_resource_group:
+        branch_roots = [
+            key for key in branch_roots if epic_resource_group(plan, key) == root_resource_group
+        ]
     branch_roots = sorted(
         branch_roots,
         key=lambda key: (-downstream_counts.get(key, 0), key),
     )
+    if root_resource_group:
+        visible_keys = cascade_branch_keys(plan, branch_roots, changed_keys)
+        cascade_items = {
+            key: item for key, item in cascade_items.items() if key in visible_keys
+        }
+        changed_keys = set(cascade_items)
+        driver_keys = {
+            key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
+        }
+        leaf_keys = changed_keys - driver_keys
     metrics = [
         ("Finish Changes", len(changed_keys), "Changed after Project recalculated the sandbox"),
         ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
@@ -763,7 +1001,11 @@ def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = Fal
         for root_key in branch_roots
     )
     if not branch_html:
-        branch_html = "<p class=\"empty\">No cascade branches were detected. Finish changes appear independent or leaf-only.</p>"
+        branch_html = (
+            "<p class=\"empty\">"
+            + html_escape(cascade_empty_message(root_resource_group))
+            + "</p>"
+        )
     detail_table = render_collapsible(
         "Schedule Cascade Detail",
         render_schedule_cascade_table(plan, cascade_items),
@@ -776,6 +1018,7 @@ def render_schedule_cascade_review(plan: RunPlan, project_update_run: bool = Fal
         "<p class=\"cascade-help\">"
         "Red cards are changed finish dates that also have changed downstream successors. "
         "Green cards are changed finish dates with no changed downstream successor. "
+        "Branches are collapsed and ordered from most downstream affected issues to least. "
         "Nested branches follow the Jira dependency links written to Project as predecessor relationships."
         "</p>"
         f"<div class=\"cascade-flow\">{branch_html}</div>"
@@ -814,6 +1057,23 @@ def changed_successors(plan: RunPlan, key: str, changed_keys: set[str]) -> List[
     return sorted(successor_key for successor_key in epic.successors if successor_key in changed_keys)
 
 
+def cascade_empty_message(root_resource_group: Optional[str] = None) -> str:
+    if root_resource_group:
+        return (
+            "No cascade branches were detected that start with an issue attached to "
+            f"{root_resource_group}. Finish changes may be independent, leaf-only, or started by another resource group."
+        )
+    return "No cascade branches were detected. Finish changes appear independent or leaf-only."
+
+
+def cascade_branch_keys(plan: RunPlan, branch_roots: Sequence[str], changed_keys: set[str]) -> set[str]:
+    visible_keys: set[str] = set()
+    for root_key in branch_roots:
+        visible_keys.add(root_key)
+        visible_keys.update(cascade_downstream_keys(plan, root_key, changed_keys))
+    return visible_keys
+
+
 def cascade_downstream_counts(plan: RunPlan, changed_keys: set[str]) -> Dict[str, int]:
     return {key: len(cascade_downstream_keys(plan, key, changed_keys)) for key in changed_keys}
 
@@ -850,9 +1110,6 @@ def render_cascade_branch(
 ) -> str:
     downstream_count = downstream_counts.get(root_key, 0)
     branch_body = render_cascade_node(plan, cascade_items, root_key, set(), downstream_counts)
-    if downstream_count <= 5:
-        return f"<div class=\"cascade-branch\">{branch_body}</div>"
-
     item = cascade_items[root_key]
     epic = plan.epics.get(root_key)
     jira_key = item.jira_key or (epic.jira_key if epic else "") or root_key
@@ -868,6 +1125,11 @@ def render_cascade_branch(
         f"<div class=\"cascade-branch-body\">{branch_body}</div>"
         "</details>"
     )
+
+
+def epic_resource_group(plan: RunPlan, key: str) -> str:
+    epic = epic_for_key(plan, key)
+    return epic.resource_group if epic else ""
 
 
 def render_cascade_node(
@@ -1096,8 +1358,10 @@ def render_report_context(
     sandbox_path: Optional[Path],
     state_path: Optional[Path],
     by_project_key_path: Path,
+    report_scope: str = "Overall Manager Report",
 ) -> str:
     rows = [
+        ["Report Scope", report_scope],
         ["Jira CSV", plan.jira_csv],
         ["Sandbox Project File", str(sandbox_path) if sandbox_path else "not created in validate mode"],
         ["State File", str(state_path) if state_path else "not written"],

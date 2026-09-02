@@ -14,7 +14,8 @@ At least 60% of included schedule-driving epic rows have valid predecessors. Thi
 | `project-wide-jira-baseline-1200.csv` | Baseline Jira export with exactly 1,200 lines |
 | `project-wide-jira-updated-1200.csv` | Updated Jira export with exactly 1,200 lines |
 | `expected-review-cases.csv` | Checklist of Jira keys that demonstrate each color/review behavior |
-| `report-example\j2p-run-updated-1200\Manager-Review-Report.html` | Generated manager report for the updated CSV |
+| `report-example\j2p-run-updated-1200\html-report\Manager-Review-Report.html` | Generated overall manager report for the updated CSV |
+| `report-example\j2p-run-updated-1200\html-report\resource-groups\*.html` | Generated resource-group reports for the updated CSV |
 | `report-example\j2p-run-updated-1200\by-project-key\index.csv` | Index of the per-project-key CSV outputs |
 
 No `.mpp` files are committed in this example folder. The committed `report-example` folders were created with `validate`, so they contain report files only. To create Project files you can open in Microsoft Project, use Step 5 on a Windows machine with Microsoft Project installed.
@@ -121,7 +122,7 @@ py -3.14 -m j2p validate `
 Open the generated manager report:
 
 ```text
-examples\large-scenario\report-example\j2p-run-updated-1200\Manager-Review-Report.html
+examples\large-scenario\report-example\j2p-run-updated-1200\html-report\Manager-Review-Report.html
 ```
 
 ## Step 5: Create Project Files For Windows Review
@@ -193,7 +194,7 @@ review-output\large-scenario-project\j2p-run-updated-project-review\Large-Scenar
 Expected manager report for the Project update:
 
 ```text
-review-output\large-scenario-project\j2p-run-updated-project-review\Manager-Review-Report.html
+review-output\large-scenario-project\j2p-run-updated-project-review\html-report\Manager-Review-Report.html
 ```
 
 Open the sandbox `.mpp`, not the baseline source file, for review.
@@ -207,10 +208,10 @@ In Microsoft Project:
 3. Apply the `j2p Review` task table from Project's table menu if it is not already active.
 4. Start with the default manager-facing columns: `Jira Key`, `Name`, `Resource Group`, `Dependency Review`, `Jira Status`, `Start`, `Finish`, `% Complete`, and `Predecessors`.
 5. Look for colored cells in the left task grid. The colors are not shown on the right-side Gantt bars.
-6. Use `Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key.
+6. Use `html-report\Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key. Use `html-report\resource-groups\*.html` for resource-group focused review.
 7. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and the in-planning entries in the manager report.
 
-The default `j2p Review` table intentionally hides rollup categories, j2p row role, Jira fixVersion, internal mapping keys, Jira target dates, story point fields, hours fields, in-planning fields, and flag-style review indicators. Those values are still available in `Manager-Review-Report.html`, the CSV files, and the hidden Project custom fields. Edit `review_table.exposed_columns` in YAML only when your review process needs those fields visible in Project.
+The default `j2p Review` table intentionally hides rollup categories, j2p row role, Jira fixVersion, internal mapping keys, Jira target dates, story point fields, hours fields, in-planning fields, and flag-style review indicators. Those values are still available in `html-report\Manager-Review-Report.html`, the resource-group HTML reports, the CSV files, and the hidden Project custom fields. Edit `review_table.exposed_columns` in YAML only when your review process needs those fields visible in Project.
 
 Training keys to find in the sandbox:
 
@@ -374,7 +375,7 @@ For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 - `CORE-1004` has a target-end date change and blocks `CORE-1005`.
 - `CORE-1005` is the downstream dependent epic.
 - In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports every changed finish with changed downstream successors as red. Changed finish dates with no changed downstream successor remain green.
-- The generated `Manager-Review-Report.html` includes `Schedule Cascade Review`, which presents those changed dates as branch cards plus a collapsible old/new date table. Branches appear from most downstream affected issues to least, and branches with more than five downstream affected issues start collapsed.
+- The generated `html-report\Manager-Review-Report.html` includes `Schedule Cascade Review`, which presents those changed dates as branch cards plus a collapsible old/new date table. Branches appear from most downstream affected issues to least, and every branch starts collapsed. Resource-group reports show branches that start with issues attached to that resource group.
 
 ## Step 9: Manager Decisions
 

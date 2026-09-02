@@ -14,7 +14,8 @@ from typing import Iterable, List, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_REPORT_FILES = [
-    "Manager-Review-Report.html",
+    "html-report/index.html",
+    "html-report/Manager-Review-Report.html",
     "audit-detail.csv",
     "planned-epics.csv",
     "summary-rollups.csv",
@@ -130,7 +131,7 @@ def run_smoke(output_dir: Path) -> int:
         {"changed_cell", "review_needed", "dependency_review", "in_planning"},
     )
     assert_report_contains(
-        large_updated_dir / "Manager-Review-Report.html",
+        large_updated_dir / "html-report" / "Manager-Review-Report.html",
         [
             "Decision Briefing",
             "Rollup Status",
@@ -151,10 +152,14 @@ def run_smoke(output_dir: Path) -> int:
             "DATA-3009",
         ],
     )
+    assert_resource_group_reports(
+        large_updated_dir / "html-report" / "resource-groups",
+        {"Core_Product_Engineering.html", "Platform_Engineering.html", "Data_Engineering.html"},
+    )
     assert_expected_review_cases(
         ROOT / "examples" / "large-scenario" / "expected-review-cases.csv",
         large_updated_dir / "audit-detail.csv",
-        large_updated_dir / "Manager-Review-Report.html",
+        large_updated_dir / "html-report" / "Manager-Review-Report.html",
     )
 
     print("Smoke tests passed.", flush=True)
@@ -209,8 +214,19 @@ def assert_report_bundle(run_dir: Path) -> None:
     missing = [name for name in REQUIRED_REPORT_FILES if not (run_dir / name).exists()]
     if not (run_dir / "by-project-key" / "index.csv").exists():
         missing.append("by-project-key/index.csv")
+    if not (run_dir / "html-report" / "resource-groups").is_dir():
+        missing.append("html-report/resource-groups")
     if missing:
         raise AssertionError(f"Missing report files in {run_dir}: {', '.join(missing)}")
+
+
+def assert_resource_group_reports(report_dir: Path, expected_files: Iterable[str]) -> None:
+    actual_files = {path.name for path in report_dir.glob("*.html")}
+    missing = set(expected_files) - actual_files
+    if missing:
+        raise AssertionError(
+            f"{report_dir} is missing resource-group reports: {', '.join(sorted(missing))}"
+        )
 
 
 def assert_audit_categories(path: Path, expected: Iterable[str]) -> None:

@@ -10,7 +10,7 @@ The large scenario includes:
 
 - 1,200-line baseline and follow-on Jira CSV exports
 - a full YAML configuration
-- generated manager-review reports
+- generated HTML reports, including the overall manager report and resource-group reports
 - per-project-key CSV outputs
 - expected review cases for color and report validation
 

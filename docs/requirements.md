@@ -128,7 +128,8 @@ The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
 - every changed finish with changed downstream successors is colored red
 - changed finish dates with no changed downstream successor are colored green
 - any Project scheduled finish that does not match Jira `Target end` is reported
-- the manager report includes a `Schedule Cascade Review` section that visualizes changed finish dates by dependency branch, orders branches by downstream impact, collapses branches with more than five downstream affected issues, and includes a collapsible detail table
+- the HTML reports include a `Schedule Cascade Review` section that visualizes changed finish dates by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes a collapsible detail table
+- each resource-group HTML report includes schedule cascade branches whose starting issue belongs to that resource group
 
 ## Review Colors
 

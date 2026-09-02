@@ -547,6 +547,6 @@ Before running with a new team's Jira export:
 4. Confirm `columns` matches the actual CSV headers.
 5. Confirm fixVersion teams use the intended `multi_fixversion_policy`.
 6. Run `validate`.
-7. Review `CSV Column Mapping Used` in `Manager-Review-Report.html`.
+7. Review `CSV Column Mapping Used` in `html-report\Manager-Review-Report.html`.
 8. Review `FIELD_MAPPING.md`.
 9. Fix YAML or Jira data-quality issues before running `update`.

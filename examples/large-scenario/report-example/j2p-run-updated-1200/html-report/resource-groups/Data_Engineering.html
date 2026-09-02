@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>j2p Manager Review Report</title>
+  <style>
+    :root {
+      --changed: #C6EFCE;
+      --cascade: #FFC7CE;
+      --review: #FFEB9C;
+      --dependency: #BDD7EE;
+      --planning: #D9EAD3;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --bg: #ffffff;
+      --section: #f6f8fa;
+      --accent: #2f6f5e;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.4;
+    }
+    header {
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--border);
+      background: #ffffff;
+    }
+    main {
+      padding: 24px 32px 40px;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 700;
+    }
+    h2 {
+      margin: 28px 0 10px;
+      font-size: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 16px;
+    }
+    p {
+      margin: 6px 0;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .headline {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+    .headline-meta {
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .briefing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      margin: 12px 0 18px;
+    }
+    .briefing-item {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: #ffffff;
+    }
+    .briefing-item strong {
+      display: block;
+      font-size: 22px;
+      margin-top: 2px;
+    }
+    .briefing-item span {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+    .cascade-review {
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--cascade);
+      padding: 12px 14px;
+      background: #ffffff;
+      margin-bottom: 18px;
+    }
+    .cascade-help {
+      margin: 0 0 12px;
+      color: var(--muted);
+    }
+    .cascade-flow {
+      display: grid;
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .cascade-branch {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      background: #ffffff;
+    }
+    details.cascade-branch {
+      padding: 0;
+    }
+    details.cascade-branch > summary {
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      padding: 10px;
+      font-weight: 600;
+    }
+    details.cascade-branch > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.cascade-branch > summary::before {
+      content: "+";
+      color: var(--cascade);
+      margin-right: 2px;
+    }
+    details.cascade-branch[open] > summary::before {
+      content: "-";
+    }
+    .cascade-branch-body {
+      border-top: 1px solid var(--border);
+      padding: 10px;
+    }
+    .cascade-branch-count {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: normal;
+    }
+    .cascade-node {
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--changed);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: #ffffff;
+      min-width: 220px;
+    }
+    .cascade-node.driver {
+      border-left-color: var(--cascade);
+      background: #fffafa;
+    }
+    .cascade-node.changed {
+      border-left-color: var(--changed);
+      background: #fbfffb;
+    }
+    .cascade-node-title {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: baseline;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .cascade-node-title span {
+      color: var(--muted);
+      font-weight: normal;
+      font-size: 12px;
+    }
+    .cascade-node-summary {
+      margin-top: 4px;
+      font-size: 13px;
+    }
+    .cascade-node-dates {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .cascade-children {
+      border-left: 2px solid var(--border);
+      margin: 8px 0 0 16px;
+      padding-left: 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 18px;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 7px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--section);
+      font-weight: 600;
+    }
+    .priority-table tbody tr:first-child td {
+      border-top: 2px solid var(--accent);
+    }
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+      margin: 8px 0 18px;
+    }
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .swatch {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #8c959f;
+      margin-right: 6px;
+      vertical-align: -2px;
+    }
+    .changed { background: var(--changed); }
+    .cascade { background: var(--cascade); }
+    .review { background: var(--review); }
+    .dependency { background: var(--dependency); }
+    .planning { background: var(--planning); }
+    details.detail-block {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin: 20px 0;
+      background: white;
+    }
+    details.detail-block > summary {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      background: var(--section);
+      font-weight: bold;
+    }
+    details.detail-block[open] > summary {
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-body {
+      padding: 0 14px 14px;
+    }
+    .summary-note {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="headline">
+      <div>
+        <h1>Schedule Review Report - Resource Group: Data Engineering</h1>
+        <p class="muted">Jira-to-Project sandbox review packet</p>
+      </div>
+      <div class="headline-meta">
+        <p>Generated 2026-09-01T13:54:18</p>
+        <p>Rollup mode: mixed</p>
+        <p>Scope: Resource Group: Data Engineering</p>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section><h2>Decision Briefing</h2><div class="briefing-grid"><div class="briefing-item"><span>Needs Review</span><strong>2</strong><p class="muted">Warnings and review decisions</p></div>
+<div class="briefing-item"><span>Rollups In Progress</span><strong>3</strong><p class="muted">0 complete</p></div>
+<div class="briefing-item"><span>Dependency Items</span><strong>2</strong><p class="muted">Changed, missing, skipped, or circular</p></div>
+<div class="briefing-item"><span>Completed Epics</span><strong>0</strong><p class="muted">Completed since comparison baseline</p></div>
+<div class="briefing-item"><span>Logged Hours</span><strong>577</strong><p class="muted">Rolled up from child work</p></div>
+<div class="briefing-item"><span>Story Point Ratio</span><strong>10.35</strong><p class="muted">35 in-progress rows</p></div></div></section>
+    <section><h2>Story Point Ratio</h2><div class="briefing-grid"><div class="briefing-item"><span>Story Point Ratio</span><strong>10.35</strong><p class="muted">In-progress scheduled epic rows only</p></div>
+<div class="briefing-item"><span>In-Progress Epic Rows</span><strong>35</strong><p class="muted">Driving rows with 1-99% complete</p></div>
+<div class="briefing-item"><span>Completed / Total Points</span><strong>247 / 749</strong><p class="muted">Only rows counted in this view</p></div>
+<div class="briefing-item"><span>Completed Logged Hours</span><strong>191</strong><p class="muted">Expected 1976</p></div>
+<div class="briefing-item"><span>Total Logged Hours</span><strong>577</strong><p class="muted">All child logs under active epics</p></div>
+<div class="briefing-item"><span>Configured Hours per Point</span><strong>8</strong><p class="muted">Configured in YAML</p></div></div><p class="muted">A value of 1.00 means one completed story point per configured 8-hour block. Higher values mean more completed points per logged-time block; lower values mean fewer. This section excludes completed, not-started, in-planning, and reference-only rows.</p></section><details class="detail-block"><summary><span>Story Point Ratio By Resource Group</span><span class="summary-note">1 resource group with in-progress work.</span></summary><div class="detail-body"><section><h2>Resource Group Story Point Ratio</h2><div class="table-wrap"><table><thead><tr><th>Resource Group</th><th>Project Keys</th><th>In-Progress Rows</th><th>Completed / Total Points</th><th>Completed Logged Hours</th><th>Expected Completed Hours</th><th>Total Logged Hours</th><th>Story Point Ratio</th></tr></thead><tbody><tr><td>Data Engineering</td><td>DATA</td><td>35</td><td>247 / 749</td><td>191</td><td>1976</td><td>577</td><td>10.35</td></tr></tbody></table></div></section></div></details>
+    <section><h2>Rollup Status</h2><div class="table-wrap"><table><thead><tr><th>Rollup</th><th>Rollup Key</th><th>Project Key</th><th>Mode</th><th>Status</th><th>% Complete</th><th>Completed / Total Points</th><th>Logged Hours</th><th>Story Point Ratio</th><th>Driving Rows</th><th>Reference Rows</th><th>Total Rows</th></tr></thead><tbody><tr><td>Forecasting Program</td><td>INIT-1500</td><td>DATA</td><td>initiative</td><td>In progress</td><td>37%</td><td>85 / 231</td><td>181.5</td><td>11.62</td><td>11</td><td>0</td><td>11</td></tr><tr><td>Data Foundations</td><td>INIT-300</td><td>DATA</td><td>initiative</td><td>In progress</td><td>33%</td><td>85 / 261</td><td>179.5</td><td>11.24</td><td>12</td><td>0</td><td>12</td></tr><tr><td>Program Reporting</td><td>INIT-600</td><td>DATA</td><td>initiative</td><td>In progress</td><td>30%</td><td>77 / 257</td><td>216</td><td>8.56</td><td>12</td><td>0</td><td>12</td></tr></tbody></table></div></section>
+    <section><h2>Schedule Cascade Review</h2><p class="empty">No Project auto-schedule finish-date changes were evaluated in this report. This section is populated during create/update runs after Microsoft Project recalculates the sandbox.</p></section>
+    <section><h2>Reviewer Action Needed</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Schedule Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>UnparsedDate</td><td>DATA-3034</td><td></td><td></td><td></td><td>not-a-date</td><td></td><td>Could not parse date &#x27;not-a-date&#x27; on CSV row 31.</td><td>Use YYYY-MM-DD or configure a supported export date format.</td></tr><tr><td>Warning</td><td>CircularDependencySkipped</td><td>DATA-3009</td><td>DATA-3009</td><td>Client Walkthrough - Warehouse migration circular dependency B</td><td>Dependency Review</td><td></td><td></td><td>Skipped circular dependency DATA-3009 -&gt; DATA-3008.</td><td>Resolve the circular Jira blocker relationship.</td></tr></tbody></table></div></section>
+    <section><h2>Review Type Summary</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th>Items</th><th>Highest Severity</th><th>Color</th><th>Typical Reviewer Action</th></tr></thead><tbody><tr><td>CircularDependencySkipped</td><td>1</td><td>Warning</td><td>Blue</td><td>Resolve the circular Jira blocker relationship.</td></tr><tr><td>UnparsedDate</td><td>1</td><td>Warning</td><td></td><td>Use YYYY-MM-DD or configure a supported export date format.</td></tr><tr><td>ChangedField</td><td>9</td><td>Info</td><td>Green</td><td>Review the changed sandbox cell.</td></tr><tr><td>DependencyChange</td><td>1</td><td>Info</td><td>Green</td><td>Review the changed sandbox cell.</td></tr></tbody></table></div></section>
+    <section><h2>Project Key Rollup Mapping</h2><div class="table-wrap"><table><thead><tr><th>Project Key</th><th>Resource Group</th><th>Rollup Mode</th><th>Multi-FixVersion Policy</th></tr></thead><tbody><tr><td>CORE</td><td>Core Product Engineering</td><td>initiative</td><td></td></tr><tr><td>DATA</td><td>Data Engineering</td><td>initiative</td><td></td></tr><tr><td>OPS</td><td>Operations</td><td>fixVersion</td><td>split</td></tr><tr><td>PLAT</td><td>Platform Engineering</td><td>fixVersion</td><td>reference</td></tr><tr><td>WEB</td><td>Web Experience</td><td>initiative</td><td></td></tr></tbody></table></div></section>
+    <details class="detail-block"><summary><span>Report Context</span><span class="summary-note">Open for file paths, CSV row counts, and raw processing totals.</span></summary><div class="detail-body"><section><h2>Run Inputs And Counts</h2><div class="table-wrap"><table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody><tr><td>Report Scope</td><td>Resource Group: Data Engineering</td></tr><tr><td>Jira CSV</td><td>examples/large-scenario/project-wide-jira-updated-1200.csv</td></tr><tr><td>Sandbox Project File</td><td>not created in validate mode</td></tr><tr><td>State File</td><td>examples/large-scenario/report-example/j2p-state.json</td></tr><tr><td>Per-Project-Key CSV Folder</td><td>examples/large-scenario/report-example/j2p-run-updated-1200/by-project-key</td></tr><tr><td>CSV Rows Read</td><td>1199</td></tr><tr><td>Jira Issues Read</td><td>1198</td></tr><tr><td>Epics Included</td><td>35</td></tr><tr><td>Epics Excluded</td><td>6</td></tr><tr><td>Planned Epic Rows</td><td>35</td></tr><tr><td>Summary Rollup Rows</td><td>3</td></tr><tr><td>Project Keys</td><td>DATA</td></tr><tr><td>Multi-FixVersion Epics</td><td>2</td></tr></tbody></table></div></section></div></details>
+    <section>
+  <h2>Color Key</h2>
+  <div class="swatches">
+    <div class="swatch"><span class="dot changed"></span>Green: changed cell</div>
+    <div class="swatch"><span class="dot cascade"></span>Red: cascade branch driver finish date; overrides green</div>
+    <div class="swatch"><span class="dot review"></span>Yellow/amber: unmatched or manager review needed</div>
+    <div class="swatch"><span class="dot dependency"></span>Blue: dependency review marker</div>
+    <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
+  </div>
+</section>
+    <section><h2>Color Case Examples</h2><table><thead><tr><th>Color</th><th>Meaning</th><th>Example Jira Key</th><th>Category</th><th>Field</th><th>Example</th></tr></thead><tbody><tr><td><span class="dot changed"></span>Green</td><td>Changed cell</td><td>DATA-3008</td><td>ChangedField</td><td>% Complete</td><td>% Complete changed from &#x27;50&#x27; to &#x27;45&#x27;.</td></tr><tr><td><span class="dot cascade"></span>Red</td><td>Cascade branch driver finish change</td><td>DATA-3034</td><td>Project update only</td><td>Finish</td><td>Validate mode does not choose the red cell. This kind of Jira target-end change becomes a red example only after Microsoft Project auto-scheduling identifies it as a changed finish date with changed downstream successors.</td></tr><tr><td><span class="dot review"></span>Yellow/amber</td><td>Reviewer attention</td><td></td><td>Not present in this run</td><td></td><td>The item is unmatched, excluded, or otherwise needs manager review.</td></tr><tr><td><span class="dot dependency"></span>Blue</td><td>Dependency review</td><td>DATA-3009</td><td>CircularDependencySkipped</td><td>Dependency Review</td><td>Skipped circular dependency DATA-3009 -&gt; DATA-3008.</td></tr><tr><td><span class="dot planning"></span>Gray/green-gray</td><td>In planning</td><td></td><td>Not present in this run</td><td></td><td>The epic has no pointed child stories/tasks and is included as planning work.</td></tr></tbody></table></section>
+    <details class="detail-block"><summary><span>Detailed Review Sections</span><span class="summary-note">4 items across 10 review sections.</span></summary><div class="detail-body"><section><h2>Changed Names</h2><p class="empty">No items.</p></section>
+<section><h2>Added Epics</h2><p class="empty">No items.</p></section>
+<section><h2>Multi-FixVersion Epics</h2><p class="empty">No items.</p></section>
+<section><h2>Parent Or Rollup Moves</h2><p class="empty">No items.</p></section>
+<section><h2>Completed Since Last Update</h2><p class="empty">No items.</p></section>
+<section><h2>In Planning</h2><p class="empty">No items.</p></section>
+<section><h2>Dependency Review</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Schedule Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>CircularDependencySkipped</td><td>DATA-3009</td><td>DATA-3009</td><td>Client Walkthrough - Warehouse migration circular dependency B</td><td>Dependency Review</td><td></td><td></td><td>Skipped circular dependency DATA-3009 -&gt; DATA-3008.</td><td>Resolve the circular Jira blocker relationship.</td></tr><tr><td>Info</td><td>DependencyChange</td><td>DATA-3009</td><td>DATA-3009</td><td>Client Walkthrough - Warehouse migration circular dependency B</td><td>Predecessors</td><td></td><td>DATA-3008</td><td>Predecessors changed from &#x27;&#x27; to &#x27;DATA-3008&#x27;.</td><td>Review the changed sandbox cell.</td></tr></tbody></table></div></section>
+<section><h2>Date Review</h2><div class="table-wrap"><table><thead><tr><th>Severity</th><th>Category</th><th>Jira Key</th><th>Schedule Key</th><th>Summary</th><th>Field</th><th>Old</th><th>New</th><th>Message</th><th>Reviewer Action</th></tr></thead><tbody><tr><td>Warning</td><td>UnparsedDate</td><td>DATA-3034</td><td></td><td></td><td></td><td>not-a-date</td><td></td><td>Could not parse date &#x27;not-a-date&#x27; on CSV row 31.</td><td>Use YYYY-MM-DD or configure a supported export date format.</td></tr><tr><td>Info</td><td>ChangedField</td><td>DATA-3034</td><td>DATA-3034</td><td>Client Walkthrough - Forecast refresh invalid date example</td><td>Jira Target End</td><td>2026-10-19</td><td>not-a-date</td><td>Jira Target End changed from &#x27;2026-10-19&#x27; to &#x27;not-a-date&#x27;.</td><td>Review the changed sandbox cell.</td></tr></tbody></table></div></section>
+<section><h2>Unmatched Project Tasks</h2><p class="empty">No items.</p></section>
+<section><h2>Excluded Items</h2><p class="empty">No items.</p></section></div></details>
+    <details class="detail-block"><summary><span>Full Planned Epic Rows</span><span class="summary-note">35 rows. Open for full row-level schedule detail.</span></summary><div class="detail-body"><section><h2>Planned Epic Rows</h2><div class="table-wrap"><table><thead><tr><th>Jira Key</th><th>Schedule Key</th><th>Project Key</th><th>Summary</th><th>Rollup Mode</th><th>Rollup</th><th>Row Role</th><th>Fix Version</th><th>Drives Schedule</th><th>Resource Group</th><th>% Complete</th><th>Logged Hours</th><th>Story Point Ratio</th><th>In Planning</th><th>Done</th><th>Target Start</th><th>Target End</th><th>Predecessors</th><th>Dependency Review</th></tr></thead><tbody><tr><td>DATA-3002</td><td>DATA-3002</td><td>DATA</td><td>Scale Rows - Data Platform - Metrics certification wave 03</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>19</td><td>21</td><td>4.57</td><td>No</td><td>No</td><td>2026-07-06</td><td>2026-08-17</td><td>DATA-3001</td><td></td></tr><tr><td>DATA-3005</td><td>DATA-3005</td><td>DATA</td><td>Scale Rows - Data Platform - Retention model update wave 06</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>58</td><td>13</td><td>11</td><td>No</td><td>No</td><td>2026-07-27</td><td>2026-08-24</td><td>DATA-3004</td><td></td></tr><tr><td>DATA-3008</td><td>DATA-3008</td><td>DATA</td><td>Client Walkthrough - Warehouse migration circular dependency A</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>45</td><td>20.5</td><td>8.89</td><td>No</td><td>No</td><td>2026-08-17</td><td>2026-10-05</td><td></td><td></td></tr><tr><td>DATA-3011</td><td>DATA-3011</td><td>DATA</td><td>Scale Rows - Data Platform - Forecast data mart wave 12</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>16</td><td>14.5</td><td>4.36</td><td>No</td><td>No</td><td>2026-09-07</td><td>2026-10-12</td><td>DATA-3010</td><td></td></tr><tr><td>DATA-3014</td><td>DATA-3014</td><td>DATA</td><td>Scale Rows - Data Platform - Quality rule expansion wave 15</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>50</td><td>21</td><td>8.8</td><td>No</td><td>No</td><td>2026-09-28</td><td>2026-11-23</td><td>DATA-3013</td><td></td></tr><tr><td>DATA-3017</td><td>DATA-3017</td><td>DATA</td><td>Scale Rows - Data Platform - Pipeline observability wave 18</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>11</td><td>13</td><td>0</td><td>No</td><td>No</td><td>2026-04-27</td><td>2026-06-08</td><td>DATA-3016</td><td></td></tr><tr><td>DATA-3020</td><td>DATA-3020</td><td>DATA</td><td>Scale Rows - Data Platform - Streaming ingestion wave 21</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>41</td><td>15</td><td>44</td><td>No</td><td>No</td><td>2026-05-18</td><td>2026-06-15</td><td>DATA-3019</td><td></td></tr><tr><td>DATA-3023</td><td>DATA-3023</td><td>DATA</td><td>Scale Rows - Data Platform - Analytics contract cleanup wave 24</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>53</td><td>14.5</td><td>26.67</td><td>No</td><td>No</td><td>2026-06-08</td><td>2026-07-27</td><td>DATA-3022</td><td></td></tr><tr><td>DATA-3026</td><td>DATA-3026</td><td>DATA</td><td>Scale Rows - Data Platform - Metrics certification wave 27</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>29</td><td>21</td><td>14</td><td>No</td><td>No</td><td>2026-06-29</td><td>2026-08-03</td><td></td><td></td></tr><tr><td>DATA-3029</td><td>DATA-3029</td><td>DATA</td><td>Scale Rows - Data Platform - Retention model update wave 30</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>32</td><td>13</td><td>9.6</td><td>No</td><td>No</td><td>2026-07-20</td><td>2026-09-14</td><td></td><td></td></tr><tr><td>DATA-3032</td><td>DATA-3032</td><td>DATA</td><td>Scale Rows - Data Platform - Warehouse model refresh wave 33</td><td>initiative</td><td>INIT-1500</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>50</td><td>15</td><td>16</td><td>No</td><td>No</td><td>2026-08-10</td><td>2026-09-21</td><td></td><td></td></tr><tr><td>DATA-3000</td><td>DATA-3000</td><td>DATA</td><td>Scale Rows - Data Platform - Warehouse model refresh wave 01</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>46</td><td>12.5</td><td>44</td><td>No</td><td>No</td><td>2026-06-22</td><td>2026-07-20</td><td></td><td></td></tr><tr><td>DATA-3003</td><td>DATA-3003</td><td>DATA</td><td>Scale Rows - Data Platform - Forecast data mart wave 04</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>53</td><td>13.5</td><td>26.67</td><td>No</td><td>No</td><td>2026-07-13</td><td>2026-08-31</td><td>DATA-3002</td><td></td></tr><tr><td>DATA-3006</td><td>DATA-3006</td><td>DATA</td><td>Scale Rows - Data Platform - Quality rule expansion wave 07</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>32</td><td>18.5</td><td>14</td><td>No</td><td>No</td><td>2026-08-03</td><td>2026-09-07</td><td>DATA-3005</td><td></td></tr><tr><td>DATA-3009</td><td>DATA-3009</td><td>DATA</td><td>Client Walkthrough - Warehouse migration circular dependency B</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>22</td><td>15</td><td>9.6</td><td>No</td><td>No</td><td>2026-08-24</td><td>2026-10-19</td><td>DATA-3008</td><td>Skipped circular dependency DATA-3009 -&gt; DATA-3008.</td></tr><tr><td>DATA-3012</td><td>DATA-3012</td><td>DATA</td><td>Scale Rows - Data Platform - Streaming ingestion wave 13</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>37</td><td>12.5</td><td>16</td><td>No</td><td>No</td><td>2026-09-14</td><td>2026-10-26</td><td>DATA-3011</td><td></td></tr><tr><td>DATA-3015</td><td>DATA-3015</td><td>DATA</td><td>Scale Rows - Data Platform - Analytics contract cleanup wave 16</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>26</td><td>13.5</td><td>10</td><td>No</td><td>No</td><td>2026-10-05</td><td>2026-11-02</td><td>DATA-3014</td><td></td></tr><tr><td>DATA-3018</td><td>DATA-3018</td><td>DATA</td><td>Scale Rows - Data Platform - Metrics certification wave 19</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>25</td><td>18.5</td><td>6.86</td><td>No</td><td>No</td><td>2026-05-04</td><td>2026-06-22</td><td>DATA-3017</td><td></td></tr><tr><td>DATA-3021</td><td>DATA-3021</td><td>DATA</td><td>Scale Rows - Data Platform - Retention model update wave 22</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>37</td><td>15</td><td>12.44</td><td>No</td><td>No</td><td>2026-05-25</td><td>2026-06-29</td><td>DATA-3020</td><td></td></tr><tr><td>DATA-3024</td><td>DATA-3024</td><td>DATA</td><td>Scale Rows - Data Platform - Warehouse model refresh wave 25</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>30</td><td>12.5</td><td>8.73</td><td>No</td><td>No</td><td>2026-06-15</td><td>2026-08-10</td><td>DATA-3023</td><td></td></tr><tr><td>DATA-3027</td><td>DATA-3027</td><td>DATA</td><td>Scale Rows - Data Platform - Forecast data mart wave 28</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>21</td><td>13.5</td><td>4.92</td><td>No</td><td>No</td><td>2026-07-06</td><td>2026-08-17</td><td></td><td></td></tr><tr><td>DATA-3030</td><td>DATA-3030</td><td>DATA</td><td>Scale Rows - Data Platform - Quality rule expansion wave 31</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>32</td><td>19.5</td><td>8.62</td><td>No</td><td>No</td><td>2026-07-27</td><td>2026-08-24</td><td></td><td></td></tr><tr><td>DATA-3033</td><td>DATA-3033</td><td>DATA</td><td>Scale Rows - Data Platform - Pipeline observability wave 34</td><td>initiative</td><td>INIT-300</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>32</td><td>15</td><td>6.4</td><td>No</td><td>No</td><td>2026-08-17</td><td>2026-10-05</td><td></td><td></td></tr><tr><td>DATA-3001</td><td>DATA-3001</td><td>DATA</td><td>Scale Rows - Data Platform - Pipeline observability wave 02</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>37</td><td>14</td><td>12.44</td><td>No</td><td>No</td><td>2026-06-29</td><td>2026-08-03</td><td>DATA-3000</td><td></td></tr><tr><td>DATA-3004</td><td>DATA-3004</td><td>DATA</td><td>Scale Rows - Data Platform - Streaming ingestion wave 05</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>22</td><td>16.5</td><td>8.73</td><td>No</td><td>No</td><td>2026-07-20</td><td>2026-09-14</td><td>DATA-3003</td><td></td></tr><tr><td>DATA-3007</td><td>DATA-3007</td><td>DATA</td><td>Scale Rows - Data Platform - Analytics contract cleanup wave 08</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>21</td><td>19</td><td>4.92</td><td>No</td><td>No</td><td>2026-08-10</td><td>2026-09-21</td><td>DATA-3006</td><td></td></tr><tr><td>DATA-3010</td><td>DATA-3010</td><td>DATA</td><td>Scale Rows - Data Platform - Metrics certification wave 11</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>33</td><td>23.5</td><td>8.62</td><td>No</td><td>No</td><td>2026-08-31</td><td>2026-09-28</td><td>DATA-3007</td><td></td></tr><tr><td>DATA-3013</td><td>DATA-3013</td><td>DATA</td><td>Scale Rows - Data Platform - Retention model update wave 14</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>5</td><td>14</td><td>5.33</td><td>No</td><td>No</td><td>2026-09-21</td><td>2026-11-09</td><td>DATA-3012</td><td></td></tr><tr><td>DATA-3016</td><td>DATA-3016</td><td>DATA</td><td>Scale Rows - Data Platform - Warehouse model refresh wave 17</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>20</td><td>16.5</td><td>16</td><td>No</td><td>No</td><td>2026-10-12</td><td>2026-11-16</td><td>DATA-3015</td><td></td></tr><tr><td>DATA-3019</td><td>DATA-3019</td><td>DATA</td><td>Scale Rows - Data Platform - Forecast data mart wave 20</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>42</td><td>19</td><td>25.6</td><td>No</td><td>No</td><td>2026-05-11</td><td>2026-07-06</td><td>DATA-3018</td><td></td></tr><tr><td>DATA-3022</td><td>DATA-3022</td><td>DATA</td><td>Scale Rows - Data Platform - Quality rule expansion wave 23</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>18</td><td>23.5</td><td>4.57</td><td>No</td><td>No</td><td>2026-06-01</td><td>2026-07-13</td><td>DATA-3021</td><td></td></tr><tr><td>DATA-3025</td><td>DATA-3025</td><td>DATA</td><td>Scale Rows - Data Platform - Pipeline observability wave 26</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>58</td><td>14</td><td>11</td><td>No</td><td>No</td><td>2026-06-22</td><td>2026-07-20</td><td>DATA-3024</td><td></td></tr><tr><td>DATA-3028</td><td>DATA-3028</td><td>DATA</td><td>Scale Rows - Data Platform - Streaming ingestion wave 29</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>48</td><td>16.5</td><td>8.89</td><td>No</td><td>No</td><td>2026-07-13</td><td>2026-08-31</td><td></td><td></td></tr><tr><td>DATA-3031</td><td>DATA-3031</td><td>DATA</td><td>Scale Rows - Data Platform - Analytics contract cleanup wave 32</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>21</td><td>15.5</td><td>3.56</td><td>No</td><td>No</td><td>2026-08-03</td><td>2026-09-07</td><td></td><td></td></tr><tr><td>DATA-3034</td><td>DATA-3034</td><td>DATA</td><td>Client Walkthrough - Forecast refresh invalid date example</td><td>initiative</td><td>INIT-600</td><td>Scheduled</td><td></td><td>Yes</td><td>Data Engineering</td><td>34</td><td>24</td><td>8.8</td><td>No</td><td>No</td><td>2026-08-24</td><td>not-a-date</td><td></td><td></td></tr></tbody></table></div></section></div></details>
+    <details class="detail-block"><summary><span>CSV Column Mapping Used</span><span class="summary-note">15 logical fields. Open to verify Jira CSV header mapping.</span></summary><div class="detail-body"><section><h2>CSV Column Mapping Used</h2><div class="table-wrap"><table><thead><tr><th>Logical Field</th><th>CSV Header</th></tr></thead><tbody><tr><td>epic_link</td><td>Epic Link</td></tr><tr><td>fix_versions</td><td>Fix versions</td></tr><tr><td>issue_id</td><td>Issue id</td></tr><tr><td>issue_type</td><td>Issue Type</td></tr><tr><td>jira_key</td><td>Issue key</td></tr><tr><td>logged_hours</td><td>Logged Hours</td></tr><tr><td>parent</td><td>Parent</td></tr><tr><td>predecessors</td><td>Inward issue link (Blocks)</td></tr><tr><td>resolution</td><td>Resolution</td></tr><tr><td>status</td><td>Status</td></tr><tr><td>story_points</td><td>Story Points</td></tr><tr><td>successors</td><td>Outward issue link (Blocks)</td></tr><tr><td>summary</td><td>Summary</td></tr><tr><td>target_end</td><td>Target end</td></tr><tr><td>target_start</td><td>Target start</td></tr></tbody></table></div></section></div></details>
+  </main>
+</body>
+</html>

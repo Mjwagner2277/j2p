@@ -297,14 +297,19 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("Reading Jira CSV and building review plan", output)
             self.assertIn("Writing manager report and audit CSV files", output)
             run_dir = Path(temp) / "j2p-run-unit"
-            self.assertTrue((run_dir / "Manager-Review-Report.html").exists())
+            manager_report = run_dir / "html-report" / "Manager-Review-Report.html"
+            self.assertTrue(manager_report.exists())
+            self.assertTrue((run_dir / "html-report" / "index.html").exists())
+            self.assertTrue(
+                (run_dir / "html-report" / "resource-groups" / "Product_Delivery.html").exists()
+            )
             self.assertTrue((run_dir / "audit-detail.csv").exists())
             self.assertTrue((run_dir / "planned-epics.csv").exists())
             self.assertTrue((run_dir / "by-project-key" / "TEAM" / "audit-detail.csv").exists())
             self.assertTrue((run_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
             self.assertTrue((run_dir / "by-project-key" / "PLAT" / "summary-rollups.csv").exists())
             self.assertTrue((run_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
-            report = (run_dir / "Manager-Review-Report.html").read_text(encoding="utf-8")
+            report = manager_report.read_text(encoding="utf-8")
             self.assertIn("Reviewer Action Needed", report)
             self.assertIn("Decision Briefing", report)
             self.assertIn("Rollup Status", report)
@@ -320,6 +325,11 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertLess(report.index("Rollup Status"), report.index("Reviewer Action Needed"))
             self.assertLess(report.index("Reviewer Action Needed"), report.index("Full Planned Epic Rows"))
             self.assertIn("Unknown team epic", report)
+            resource_report = (
+                run_dir / "html-report" / "resource-groups" / "Product_Delivery.html"
+            ).read_text(encoding="utf-8")
+            self.assertIn("Scope: Resource Group: Product Delivery", resource_report)
+            self.assertNotIn("Unknown team epic", resource_report)
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
             self.assertIn("schedule_key", audit_header)
@@ -393,8 +403,13 @@ class J2PPlanningTests(unittest.TestCase):
         plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config)
         with tempfile.TemporaryDirectory() as temp:
             run_dir = Path(temp)
+            legacy_report = run_dir / "Manager-Review-Report.html"
+            legacy_report.write_text("old report", encoding="utf-8")
             paths = write_reports(plan, run_dir, config)
             report = paths["manager_report"].read_text(encoding="utf-8")
+            self.assertFalse(legacy_report.exists())
+            self.assertTrue((run_dir / "html-report" / "index.html").exists())
+            self.assertTrue((run_dir / "html-report" / "resource-groups").exists())
             self.assertNotIn("<script src=", report)
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)
@@ -568,7 +583,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Nested branch driver", html)
         self.assertIn("Changed Downstream Successors", html)
 
-    def test_schedule_cascade_review_collapses_and_sorts_large_branches(self) -> None:
+    def test_schedule_cascade_review_collapses_and_sorts_all_branches(self) -> None:
         def epic(key: str, summary: str, successors: list[str] | None = None) -> PlanEpic:
             return PlanEpic(
                 key=key,
@@ -643,9 +658,80 @@ class J2PPlanningTests(unittest.TestCase):
 
         html = render_schedule_cascade_review(plan, project_update_run=True)
 
-        self.assertEqual(html.count('<details class="cascade-branch">'), 1)
+        self.assertEqual(html.count('<details class="cascade-branch">'), 2)
         self.assertIn("6 downstream affected issues", html)
         self.assertLess(html.index("TEAM-A: TEAM-A summary"), html.index("TEAM-X"))
+
+    def test_schedule_cascade_review_filters_branch_roots_by_resource_group(self) -> None:
+        def epic(key: str, summary: str, resource_group: str, successors: list[str] | None = None) -> PlanEpic:
+            return PlanEpic(
+                key=key,
+                issue_id=key,
+                summary=summary,
+                status="In Progress",
+                rollup_mode="initiative",
+                rollup_key="PROD-100",
+                rollup_name="Program",
+                resource_group=resource_group,
+                key_prefix=key.split("-", 1)[0],
+                total_story_points=8,
+                completed_story_points=0,
+                logged_hours=0,
+                completed_logged_hours=0,
+                story_point_ratio=0,
+                percent_complete=0,
+                in_planning=False,
+                completed=False,
+                target_start="2026-01-01",
+                target_end="2026-01-31",
+                successors=successors or [],
+            )
+
+        def schedule_item(key: str, category: str) -> AuditItem:
+            return AuditItem(
+                severity="info",
+                category=category,
+                jira_key=key,
+                schedule_key=key,
+                summary=f"{key} summary",
+                old_value="2026-01-01",
+                new_value="2026-02-01",
+            )
+
+        plan = RunPlan(
+            generated_at="2026-01-01T00:00:00",
+            jira_csv="unit.csv",
+            rollup_mode="initiative",
+            column_map={},
+            stats={},
+            summaries={},
+            epics={
+                "TEAM-A": epic("TEAM-A", "Alpha branch", "Alpha", ["TEAM-B"]),
+                "TEAM-B": epic("TEAM-B", "Beta downstream", "Beta", ["TEAM-C"]),
+                "TEAM-C": epic("TEAM-C", "Alpha downstream", "Alpha"),
+                "TEAM-X": epic("TEAM-X", "Beta branch", "Beta", ["TEAM-Y"]),
+                "TEAM-Y": epic("TEAM-Y", "Alpha downstream from beta", "Alpha"),
+            },
+            audit_items=[
+                schedule_item("TEAM-A", "CascadeBranchDriver"),
+                schedule_item("TEAM-B", "CascadeBranchDriver"),
+                schedule_item("TEAM-C", "CascadingDateChange"),
+                schedule_item("TEAM-X", "CascadeBranchDriver"),
+                schedule_item("TEAM-Y", "CascadingDateChange"),
+            ],
+        )
+
+        html = render_schedule_cascade_review(
+            plan,
+            project_update_run=True,
+            root_resource_group="Alpha",
+        )
+
+        self.assertIn("TEAM-A: TEAM-A summary", html)
+        self.assertIn("TEAM-B", html)
+        self.assertIn("TEAM-C", html)
+        self.assertNotIn("TEAM-X", html)
+        self.assertNotIn("TEAM-Y", html)
 
     def test_resource_group_uses_project_resource_assignment(self) -> None:
         session = object.__new__(MicrosoftProjectSession)

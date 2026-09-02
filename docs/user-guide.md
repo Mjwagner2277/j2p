@@ -15,7 +15,7 @@ The normal workflow is:
 3. Review the manager report for exclusions, data-quality concerns, dependencies, and changed values.
 4. Run j2p in `update` mode against the source-of-truth `.mpp`.
 5. j2p copies the source-of-truth `.mpp` to a timestamped sandbox and updates only that sandbox.
-6. Review the sandbox `.mpp`, `Manager-Review-Report.html`, and CSV audit files.
+6. Review the sandbox `.mpp`, `html-report\Manager-Review-Report.html`, resource-group HTML reports, and CSV audit files.
 7. A schedule owner decides what should be manually accepted into the source-of-truth schedule.
 
 j2p does not automatically promote sandbox changes back into the source-of-truth `.mpp`.
@@ -171,7 +171,11 @@ Each run writes a timestamped run folder:
 ```text
 review-output\j2p-run-YYYYMMDD-HHMMSS\
   Program-Source-Of-Truth.sandbox.YYYYMMDD-HHMMSS.mpp
-  Manager-Review-Report.html
+  html-report\
+    index.html
+    Manager-Review-Report.html
+    resource-groups\
+      Product_Delivery.html
   audit-detail.csv
   planned-epics.csv
   summary-rollups.csv
@@ -196,7 +200,7 @@ The state file lets future report-only validation compare against the last saved
 
 ## Recommended Review Order
 
-Open `Manager-Review-Report.html` first.
+Open `html-report\index.html` first, or open `html-report\Manager-Review-Report.html` directly when you only need the overall manager view.
 
 1. Review `Decision Briefing`.
 2. Review `Story Point Ratio`.
@@ -214,7 +218,7 @@ Open `Manager-Review-Report.html` first.
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
-`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. Branches are ordered from most downstream affected issues to least downstream affected issues. Any branch with more than five downstream affected issues starts collapsed so managers can review the largest movements without losing the rest of the report. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
+`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. Branches are collapsed by default and ordered from most downstream affected issues to least downstream affected issues. In resource-group reports, this section includes cascade branches whose starting issue belongs to that resource group; downstream affected issues remain visible even when they belong to another group. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
 
 ## Color Key
 
@@ -434,7 +438,7 @@ The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `
 - If Project auto-scheduling shifts finish dates, every changed finish with changed downstream successors is colored red.
 - Changed finish dates with no changed downstream successor remain green.
 - If a Project scheduled finish does not match Jira `Target end`, the mismatch is reported.
-- The manager report adds a `Schedule Cascade Review` visual that groups those finish changes into dependency branches.
+- The HTML reports add a `Schedule Cascade Review` visual that groups those finish changes into dependency branches.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
 
@@ -444,7 +448,9 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 
 | File | Audience | Purpose |
 | --- | --- | --- |
-| `Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Self-contained review report with summary sections and review guidance. |
+| `html-report\index.html` | Product managers, schedule owners, reviewers | Landing page linking to the overall manager report and each resource-group report. |
+| `html-report\Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Overall self-contained review report with summary sections and review guidance. |
+| `html-report\resource-groups\<Resource_Group>.html` | Resource-group leads, schedule owners | Resource-group scoped report. The schedule cascade section shows branches that start with that resource group. |
 | `audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
 | `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, Story Point Ratio calculation, and rollup decisions. |
 | `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and Story Point Ratio. |
@@ -562,7 +568,7 @@ Before running:
 
 After running `validate`:
 
-- Open `Manager-Review-Report.html`.
+- Open `html-report\Manager-Review-Report.html`.
 - Resolve unknown prefixes.
 - Resolve missing initiative parents or missing fixVersions.
 - Review multi-fixVersion rows and confirm reference versus split behavior.

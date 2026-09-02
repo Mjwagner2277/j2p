@@ -267,6 +267,7 @@ def print_run_result(
     if sandbox_path:
         print(f"Sandbox Project file: {sandbox_path}")
     print(f"Manager report: {paths['manager_report']}")
+    print(f"HTML reports folder: {paths['html_report']}")
     print(f"Audit detail CSV: {paths['audit_detail']}")
     print(f"Planned epics CSV: {paths['planned_epics']}")
     print(f"Dependency review CSV: {paths['dependency_review']}")

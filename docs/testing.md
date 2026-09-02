@@ -95,7 +95,8 @@ Review the generated sandbox `.mpp` and confirm:
 - unmatched review cells are amber
 - no Microsoft Project Font formatting dialog appears, including when `--debug-visible` is used
 - cascade branch driver finish changes are red when applicable
-- `Schedule Cascade Review` appears in the manager report, shows red branch drivers with downstream changed finish dates, orders branches from most affected to least affected, and collapses branches with more than five downstream affected issues
+- `Schedule Cascade Review` appears in the overall manager report and resource-group reports, shows red branch drivers with downstream changed finish dates, orders branches from most affected to least affected, and collapses every branch by default
+- Resource-group HTML reports include schedule cascade branches that start with that resource group
 - completed epics are inactive and have hidden Gantt bars when Project permits it
-- `Manager-Review-Report.html` and audit CSVs match visible sandbox changes
+- `html-report\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
 - `by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
