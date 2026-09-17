@@ -4,6 +4,8 @@ This guide is for people who run j2p, review its outputs, or decide whether a Ji
 
 For contributor and testing information, use `docs/contributing.md` and `docs/testing.md`.
 
+For the full project lifecycle from first setup through recurring sprint updates, use `docs/project-sprint-workflow.md`.
+
 ## What j2p Does
 
 j2p reads a project-wide Jira CSV export and prepares Microsoft Project review material.
