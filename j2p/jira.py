@@ -3,22 +3,23 @@
 from __future__ import annotations
 
 import csv
+import io
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from .models import AuditItem, J2PError, JiraIssue
 
 
 JIRA_KEY_RE = re.compile(r"\b[A-Z][A-Z0-9]+-\d+\b")
+SINGLE_BYTE_FALLBACK_ENCODINGS = ("cp1252", "latin-1")
 
 
 class CsvTable:
     def __init__(self, path: Path) -> None:
         self.path = path
-        with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            rows = list(csv.reader(handle))
+        rows, self.encoding = read_csv_rows(path)
         if not rows:
             raise J2PError(f"CSV is empty: {path}")
         self.headers = [header.strip() for header in rows[0]]
@@ -51,6 +52,52 @@ class CsvTable:
     def get_first(self, row: Sequence[str], candidates: Sequence[str]) -> str:
         values = self.get_all(row, candidates)
         return values[0] if values else ""
+
+
+def read_csv_rows(path: Path) -> Tuple[List[List[str]], str]:
+    raw = path.read_bytes()
+    attempted: List[str] = []
+    failures: List[str] = []
+    for encoding in csv_encoding_candidates(raw):
+        if encoding in attempted:
+            continue
+        attempted.append(encoding)
+        try:
+            text = raw.decode(encoding)
+        except UnicodeError as exc:
+            failures.append(f"{encoding}: {exc}")
+            continue
+        if decoded_text_looks_binary(text):
+            failures.append(f"{encoding}: decoded text contains NUL characters")
+            continue
+        return list(csv.reader(io.StringIO(text))), encoding
+    attempted_text = ", ".join(attempted)
+    failure_text = "; ".join(failures)
+    details = f" Details: {failure_text}" if failure_text else ""
+    raise J2PError(
+        "Could not decode Jira CSV. "
+        f"Tried these encodings: {attempted_text}. "
+        "Re-export the Jira CSV as UTF-8, UTF-16, or Windows CSV and retry."
+        f"{details}"
+    )
+
+
+def csv_encoding_candidates(raw: bytes) -> List[str]:
+    if raw_has_utf16_shape(raw):
+        return ["utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", *SINGLE_BYTE_FALLBACK_ENCODINGS]
+    return ["utf-8-sig", *SINGLE_BYTE_FALLBACK_ENCODINGS]
+
+
+def raw_has_utf16_shape(raw: bytes) -> bool:
+    sample = raw[:4096]
+    if sample.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return True
+    return bool(sample) and sample.count(b"\x00") / len(sample) > 0.1
+
+
+def decoded_text_looks_binary(text: str) -> bool:
+    sample = text[:4096]
+    return "\x00" in sample
 
 
 def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]) -> List[JiraIssue]:

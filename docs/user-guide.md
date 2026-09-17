@@ -164,6 +164,8 @@ During Project automation, the slowest phases are usually Project recalculation,
 
 For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. Rerun with `--dependency-write-mode diagnostic` only when you need the full Project API fallback trace.
 
+j2p accepts common Jira CSV encodings, including UTF-8 with BOM, UTF-16, Windows-1252, and Latin-1. If CSV parsing still fails with an encoding error, re-export the Jira issue list as UTF-8 CSV from Jira or resave the file as UTF-8 CSV in Excel before rerunning.
+
 ## Output Folder
 
 Each run writes a timestamped run folder:

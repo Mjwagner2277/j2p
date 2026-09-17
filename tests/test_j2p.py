@@ -58,6 +58,76 @@ def predecessor_coverage_ratio(plan: RunPlan) -> float:
 
 
 class J2PPlanningTests(unittest.TestCase):
+    def test_csv_reader_accepts_windows_1252_jira_exports(self) -> None:
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        rows = [
+            [
+                "Issue key",
+                "Issue id",
+                "Issue Type",
+                "Summary",
+                "Epic Link",
+                "Parent",
+                "Fix versions",
+                "Story Points",
+                "Logged Hours",
+                "Status",
+                "Resolution",
+                "Target start",
+                "Target end",
+                "Outward issue link (Blocks)",
+                "Inward issue link (Blocks)",
+            ],
+            ["PROD-1", "1", "Initiative", "Client portal", "", "", "", "", "", "In Progress", "", "", "", "", ""],
+            [
+                "TEAM-1",
+                "2",
+                "Epic",
+                "René client – café readiness",
+                "",
+                "PROD-1",
+                "",
+                "",
+                "",
+                "In Progress",
+                "",
+                "2026-01-01",
+                "2026-01-15",
+                "",
+                "",
+            ],
+            ["TEAM-11", "3", "Story", "Completed child", "TEAM-1", "", "", "3", "24", "Done", "Done", "", "", "", ""],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "jira-windows-1252.csv"
+            output = StringIO()
+            csv.writer(output, lineterminator="\n").writerows(rows)
+            csv_path.write_bytes(output.getvalue().encode("cp1252"))
+
+            plan = build_run_plan(csv_path, config)
+
+        self.assertEqual(plan.epics["TEAM-1"].summary, "René client – café readiness")
+        self.assertEqual(plan.epics["TEAM-1"].percent_complete, 100)
+
+    def test_csv_reader_accepts_utf16_jira_exports(self) -> None:
+        config = load_config(FIXTURES / "mixed-config.yaml")
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Client portal,,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,UTF-16 import check,,PROD-1,,,,In Progress,,2026-01-01,2026-01-15,,",
+                "TEAM-11,3,Story,Completed child,TEAM-1,,,2,16,Done,Done,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "jira-utf16.csv"
+            csv_path.write_bytes(csv_text.encode("utf-16"))
+
+            plan = build_run_plan(csv_path, config)
+
+        self.assertEqual(plan.epics["TEAM-1"].summary, "UTF-16 import check")
+        self.assertEqual(plan.epics["TEAM-1"].percent_complete, 100)
+
     def test_initiative_mode_rollups_dependencies_and_exclusions(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
         baseline = {
