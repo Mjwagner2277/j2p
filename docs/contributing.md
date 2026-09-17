@@ -119,7 +119,9 @@ py -3.14 -m j2p update `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --main-project .\path\to\sanitized-source-of-truth.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10"
 ```
 
 Manually confirm:

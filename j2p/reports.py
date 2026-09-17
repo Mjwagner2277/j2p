@@ -86,18 +86,24 @@ def write_reports(
 ) -> Dict[str, Path]:
     run_dir.mkdir(parents=True, exist_ok=True)
     remove_legacy_html_outputs(run_dir)
-    html_report_dir = run_dir / "html-report"
+    organized_layout = (run_dir / "project").is_dir() or (run_dir / "state").is_dir()
+    html_report_dir = run_dir / "reports" / "html" if organized_layout else run_dir / "html-report"
+    csv_report_dir = run_dir / "reports" / "csv" if organized_layout else run_dir
+    docs_dir = run_dir / "docs" if organized_layout else run_dir
     html_report_dir.mkdir(parents=True, exist_ok=True)
+    csv_report_dir.mkdir(parents=True, exist_ok=True)
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    by_project_key_dir = csv_report_dir / "by-project-key"
     paths = {
         "html_report": html_report_dir,
         "html_report_index": html_report_dir / "index.html",
         "manager_report": html_report_dir / "Manager-Review-Report.html",
         "resource_group_reports": html_report_dir / "resource-groups",
-        "audit_detail": run_dir / "audit-detail.csv",
-        "planned_epics": run_dir / "planned-epics.csv",
-        "summary_rollups": run_dir / "summary-rollups.csv",
-        "dependency_review": run_dir / "dependency-review.csv",
-        "field_mapping": run_dir / "FIELD_MAPPING.md",
+        "audit_detail": csv_report_dir / "audit-detail.csv",
+        "planned_epics": csv_report_dir / "planned-epics.csv",
+        "summary_rollups": csv_report_dir / "summary-rollups.csv",
+        "dependency_review": csv_report_dir / "dependency-review.csv",
+        "field_mapping": docs_dir / "FIELD_MAPPING.md",
     }
 
     write_audit_csv(paths["audit_detail"], plan.audit_items)
@@ -105,14 +111,14 @@ def write_reports(
     write_summary_rollups(paths["summary_rollups"], plan)
     write_dependency_review(paths["dependency_review"], plan.audit_items)
     write_field_mapping(paths["field_mapping"], config)
-    write_per_project_key_csvs(run_dir / "by-project-key", plan)
+    write_per_project_key_csvs(by_project_key_dir, plan)
     resource_group_reports = write_resource_group_html_reports(
         paths["resource_group_reports"],
         plan,
         config,
         sandbox_path,
         state_path,
-        run_dir / "by-project-key",
+        by_project_key_dir,
     )
     write_manager_html(
         paths["manager_report"],
@@ -120,10 +126,10 @@ def write_reports(
         config,
         sandbox_path,
         state_path,
-        by_project_key_path=run_dir / "by-project-key",
+        by_project_key_path=by_project_key_dir,
     )
     write_html_report_index(paths["html_report_index"], paths["manager_report"], resource_group_reports)
-    paths["by_project_key"] = run_dir / "by-project-key"
+    paths["by_project_key"] = by_project_key_dir
     return paths
 
 

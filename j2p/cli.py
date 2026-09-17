@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -150,6 +151,19 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--run-id", help="Override timestamped run id; useful for repeatable tests.")
     parser.add_argument(
+        "--project-name",
+        help="Program/project folder name that groups all sprint and team outputs. Required for create and update.",
+    )
+    parser.add_argument(
+        "--sprint",
+        help="Sprint or planning increment value to encode into the output folder structure. Required for update.",
+    )
+    parser.add_argument(
+        "--allow-existing-sprint",
+        action="store_true",
+        help="Allow writing a new run under an existing --project-name/--sprint folder.",
+    )
+    parser.add_argument(
         "--suppress-warnings-before",
         help=(
             "Suppress configured warning/review audit items for Jira issues dated before this cutoff. "
@@ -163,7 +177,7 @@ def run_validate(args: argparse.Namespace) -> int:
     progress("Reading Jira CSV and building review plan")
     baseline = snapshots_from_state(context["state_path"]) if args.compare_state else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
-    state_after_path = context["run_dir"] / "j2p-state.after.json"
+    state_after_path = context["state_dir"] / "j2p-state.after.json"
     progress("Writing report state")
     write_json(state_after_path, run_plan_to_state(plan))
     if args.write_state or context["config"].get("behavior", {}).get("write_state_on_validate"):
@@ -184,7 +198,7 @@ def run_update(args: argparse.Namespace) -> int:
     context = make_context(args)
     debug_visible = get_debug_visible(args)
     progress("Copying source-of-truth MPP to a timestamped sandbox")
-    sandbox_path = prepare_sandbox_copy(args.main_project, context["run_dir"], context["run_id"])
+    sandbox_path = prepare_sandbox_copy(args.main_project, context["project_dir"], context["run_id"])
     progress(f"Loading comparison baseline from {args.comparison_source}")
     baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
     progress("Reading Jira CSV and building update plan")
@@ -200,7 +214,7 @@ def run_update(args: argparse.Namespace) -> int:
     )
     progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
-    write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
+    write_json(context["state_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
     progress("Writing manager report and audit CSV files")
     paths = write_reports(plan, context["run_dir"], context["config"], sandbox_path, context["state_path"])
     print_run_result("Sandbox update complete.", context, paths, sandbox_path)
@@ -214,7 +228,7 @@ def run_create(args: argparse.Namespace) -> int:
     baseline = snapshots_from_state(context["state_path"]) if context["state_path"].exists() else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
     progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
-    output_project = context["run_dir"] / args.output_project_name
+    output_project = context["project_dir"] / args.output_project_name
     progress("Creating initial sandbox MPP")
     create_project_from_plan(
         output_project,
@@ -225,7 +239,7 @@ def run_create(args: argparse.Namespace) -> int:
     )
     progress("Writing state files")
     write_json(context["state_path"], run_plan_to_state(plan))
-    write_json(context["run_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
+    write_json(context["state_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
     progress("Writing manager report and audit CSV files")
     paths = write_reports(plan, context["run_dir"], context["config"], output_project, context["state_path"])
     print_run_result("Initial Project file created.", context, paths, output_project)
@@ -233,22 +247,89 @@ def run_create(args: argparse.Namespace) -> int:
 
 
 def make_context(args: argparse.Namespace) -> Dict[str, Any]:
+    validate_output_scope(args)
     overrides: Dict[str, Any] = {}
     if getattr(args, "suppress_warnings_before", None):
         overrides["warning_suppression"] = {"before": args.suppress_warnings_before}
     config = load_config(args.config, overrides or None)
     run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = args.output_dir
-    run_dir = output_dir / f"j2p-run-{run_id}"
+    project_name = getattr(args, "project_name", None)
+    sprint = getattr(args, "sprint", None)
+    organized_layout = bool(project_name or sprint)
+    workspace_dir = output_dir / slugify_path_part(project_name) if organized_layout else output_dir
+    sprint_dir = workspace_dir / "sprints" / slugify_path_part(sprint) if sprint else None
+    if sprint_dir is not None:
+        check_sprint_folder(sprint_dir, bool(getattr(args, "allow_existing_sprint", False)))
+        run_parent = sprint_dir / "runs"
+    elif organized_layout:
+        run_parent = workspace_dir / "runs"
+    else:
+        run_parent = output_dir
+    run_dir = run_parent / f"j2p-run-{run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    state_path = args.state_path or output_dir / "j2p-state.json"
+    if sprint_dir is not None:
+        write_sprint_marker(sprint_dir, project_name, sprint)
+    state_path = args.state_path or workspace_dir / "j2p-state.json"
+    project_dir = run_dir / "project" if organized_layout else run_dir
+    state_dir = run_dir / "state" if organized_layout else run_dir
+    project_dir.mkdir(parents=True, exist_ok=True)
+    state_dir.mkdir(parents=True, exist_ok=True)
     return {
         "config": config,
         "run_id": run_id,
         "output_dir": output_dir,
+        "workspace_dir": workspace_dir,
+        "sprint_dir": sprint_dir,
+        "organized_layout": organized_layout,
         "run_dir": run_dir,
+        "project_dir": project_dir,
+        "state_dir": state_dir,
         "state_path": state_path,
     }
+
+
+def validate_output_scope(args: argparse.Namespace) -> None:
+    if args.command == "create" and not getattr(args, "project_name", None):
+        raise J2PError("create requires --project-name so the initial schedule has a project-level output folder.")
+    if args.command == "update":
+        missing = []
+        if not getattr(args, "project_name", None):
+            missing.append("--project-name")
+        if not getattr(args, "sprint", None):
+            missing.append("--sprint")
+        if missing:
+            raise J2PError(
+                "update requires "
+                f"{' and '.join(missing)} so sandbox updates are grouped by project and sprint."
+            )
+    if getattr(args, "sprint", None) and not getattr(args, "project_name", None):
+        raise J2PError("--sprint requires --project-name.")
+
+
+def slugify_path_part(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
+    cleaned = cleaned.strip(".-_")
+    return cleaned or "unnamed"
+
+
+def check_sprint_folder(sprint_dir: Path, allow_existing: bool) -> None:
+    marker = sprint_dir / ".j2p-sprint"
+    if marker.exists() and not allow_existing:
+        raise J2PError(
+            f"Sprint output already exists: {sprint_dir}. "
+            "Use a different --sprint value or rerun with --allow-existing-sprint to add another run."
+        )
+
+
+def write_sprint_marker(sprint_dir: Path, project_name: str, sprint: str) -> None:
+    sprint_dir.mkdir(parents=True, exist_ok=True)
+    marker = sprint_dir / ".j2p-sprint"
+    if not marker.exists():
+        marker.write_text(
+            f"project_name={project_name}\nsprint={sprint}\ncreated_by=j2p\n",
+            encoding="utf-8",
+        )
 
 
 def load_update_baseline(

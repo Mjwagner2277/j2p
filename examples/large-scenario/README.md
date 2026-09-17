@@ -167,7 +167,8 @@ This command creates a baseline `.mpp` from the baseline Jira CSV. For this walk
 py -3.14 -m j2p create `
   --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output\large-scenario-project `
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
   --run-id baseline-project `
   --output-project-name Large-Scenario-Baseline-Source.mpp
 ```
@@ -175,7 +176,7 @@ py -3.14 -m j2p create `
 Expected baseline Project file:
 
 ```text
-review-output\large-scenario-project\j2p-run-baseline-project\Large-Scenario-Baseline-Source.mpp
+review-output\Large-Scenario-Project\runs\j2p-run-baseline-project\project\Large-Scenario-Baseline-Source.mpp
 ```
 
 Open this file if you want to see the baseline schedule before the update. Do not edit it during the walkthrough; the next command copies it and updates the sandbox copy.
@@ -187,9 +188,11 @@ This command copies the baseline `.mpp` to a timestamped sandbox and applies the
 ```powershell
 py -3.14 -m j2p update `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
-  --main-project .\review-output\large-scenario-project\j2p-run-baseline-project\Large-Scenario-Baseline-Source.mpp `
+  --main-project .\review-output\Large-Scenario-Project\runs\j2p-run-baseline-project\project\Large-Scenario-Baseline-Source.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output\large-scenario-project `
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10" `
   --run-id updated-project-review
 ```
 
@@ -198,13 +201,13 @@ j2p prints timestamped progress messages in the terminal during the run. Use `--
 Expected sandbox Project file:
 
 ```text
-review-output\large-scenario-project\j2p-run-updated-project-review\Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp
+review-output\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-project-review\project\Large-Scenario-Baseline-Source.sandbox.updated-project-review.mpp
 ```
 
 Expected manager report for the Project update:
 
 ```text
-review-output\large-scenario-project\j2p-run-updated-project-review\html-report\Manager-Review-Report.html
+review-output\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-project-review\reports\html\Manager-Review-Report.html
 ```
 
 Open the sandbox `.mpp`, not the baseline source file, for review.
@@ -218,10 +221,10 @@ In Microsoft Project:
 3. Apply the `j2p Review` task table from Project's table menu if it is not already active.
 4. Start with the default manager-facing columns: `Jira Key`, `Name`, `Resource Group`, `Dependency Review`, `Jira Status`, `Start`, `Finish`, `% Complete`, and `Predecessors`.
 5. Look for colored cells in the left task grid. The colors are not shown on the right-side Gantt bars.
-6. Use `html-report\Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key. Use `html-report\resource-groups\*.html` for resource-group focused review.
+6. Use `reports\html\Manager-Review-Report.html` beside the `.mpp` and search/filter by Jira key. Use `reports\html\resource-groups\*.html` for resource-group focused review.
 7. Review red finish-date cells first, then green changed cells, amber review cells, blue dependency cells, and the in-planning entries in the manager report.
 
-The default `j2p Review` table intentionally hides rollup categories, j2p row role, Jira fixVersion, internal mapping keys, Jira target dates, story point fields, hours fields, in-planning fields, and flag-style review indicators. Those values are still available in `html-report\Manager-Review-Report.html`, the resource-group HTML reports, the CSV files, and the hidden Project custom fields. Edit `review_table.exposed_columns` in YAML only when your review process needs those fields visible in Project.
+The default `j2p Review` table intentionally hides rollup categories, j2p row role, Jira fixVersion, internal mapping keys, Jira target dates, story point fields, hours fields, in-planning fields, and flag-style review indicators. Those values are still available in `reports\html\Manager-Review-Report.html`, the resource-group HTML reports, the CSV files, and the hidden Project custom fields. Edit `review_table.exposed_columns` in YAML only when your review process needs those fields visible in Project.
 
 Training keys to find in the sandbox:
 
@@ -395,7 +398,7 @@ For training, use `CORE-1004` and `CORE-1005` as the schedule-change pair:
 - `CORE-1004` has a target-end date change and blocks `CORE-1005`.
 - `CORE-1005` is the downstream dependent epic.
 - In a real `.mpp` update, j2p asks Microsoft Project to auto-schedule the sandbox, then reports every changed finish with changed downstream successors as red. Changed finish dates with no changed downstream successor remain green.
-- The generated `html-report\Manager-Review-Report.html` includes `Schedule Cascade Review`, which presents those changed dates as branch cards plus a collapsible old/new date table. Branches appear from most downstream affected issues to least, and every branch starts collapsed. Resource-group reports show branches that start with issues attached to that resource group.
+- The generated `reports\html\Manager-Review-Report.html` includes `Schedule Cascade Review`, which presents those changed dates as branch cards plus a collapsible old/new date table. Branches appear from most downstream affected issues to least, and every branch starts collapsed. Resource-group reports show branches that start with issues attached to that resource group.
 
 ## Step 9: Manager Decisions
 
@@ -404,7 +407,7 @@ Use the report to make these decisions:
 | Decision | Where To Look |
 | --- | --- |
 | Should missing rollups be fixed in Jira? | `Reviewer Action Needed`, `Excluded Items` |
-| Should unknown prefixes be added to config? | `Reviewer Action Needed`, `by-project-key\UNK\audit-detail.csv` |
+| Should unknown prefixes be added to config? | `Reviewer Action Needed`, `reports\csv\by-project-key\UNK\audit-detail.csv` |
 | Are changed names acceptable? | `Changed Names` |
 | Are moved epics under the right rollup? | `Parent Or Rollup Moves` |
 | Are completed epics safe to hide/inactivate in the sandbox? | `Completed Since Last Update` |

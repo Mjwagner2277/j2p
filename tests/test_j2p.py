@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from typing import Dict, Tuple
@@ -627,6 +627,103 @@ class J2PPlanningTests(unittest.TestCase):
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
             self.assertIn("schedule_key", audit_header)
+
+    def test_validate_cli_can_write_project_sprint_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            exit_code = main(
+                [
+                    "validate",
+                    "--jira-csv",
+                    str(FIXTURES / "project-wide-jira-update.csv"),
+                    "--config",
+                    str(FIXTURES / "mixed-config.yaml"),
+                    "--output-dir",
+                    temp,
+                    "--project-name",
+                    "Customer Portal Program",
+                    "--sprint",
+                    "Sprint 24.10",
+                    "--run-id",
+                    "unit",
+                ]
+            )
+            self.assertEqual(exit_code, 0)
+            run_dir = (
+                Path(temp)
+                / "Customer-Portal-Program"
+                / "sprints"
+                / "Sprint-24.10"
+                / "runs"
+                / "j2p-run-unit"
+            )
+            csv_dir = run_dir / "reports" / "csv"
+            html_dir = run_dir / "reports" / "html"
+            self.assertTrue((html_dir / "Manager-Review-Report.html").exists())
+            self.assertTrue((csv_dir / "audit-detail.csv").exists())
+            self.assertTrue((csv_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
+            self.assertTrue((run_dir / "docs" / "FIELD_MAPPING.md").exists())
+            self.assertTrue((run_dir / "state" / "j2p-state.after.json").exists())
+            self.assertTrue(
+                (Path(temp) / "Customer-Portal-Program" / "sprints" / "Sprint-24.10" / ".j2p-sprint").exists()
+            )
+
+    def test_validate_cli_rejects_existing_sprint_without_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            common_args = [
+                "validate",
+                "--jira-csv",
+                str(FIXTURES / "project-wide-jira-update.csv"),
+                "--config",
+                str(FIXTURES / "mixed-config.yaml"),
+                "--output-dir",
+                temp,
+                "--project-name",
+                "Customer Portal Program",
+                "--sprint",
+                "Sprint 24.10",
+            ]
+            self.assertEqual(main([*common_args, "--run-id", "first"]), 0)
+            buffer = StringIO()
+            with redirect_stdout(StringIO()), redirect_stderr(buffer):
+                exit_code = main([*common_args, "--run-id", "second"])
+            self.assertEqual(exit_code, 2)
+            self.assertIn("Sprint output already exists", buffer.getvalue())
+            self.assertEqual(main([*common_args, "--run-id", "second", "--allow-existing-sprint"]), 0)
+
+    def test_create_and_update_require_project_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            create_args = [
+                "create",
+                "--jira-csv",
+                str(FIXTURES / "project-wide-jira-update.csv"),
+                "--config",
+                str(FIXTURES / "mixed-config.yaml"),
+                "--output-dir",
+                temp,
+                "--run-id",
+                "unit",
+            ]
+            update_args = [
+                "update",
+                "--jira-csv",
+                str(FIXTURES / "project-wide-jira-update.csv"),
+                "--config",
+                str(FIXTURES / "mixed-config.yaml"),
+                "--output-dir",
+                temp,
+                "--main-project",
+                str(Path(temp) / "source.mpp"),
+                "--run-id",
+                "unit",
+            ]
+            buffer = StringIO()
+            with redirect_stderr(buffer):
+                self.assertEqual(main(create_args), 2)
+            self.assertIn("create requires --project-name", buffer.getvalue())
+            buffer = StringIO()
+            with redirect_stderr(buffer):
+                self.assertEqual(main(update_args), 2)
+            self.assertIn("update requires --project-name and --sprint", buffer.getvalue())
 
     def test_validate_cli_can_override_warning_suppression_cutoff(self) -> None:
         csv_text = "\n".join(

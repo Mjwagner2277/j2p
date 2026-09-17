@@ -15,7 +15,7 @@ The normal workflow is:
 3. Review the manager report for exclusions, data-quality concerns, dependencies, and changed values.
 4. Run j2p in `update` mode against the source-of-truth `.mpp`.
 5. j2p copies the source-of-truth `.mpp` to a timestamped sandbox and updates only that sandbox.
-6. Review the sandbox `.mpp`, `html-report\Manager-Review-Report.html`, resource-group HTML reports, and CSV audit files.
+6. Review the sandbox `.mpp`, `reports\html\Manager-Review-Report.html`, resource-group HTML reports, and CSV audit files.
 7. A schedule owner decides what should be manually accepted into the source-of-truth schedule.
 
 j2p does not automatically promote sandbox changes back into the source-of-truth `.mpp`.
@@ -95,6 +95,7 @@ py -3.14 -m j2p create `
   --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output `
+  --project-name "Customer Portal Program" `
   --output-project-name j2p-initial-sandbox.mpp
 ```
 
@@ -107,7 +108,9 @@ py -3.14 -m j2p update `
   --jira-csv .\path\to\jira-export.csv `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Customer Portal Program" `
+  --sprint "Sprint 24.10"
 ```
 
 Compare against a previous sandbox instead of the main file:
@@ -116,10 +119,13 @@ Compare against a previous sandbox instead of the main file:
 py -3.14 -m j2p update `
   --jira-csv .\path\to\jira-export.csv `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
-  --previous-sandbox .\review-output\j2p-run-20260901-090000\Program-Source-Of-Truth.sandbox.20260901-090000.mpp `
+  --previous-sandbox .\review-output\Customer-Portal-Program\sprints\Sprint-24.10\runs\j2p-run-20260901-090000\project\Program-Source-Of-Truth.sandbox.20260901-090000.mpp `
   --comparison-source previous-sandbox `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Customer Portal Program" `
+  --sprint "Sprint 24.10" `
+  --allow-existing-sprint
 ```
 
 ## Command Reference
@@ -133,6 +139,9 @@ Common arguments:
 | `--output-dir` | `validate`, `create`, `update` | No | Base folder for reports, state, and timestamped run folders. Default is `review-output`. |
 | `--state-path` | `validate`, `create`, `update` | No | Custom path for persistent state JSON. Default is `<output-dir>\j2p-state.json`. |
 | `--run-id` | `validate`, `create`, `update` | No | Overrides timestamp naming. Useful for repeatable tests or examples. |
+| `--project-name` | `validate`, `create`, `update` | Required for `create` and `update` | Program/project folder name that groups all resource groups and sprint runs. |
+| `--sprint` | `validate`, `update` | Required for `update` | Sprint or planning increment value encoded into the output folder. |
+| `--allow-existing-sprint` | `validate`, `update` | No | Allows a second run under an existing project/sprint folder. Without this, j2p stops when that sprint already exists. |
 
 `validate` arguments:
 
@@ -171,38 +180,51 @@ j2p accepts common Jira CSV encodings, including UTF-8 with BOM, UTF-16, Windows
 Each run writes a timestamped run folder:
 
 ```text
-review-output\j2p-run-YYYYMMDD-HHMMSS\
-  Program-Source-Of-Truth.sandbox.YYYYMMDD-HHMMSS.mpp
-  html-report\
-    index.html
-    Manager-Review-Report.html
-    resource-groups\
-      Product_Delivery.html
-  audit-detail.csv
-  planned-epics.csv
-  summary-rollups.csv
-  dependency-review.csv
-  FIELD_MAPPING.md
-  j2p-state.after.json
-  by-project-key\
-    TEAM\
-      audit-detail.csv
-      planned-epics.csv
-      summary-rollups.csv
-      dependency-review.csv
+review-output\Customer-Portal-Program\
+  j2p-state.json
+  sprints\
+    Sprint-24.10\
+      .j2p-sprint
+      runs\
+        j2p-run-YYYYMMDD-HHMMSS\
+          project\
+            Program-Source-Of-Truth.sandbox.YYYYMMDD-HHMMSS.mpp
+          reports\
+            html\
+              index.html
+              Manager-Review-Report.html
+              resource-groups\
+                Product_Delivery.html
+            csv\
+              audit-detail.csv
+              planned-epics.csv
+              summary-rollups.csv
+              dependency-review.csv
+              by-project-key\
+                TEAM\
+                  audit-detail.csv
+                  planned-epics.csv
+                  summary-rollups.csv
+                  dependency-review.csv
+          docs\
+            FIELD_MAPPING.md
+          state\
+            j2p-state.after.json
 ```
 
-The base output folder also stores the persistent state file:
+`--project-name` is converted to a folder-safe name, such as `Customer-Portal-Program`. `--sprint` is converted the same way, such as `Sprint-24.10`. The sprint folder contains a `.j2p-sprint` marker. If that marker already exists, j2p stops unless `--allow-existing-sprint` is supplied, which prevents accidental duplicate sprint folders while still allowing intentional reruns.
+
+When no project or sprint is supplied to `validate`, j2p keeps the older quick-check layout:
 
 ```text
-review-output\j2p-state.json
+review-output\j2p-run-YYYYMMDD-HHMMSS\
 ```
 
 The state file lets future report-only validation compare against the last saved j2p state. It is not the source of truth for the schedule; the `.mpp` remains the schedule source of truth.
 
 ## Recommended Review Order
 
-Open `html-report\index.html` first, or open `html-report\Manager-Review-Report.html` directly when you only need the overall manager view.
+Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Report.html` directly when you only need the overall manager view. In older validate-only quick-check runs, the same files may be under `html-report`.
 
 1. Review `Decision Briefing`.
 2. Review `Story Point Ratio`.
@@ -454,17 +476,17 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 
 | File | Audience | Purpose |
 | --- | --- | --- |
-| `html-report\index.html` | Product managers, schedule owners, reviewers | Landing page linking to the overall manager report and each resource-group report. |
-| `html-report\Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Overall self-contained review report with summary sections and review guidance. |
-| `html-report\resource-groups\<Resource_Group>.html` | Resource-group leads, schedule owners | Resource-group scoped report. The schedule cascade section shows branches that start with that resource group. |
-| `audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
-| `planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, Story Point Ratio calculation, and rollup decisions. |
-| `summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and Story Point Ratio. |
-| `dependency-review.csv` | Schedule owners, Jira owners | Dependency-specific review items. |
-| `FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
-| `j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
+| `reports\html\index.html` | Product managers, schedule owners, reviewers | Landing page linking to the overall manager report and each resource-group report. |
+| `reports\html\Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Overall self-contained review report with summary sections and review guidance. |
+| `reports\html\resource-groups\<Resource_Group>.html` | Resource-group leads, schedule owners | Resource-group scoped report. The schedule cascade section shows branches that start with that resource group. |
+| `reports\csv\audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
+| `reports\csv\planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, Story Point Ratio calculation, and rollup decisions. |
+| `reports\csv\summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and Story Point Ratio. |
+| `reports\csv\dependency-review.csv` | Schedule owners, Jira owners | Dependency-specific review items. |
+| `docs\FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
+| `state\j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
 
-Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one Jira key prefix.
+Each `reports\csv\by-project-key\<KEY>` folder contains the same CSV types filtered to one Jira key prefix. Older validate-only quick-check runs that omit `--project-name` and `--sprint` keep the historical flat paths such as `html-report\Manager-Review-Report.html` and `audit-detail.csv`.
 
 ## Audit CSV Columns
 
@@ -638,7 +660,7 @@ Before running:
 
 After running `validate`:
 
-- Open `html-report\Manager-Review-Report.html`.
+- Open `reports\html\Manager-Review-Report.html`.
 - Resolve unknown prefixes.
 - Resolve missing initiative parents or missing fixVersions.
 - Review multi-fixVersion rows and confirm reference versus split behavior.

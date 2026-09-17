@@ -76,7 +76,9 @@ py -3.14 -m j2p update `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --main-project .\path\to\sanitized-source-of-truth.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10"
 ```
 
 Review the generated sandbox `.mpp` and confirm:
@@ -98,5 +100,5 @@ Review the generated sandbox `.mpp` and confirm:
 - `Schedule Cascade Review` appears in the overall manager report and resource-group reports, shows red branch drivers with downstream changed finish dates, orders branches from most affected to least affected, and collapses every branch by default
 - Resource-group HTML reports include schedule cascade branches that start with that resource group
 - completed epics are inactive and have hidden Gantt bars when Project permits it
-- `html-report\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
-- `by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
+- `reports\html\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
+- `reports\csv\by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
