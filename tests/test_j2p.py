@@ -581,6 +581,8 @@ class J2PPlanningTests(unittest.TestCase):
                         str(FIXTURES / "mixed-config.yaml"),
                         "--output-dir",
                         temp,
+                        "--project-name",
+                        "Customer Portal Program",
                         "--run-id",
                         "unit",
                     ]
@@ -590,19 +592,21 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("[j2p]", output)
             self.assertIn("Reading Jira CSV and building review plan", output)
             self.assertIn("Writing manager report and audit CSV files", output)
-            run_dir = Path(temp) / "j2p-run-unit"
-            manager_report = run_dir / "html-report" / "Manager-Review-Report.html"
+            run_dir = Path(temp) / "Customer-Portal-Program" / "runs" / "j2p-run-unit"
+            html_dir = run_dir / "reports" / "html"
+            csv_dir = run_dir / "reports" / "csv"
+            manager_report = html_dir / "Manager-Review-Report.html"
             self.assertTrue(manager_report.exists())
-            self.assertTrue((run_dir / "html-report" / "index.html").exists())
+            self.assertTrue((html_dir / "index.html").exists())
             self.assertTrue(
-                (run_dir / "html-report" / "resource-groups" / "Product_Delivery.html").exists()
+                (html_dir / "resource-groups" / "Product_Delivery.html").exists()
             )
-            self.assertTrue((run_dir / "audit-detail.csv").exists())
-            self.assertTrue((run_dir / "planned-epics.csv").exists())
-            self.assertTrue((run_dir / "by-project-key" / "TEAM" / "audit-detail.csv").exists())
-            self.assertTrue((run_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
-            self.assertTrue((run_dir / "by-project-key" / "PLAT" / "summary-rollups.csv").exists())
-            self.assertTrue((run_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
+            self.assertTrue((csv_dir / "audit-detail.csv").exists())
+            self.assertTrue((csv_dir / "planned-epics.csv").exists())
+            self.assertTrue((csv_dir / "by-project-key" / "TEAM" / "audit-detail.csv").exists())
+            self.assertTrue((csv_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
+            self.assertTrue((csv_dir / "by-project-key" / "PLAT" / "summary-rollups.csv").exists())
+            self.assertTrue((csv_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
             report = manager_report.read_text(encoding="utf-8")
             self.assertIn("Reviewer Action Needed", report)
             self.assertIn("Decision Briefing", report)
@@ -620,11 +624,11 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertLess(report.index("Reviewer Action Needed"), report.index("Full Planned Epic Rows"))
             self.assertIn("Unknown team epic", report)
             resource_report = (
-                run_dir / "html-report" / "resource-groups" / "Product_Delivery.html"
+                html_dir / "resource-groups" / "Product_Delivery.html"
             ).read_text(encoding="utf-8")
             self.assertIn("Scope: Resource Group: Product Delivery", resource_report)
             self.assertNotIn("Unknown team epic", resource_report)
-            audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
+            audit_header = (csv_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
             self.assertIn("schedule_key", audit_header)
 
@@ -690,10 +694,10 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("Sprint output already exists", buffer.getvalue())
             self.assertEqual(main([*common_args, "--run-id", "second", "--allow-existing-sprint"]), 0)
 
-    def test_create_and_update_require_project_scope(self) -> None:
+    def test_cli_requires_project_name_and_update_sprint(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            create_args = [
-                "create",
+            validate_args = [
+                "validate",
                 "--jira-csv",
                 str(FIXTURES / "project-wide-jira-update.csv"),
                 "--config",
@@ -713,17 +717,18 @@ class J2PPlanningTests(unittest.TestCase):
                 temp,
                 "--main-project",
                 str(Path(temp) / "source.mpp"),
+                "--project-name",
+                "Customer Portal Program",
                 "--run-id",
                 "unit",
             ]
-            buffer = StringIO()
-            with redirect_stderr(buffer):
-                self.assertEqual(main(create_args), 2)
-            self.assertIn("create requires --project-name", buffer.getvalue())
+            with redirect_stderr(StringIO()):
+                with self.assertRaises(SystemExit):
+                    main(validate_args)
             buffer = StringIO()
             with redirect_stderr(buffer):
                 self.assertEqual(main(update_args), 2)
-            self.assertIn("update requires --project-name and --sprint", buffer.getvalue())
+            self.assertIn("update requires --sprint", buffer.getvalue())
 
     def test_validate_cli_can_override_warning_suppression_cutoff(self) -> None:
         csv_text = "\n".join(
@@ -748,15 +753,23 @@ class J2PPlanningTests(unittest.TestCase):
                         str(FIXTURES / "mixed-config.yaml"),
                         "--output-dir",
                         temp,
+                        "--project-name",
+                        "Customer Portal Program",
                         "--run-id",
                         "suppressed",
                         "--suppress-warnings-before",
                         "2025-01-01",
                     ]
                 )
-            audit_csv = (Path(temp) / "j2p-run-suppressed" / "audit-detail.csv").read_text(
-                encoding="utf-8"
-            )
+            audit_csv = (
+                Path(temp)
+                / "Customer-Portal-Program"
+                / "runs"
+                / "j2p-run-suppressed"
+                / "reports"
+                / "csv"
+                / "audit-detail.csv"
+            ).read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 0)
         self.assertNotIn("TEAM-1", audit_csv)
@@ -832,13 +845,12 @@ class J2PPlanningTests(unittest.TestCase):
         plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config)
         with tempfile.TemporaryDirectory() as temp:
             run_dir = Path(temp)
-            legacy_report = run_dir / "Manager-Review-Report.html"
-            legacy_report.write_text("old report", encoding="utf-8")
             paths = write_reports(plan, run_dir, config)
             report = paths["manager_report"].read_text(encoding="utf-8")
-            self.assertFalse(legacy_report.exists())
-            self.assertTrue((run_dir / "html-report" / "index.html").exists())
-            self.assertTrue((run_dir / "html-report" / "resource-groups").exists())
+            self.assertTrue((run_dir / "reports" / "html" / "index.html").exists())
+            self.assertTrue((run_dir / "reports" / "html" / "resource-groups").exists())
+            self.assertTrue((run_dir / "reports" / "csv" / "audit-detail.csv").exists())
+            self.assertTrue((run_dir / "docs" / "FIELD_MAPPING.md").exists())
             self.assertNotIn("<script src=", report)
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)

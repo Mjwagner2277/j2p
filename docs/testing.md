@@ -62,6 +62,7 @@ py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
   --run-id local-check
 ```
 

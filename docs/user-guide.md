@@ -85,7 +85,8 @@ Validate a CSV and write reports without opening Microsoft Project:
 py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Customer Portal Program"
 ```
 
 Create an initial `.mpp` from Jira. This is intended for first setup or demonstrations:
@@ -139,7 +140,7 @@ Common arguments:
 | `--output-dir` | `validate`, `create`, `update` | No | Base folder for reports, state, and timestamped run folders. Default is `review-output`. |
 | `--state-path` | `validate`, `create`, `update` | No | Custom path for persistent state JSON. Default is `<output-dir>\j2p-state.json`. |
 | `--run-id` | `validate`, `create`, `update` | No | Overrides timestamp naming. Useful for repeatable tests or examples. |
-| `--project-name` | `validate`, `create`, `update` | Required for `create` and `update` | Program/project folder name that groups all resource groups and sprint runs. |
+| `--project-name` | `validate`, `create`, `update` | Yes | Program/project folder name that groups all resource groups and sprint runs. |
 | `--sprint` | `validate`, `update` | Required for `update` | Sprint or planning increment value encoded into the output folder. |
 | `--allow-existing-sprint` | `validate`, `update` | No | Allows a second run under an existing project/sprint folder. Without this, j2p stops when that sprint already exists. |
 
@@ -214,17 +215,11 @@ review-output\Customer-Portal-Program\
 
 `--project-name` is converted to a folder-safe name, such as `Customer-Portal-Program`. `--sprint` is converted the same way, such as `Sprint-24.10`. The sprint folder contains a `.j2p-sprint` marker. If that marker already exists, j2p stops unless `--allow-existing-sprint` is supplied, which prevents accidental duplicate sprint folders while still allowing intentional reruns.
 
-When no project or sprint is supplied to `validate`, j2p keeps the older quick-check layout:
-
-```text
-review-output\j2p-run-YYYYMMDD-HHMMSS\
-```
-
 The state file lets future report-only validation compare against the last saved j2p state. It is not the source of truth for the schedule; the `.mpp` remains the schedule source of truth.
 
 ## Recommended Review Order
 
-Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Report.html` directly when you only need the overall manager view. In older validate-only quick-check runs, the same files may be under `html-report`.
+Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Report.html` directly when you only need the overall manager view.
 
 1. Review `Decision Briefing`.
 2. Review `Story Point Ratio`.
@@ -486,7 +481,7 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 | `docs\FIELD_MAPPING.md` | Schedule owners, admins | Project custom fields used by this run. |
 | `state\j2p-state.after.json` | Tooling/debug support | Machine-readable snapshot after the run. Product users normally do not edit this. |
 
-Each `reports\csv\by-project-key\<KEY>` folder contains the same CSV types filtered to one Jira key prefix. Older validate-only quick-check runs that omit `--project-name` and `--sprint` keep the historical flat paths such as `html-report\Manager-Review-Report.html` and `audit-detail.csv`.
+Each `reports\csv\by-project-key\<KEY>` folder contains the same CSV types filtered to one Jira key prefix.
 
 ## Audit CSV Columns
 
@@ -634,6 +629,7 @@ One-off command example:
 python -m j2p validate `
   --jira-csv .\project-wide-jira.csv `
   --config .\config.yaml `
+  --project-name "Customer Portal Program" `
   --suppress-warnings-before 2025-01-01
 ```
 

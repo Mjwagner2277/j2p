@@ -152,7 +152,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-id", help="Override timestamped run id; useful for repeatable tests.")
     parser.add_argument(
         "--project-name",
-        help="Program/project folder name that groups all sprint and team outputs. Required for create and update.",
+        required=True,
+        help="Program/project folder name that groups all sprint and team outputs.",
     )
     parser.add_argument(
         "--sprint",
@@ -256,23 +257,20 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
     output_dir = args.output_dir
     project_name = getattr(args, "project_name", None)
     sprint = getattr(args, "sprint", None)
-    organized_layout = bool(project_name or sprint)
-    workspace_dir = output_dir / slugify_path_part(project_name) if organized_layout else output_dir
+    workspace_dir = output_dir / slugify_path_part(project_name)
     sprint_dir = workspace_dir / "sprints" / slugify_path_part(sprint) if sprint else None
     if sprint_dir is not None:
         check_sprint_folder(sprint_dir, bool(getattr(args, "allow_existing_sprint", False)))
         run_parent = sprint_dir / "runs"
-    elif organized_layout:
-        run_parent = workspace_dir / "runs"
     else:
-        run_parent = output_dir
+        run_parent = workspace_dir / "runs"
     run_dir = run_parent / f"j2p-run-{run_id}"
     run_dir.mkdir(parents=True, exist_ok=True)
     if sprint_dir is not None:
         write_sprint_marker(sprint_dir, project_name, sprint)
     state_path = args.state_path or workspace_dir / "j2p-state.json"
-    project_dir = run_dir / "project" if organized_layout else run_dir
-    state_dir = run_dir / "state" if organized_layout else run_dir
+    project_dir = run_dir / "project"
+    state_dir = run_dir / "state"
     project_dir.mkdir(parents=True, exist_ok=True)
     state_dir.mkdir(parents=True, exist_ok=True)
     return {
@@ -281,7 +279,6 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
         "output_dir": output_dir,
         "workspace_dir": workspace_dir,
         "sprint_dir": sprint_dir,
-        "organized_layout": organized_layout,
         "run_dir": run_dir,
         "project_dir": project_dir,
         "state_dir": state_dir,
@@ -290,19 +287,9 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
 
 
 def validate_output_scope(args: argparse.Namespace) -> None:
-    if args.command == "create" and not getattr(args, "project_name", None):
-        raise J2PError("create requires --project-name so the initial schedule has a project-level output folder.")
     if args.command == "update":
-        missing = []
-        if not getattr(args, "project_name", None):
-            missing.append("--project-name")
         if not getattr(args, "sprint", None):
-            missing.append("--sprint")
-        if missing:
-            raise J2PError(
-                "update requires "
-                f"{' and '.join(missing)} so sandbox updates are grouped by project and sprint."
-            )
+            raise J2PError("update requires --sprint so sandbox updates are grouped by project and sprint.")
     if getattr(args, "sprint", None) and not getattr(args, "project_name", None):
         raise J2PError("--sprint requires --project-name.")
 

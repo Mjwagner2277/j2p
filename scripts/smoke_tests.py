@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,14 +15,14 @@ from typing import Iterable, List, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_REPORT_FILES = [
-    "html-report/index.html",
-    "html-report/Manager-Review-Report.html",
-    "audit-detail.csv",
-    "planned-epics.csv",
-    "summary-rollups.csv",
-    "dependency-review.csv",
-    "FIELD_MAPPING.md",
-    "j2p-state.after.json",
+    "reports/html/index.html",
+    "reports/html/Manager-Review-Report.html",
+    "reports/csv/audit-detail.csv",
+    "reports/csv/planned-epics.csv",
+    "reports/csv/summary-rollups.csv",
+    "reports/csv/dependency-review.csv",
+    "docs/FIELD_MAPPING.md",
+    "state/j2p-state.after.json",
 ]
 
 RETIRED_PATTERNS = {
@@ -89,22 +90,24 @@ def run_smoke(output_dir: Path) -> int:
         ["--write-state"],
     )
     assert_report_bundle(large_baseline_dir)
-    assert_predecessor_coverage(large_baseline_dir / "planned-epics.csv", 0.60)
+    assert_predecessor_coverage(large_baseline_dir / "reports" / "csv" / "planned-epics.csv", 0.60)
     large_updated_dir = run_validate(
         output_dir,
         "large-updated-1200",
         "large-scenario/project-wide-jira-updated-1200.csv",
         "large-scenario/config.large-example.yaml",
-        ["--compare-state"],
+        ["--sprint", "Sprint 24.10", "--compare-state"],
     )
     assert_report_bundle(large_updated_dir)
-    assert_predecessor_coverage(large_updated_dir / "planned-epics.csv", 0.60)
+    updated_csv_dir = large_updated_dir / "reports" / "csv"
+    updated_html_dir = large_updated_dir / "reports" / "html"
+    assert_predecessor_coverage(updated_csv_dir / "planned-epics.csv", 0.60)
     assert_project_key_outputs(
         large_updated_dir,
         {"CORE", "DATA", "OPS", "PLAT", "UNASSIGNED", "UNK", "WEB"},
     )
     assert_audit_categories(
-        large_updated_dir / "audit-detail.csv",
+        updated_csv_dir / "audit-detail.csv",
         {
             "AddedEpic",
             "ChangedField",
@@ -127,11 +130,11 @@ def run_smoke(output_dir: Path) -> int:
         },
     )
     assert_audit_colors(
-        large_updated_dir / "audit-detail.csv",
+        updated_csv_dir / "audit-detail.csv",
         {"changed_cell", "review_needed", "dependency_review", "in_planning"},
     )
     assert_report_contains(
-        large_updated_dir / "html-report" / "Manager-Review-Report.html",
+        updated_html_dir / "Manager-Review-Report.html",
         [
             "Decision Briefing",
             "Rollup Status",
@@ -157,13 +160,13 @@ def run_smoke(output_dir: Path) -> int:
         ],
     )
     assert_resource_group_reports(
-        large_updated_dir / "html-report" / "resource-groups",
+        updated_html_dir / "resource-groups",
         {"Core_Product_Engineering.html", "Platform_Engineering.html", "Data_Engineering.html"},
     )
     assert_expected_review_cases(
         ROOT / "examples" / "large-scenario" / "expected-review-cases.csv",
-        large_updated_dir / "audit-detail.csv",
-        large_updated_dir / "html-report" / "Manager-Review-Report.html",
+        updated_csv_dir / "audit-detail.csv",
+        updated_html_dir / "Manager-Review-Report.html",
     )
 
     print("Smoke tests passed.", flush=True)
@@ -189,12 +192,17 @@ def run_validate(
             str(ROOT / "examples" / config_name),
             "--output-dir",
             str(output_dir),
+            "--project-name",
+            "Large Scenario Project",
             "--run-id",
             run_id,
             *extra_args,
         ]
     )
-    return output_dir / f"j2p-run-{run_id}"
+    if "--sprint" in extra_args:
+        sprint = extra_args[extra_args.index("--sprint") + 1]
+        return output_dir / "Large-Scenario-Project" / "sprints" / slugify_path_part(sprint) / "runs" / f"j2p-run-{run_id}"
+    return output_dir / "Large-Scenario-Project" / "runs" / f"j2p-run-{run_id}"
 
 
 def check_repo_hygiene() -> None:
@@ -216,10 +224,10 @@ def check_repo_hygiene() -> None:
 
 def assert_report_bundle(run_dir: Path) -> None:
     missing = [name for name in REQUIRED_REPORT_FILES if not (run_dir / name).exists()]
-    if not (run_dir / "by-project-key" / "index.csv").exists():
-        missing.append("by-project-key/index.csv")
-    if not (run_dir / "html-report" / "resource-groups").is_dir():
-        missing.append("html-report/resource-groups")
+    if not (run_dir / "reports" / "csv" / "by-project-key" / "index.csv").exists():
+        missing.append("reports/csv/by-project-key/index.csv")
+    if not (run_dir / "reports" / "html" / "resource-groups").is_dir():
+        missing.append("reports/html/resource-groups")
     if missing:
         raise AssertionError(f"Missing report files in {run_dir}: {', '.join(missing)}")
 
@@ -250,7 +258,7 @@ def assert_audit_colors(path: Path, expected: Iterable[str]) -> None:
 
 
 def assert_project_key_outputs(run_dir: Path, expected_project_keys: Iterable[str]) -> None:
-    index_path = run_dir / "by-project-key" / "index.csv"
+    index_path = run_dir / "reports" / "csv" / "by-project-key" / "index.csv"
     with index_path.open("r", encoding="utf-8", newline="") as handle:
         project_keys = {row["project_key"] for row in csv.DictReader(handle)}
     missing = set(expected_project_keys) - project_keys
@@ -263,6 +271,12 @@ def assert_line_count(path: Path, expected_count: int) -> None:
         actual_count = sum(1 for _line in handle)
     if actual_count != expected_count:
         raise AssertionError(f"{path} has {actual_count} lines; expected {expected_count}.")
+
+
+def slugify_path_part(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
+    cleaned = cleaned.strip(".-_")
+    return cleaned or "unnamed"
 
 
 def assert_predecessor_coverage(path: Path, minimum_ratio: float) -> None:

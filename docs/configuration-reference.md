@@ -436,6 +436,7 @@ Command-line override:
 python -m j2p validate `
   --jira-csv .\project-wide-jira.csv `
   --config .\config.yaml `
+  --project-name "Customer Portal Program" `
   --suppress-warnings-before 2025-01-01
 ```
 

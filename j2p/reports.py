@@ -85,11 +85,9 @@ def write_reports(
     state_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     run_dir.mkdir(parents=True, exist_ok=True)
-    remove_legacy_html_outputs(run_dir)
-    organized_layout = (run_dir / "project").is_dir() or (run_dir / "state").is_dir()
-    html_report_dir = run_dir / "reports" / "html" if organized_layout else run_dir / "html-report"
-    csv_report_dir = run_dir / "reports" / "csv" if organized_layout else run_dir
-    docs_dir = run_dir / "docs" if organized_layout else run_dir
+    html_report_dir = run_dir / "reports" / "html"
+    csv_report_dir = run_dir / "reports" / "csv"
+    docs_dir = run_dir / "docs"
     html_report_dir.mkdir(parents=True, exist_ok=True)
     csv_report_dir.mkdir(parents=True, exist_ok=True)
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -255,13 +253,6 @@ def write_resource_group_html_reports(
         )
         reports.append((resource_group, report_path))
     return reports
-
-
-def remove_legacy_html_outputs(run_dir: Path) -> None:
-    legacy_report = run_dir / "Manager-Review-Report.html"
-    if legacy_report.exists():
-        legacy_report.unlink()
-
 
 def write_html_report_index(
     path: Path,

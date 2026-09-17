@@ -14,9 +14,9 @@ At least 60% of included schedule-driving epic rows have valid predecessors. Thi
 | `project-wide-jira-baseline-1200.csv` | Baseline Jira export with exactly 1,200 lines |
 | `project-wide-jira-updated-1200.csv` | Updated Jira export with exactly 1,200 lines |
 | `expected-review-cases.csv` | Checklist of Jira keys that demonstrate each color/review behavior |
-| `report-example\j2p-run-updated-1200\html-report\Manager-Review-Report.html` | Generated overall manager report for the updated CSV |
-| `report-example\j2p-run-updated-1200\html-report\resource-groups\*.html` | Generated resource-group reports for the updated CSV |
-| `report-example\j2p-run-updated-1200\by-project-key\index.csv` | Index of the per-project-key CSV outputs |
+| `report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\html\Manager-Review-Report.html` | Generated overall manager report for the updated CSV |
+| `report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\html\resource-groups\*.html` | Generated resource-group reports for the updated CSV |
+| `report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\csv\by-project-key\index.csv` | Index of the per-project-key CSV outputs |
 
 No `.mpp` files are committed in this example folder. The committed `report-example` folders were created with `validate`, so they contain report files only. To create Project files you can open in Microsoft Project, use Step 5 on a Windows machine with Microsoft Project installed.
 
@@ -106,6 +106,7 @@ py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\examples\large-scenario\report-example `
+  --project-name "Large Scenario Project" `
   --run-id baseline-1200 `
   --write-state
 ```
@@ -113,7 +114,7 @@ py -3.14 -m j2p validate `
 Expected output folder:
 
 ```text
-examples\large-scenario\report-example\j2p-run-baseline-1200\
+examples\large-scenario\report-example\Large-Scenario-Project\runs\j2p-run-baseline-1200\
 ```
 
 ## Step 4: Run The Updated Export Against The Baseline
@@ -125,6 +126,8 @@ py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
   --output-dir .\examples\large-scenario\report-example `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10" `
   --run-id updated-1200 `
   --compare-state
 ```
@@ -132,7 +135,7 @@ py -3.14 -m j2p validate `
 Open the generated manager report:
 
 ```text
-examples\large-scenario\report-example\j2p-run-updated-1200\html-report\Manager-Review-Report.html
+examples\large-scenario\report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\html\Manager-Review-Report.html
 ```
 
 ## Step 5: Create Project Files For Windows Review
@@ -363,19 +366,19 @@ Data-quality rows that do not produce Project cell colors:
 Open:
 
 ```text
-examples\large-scenario\report-example\j2p-run-updated-1200\by-project-key\index.csv
+examples\large-scenario\report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\csv\by-project-key\index.csv
 ```
 
 Each project key has its own folder:
 
 ```text
-by-project-key\CORE\
-by-project-key\WEB\
-by-project-key\DATA\
-by-project-key\PLAT\
-by-project-key\OPS\
-by-project-key\UNK\
-by-project-key\UNASSIGNED\
+reports\csv\by-project-key\CORE\
+reports\csv\by-project-key\WEB\
+reports\csv\by-project-key\DATA\
+reports\csv\by-project-key\PLAT\
+reports\csv\by-project-key\OPS\
+reports\csv\by-project-key\UNK\
+reports\csv\by-project-key\UNASSIGNED\
 ```
 
 Each folder contains:
