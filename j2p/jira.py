@@ -189,11 +189,23 @@ def parse_date(value: str, audit: List[AuditItem], key: str, row_index: int) -> 
     raw = (value or "").strip()
     if not raw:
         return ""
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d", "%d-%b-%Y"):
-        try:
-            return datetime.strptime(raw, fmt).date().isoformat()
-        except ValueError:
-            pass
+    for candidate in date_parse_candidates(raw):
+        for fmt in (
+            "%Y-%m-%d",
+            "%m/%d/%Y",
+            "%m/%d/%y",
+            "%Y/%m/%d",
+            "%d-%b-%Y",
+            "%d-%b-%y",
+            "%d/%b/%Y",
+            "%d/%b/%y",
+            "%d %b %Y",
+            "%d %b %y",
+        ):
+            try:
+                return datetime.strptime(candidate, fmt).date().isoformat()
+            except ValueError:
+                pass
     try:
         return datetime.fromisoformat(raw.replace("Z", "+00:00")).date().isoformat()
     except ValueError:
@@ -204,11 +216,24 @@ def parse_date(value: str, audit: List[AuditItem], key: str, row_index: int) -> 
                 jira_key=key,
                 old_value=raw,
                 message=f"Could not parse date '{raw}' on CSV row {row_index}.",
-                reviewer_action="Use YYYY-MM-DD or configure a supported export date format.",
+                reviewer_action="Use YYYY-MM-DD, DD-MON-YY, or configure a supported export date format.",
                 source_row=row_index,
             )
         )
         return raw
+
+
+def date_parse_candidates(raw: str) -> List[str]:
+    candidates: List[str] = []
+    for candidate in (
+        raw,
+        raw.replace("Z", ""),
+        re.split(r"[T\s,]+", raw, maxsplit=1)[0],
+    ):
+        cleaned = candidate.strip().strip('"').strip("'")
+        if cleaned and cleaned not in candidates:
+            candidates.append(cleaned)
+    return candidates
 
 
 def parse_issue_keys(values: Iterable[str]) -> Set[str]:

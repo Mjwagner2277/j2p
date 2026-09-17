@@ -121,7 +121,7 @@ Circular dependencies are skipped and reported so the sandbox can still be gener
 
 ## Dates
 
-Jira `Target start` and `Target end` map into Project custom date fields and are used to update sandbox schedule dates.
+Jira `Target start` and `Target end` map into Project custom date fields and are used to update sandbox schedule dates. Supported Jira export date values, including date-time values such as `17-SEP-26 12:00 AM`, are normalized to `YYYY-MM-DD` before Microsoft Project automation writes them.
 
 The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
 

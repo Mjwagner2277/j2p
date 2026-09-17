@@ -432,6 +432,8 @@ Jira target dates are stored in Project custom fields:
 - `Jira Target Start`
 - `Jira Target End`
 
+Jira exports may include dates with times or `DD-MON-YY` syntax, such as `17-SEP-26 12:00 AM`. j2p normalizes supported Jira target-date values to `YYYY-MM-DD` before writing them to Microsoft Project.
+
 The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `update` run:
 
 - Changed Jira target-date cells are colored green.

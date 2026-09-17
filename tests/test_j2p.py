@@ -17,6 +17,7 @@ from j2p.core import (
     ProjectTaskSnapshot,
     build_run_plan,
     calculate_story_point_ratio,
+    parse_date,
     parse_logged_hours,
     run_plan_to_state,
     snapshots_from_state,
@@ -127,6 +128,36 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(parse_logged_hours("1d 2h"), 10)
         self.assertEqual(parse_logged_hours("45m"), 0.75)
         self.assertEqual(parse_logged_hours(""), 0)
+
+    def test_parse_date_accepts_jira_day_month_year_with_time(self) -> None:
+        audit: list[AuditItem] = []
+
+        self.assertEqual(parse_date("17-SEP-26 12:00 AM", audit, "TEAM-1", 2), "2026-09-17")
+        self.assertEqual(parse_date("7-Sep-26 5:30 PM", audit, "TEAM-1", 2), "2026-09-07")
+        self.assertEqual(parse_date("17/Sep/26 09:30", audit, "TEAM-1", 2), "2026-09-17")
+        self.assertEqual(parse_date("2026-09-17T08:15:00.000Z", audit, "TEAM-1", 2), "2026-09-17")
+        self.assertEqual(audit, [])
+
+    def test_jira_target_dates_are_normalized_before_project_write(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,First epic,,PROD-1,,,,In Progress,,17-SEP-26 12:00 AM,30-SEP-26 5:30 PM,,",
+                "TEAM-11,4,Story,First story,TEAM-1,,,5,40,Done,,,,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "jira-date-time.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(FIXTURES / "mixed-config.yaml")
+            plan = build_run_plan(csv_path, config)
+
+        self.assertEqual(plan.epics["TEAM-1"].target_start, "2026-09-17")
+        self.assertEqual(plan.epics["TEAM-1"].target_end, "2026-09-30")
+        self.assertNotIn("UnparsedDate", {item.category for item in plan.audit_items})
+        self.assertIn("2026", str(project_date_for_com(plan.epics["TEAM-1"].target_start, "Start")))
+        self.assertIn("2026", str(project_date_for_com(plan.epics["TEAM-1"].target_end, "Finish")))
 
     def test_story_point_ratio_uses_configured_story_point_hours(self) -> None:
         self.assertEqual(calculate_story_point_ratio(40, 5, 8), 1)
