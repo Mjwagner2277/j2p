@@ -32,6 +32,7 @@ CSV_COLUMNS = [
     "Logged Hours",
     "Status",
     "Resolution",
+    "Resolved",
     "Target start",
     "Target end",
     "Outward issue link (Blocks)",
@@ -102,8 +103,12 @@ CURATED_ORDER = [
     "DATA-3034",
     "PLAT-4028",
     "PLAT-4029",
+    "PLAT-4026",
+    "PLAT-4027",
+    "OPS-5018",
     "OPS-5019",
     "UNK-9000",
+    "UNK-9001",
 ]
 
 CURATED_SORT = {key: index for index, key in enumerate(CURATED_ORDER)}
@@ -127,8 +132,12 @@ BASELINE_CURATED_SUMMARIES = {
     "DATA-3034": "Client Walkthrough - Forecast refresh invalid date example",
     "PLAT-4028": "Client Walkthrough - Qualification software reference example",
     "PLAT-4029": "Client Walkthrough - Deployment runner fixVersion example",
+    "PLAT-4026": "Client Walkthrough - Stale completed fixVersion hidden from manager report",
+    "PLAT-4027": "Client Walkthrough - Completed fixVersion missing Resolved date example",
+    "OPS-5018": "Client Walkthrough - Recent completed fixVersion remains visible example",
     "OPS-5019": "Client Walkthrough - Shop deliverable split fixVersion example",
     "UNK-9000": "Client Walkthrough - Unknown team prefix example",
+    "UNK-9001": "Client Walkthrough - Historical unknown prefix suppressed example",
 }
 
 UPDATED_CURATED_SUMMARIES = {
@@ -362,6 +371,7 @@ def make_epic(
     )
     status = "In Progress" if offset % 3 else "To Do"
     resolution = ""
+    resolved = ""
     start = date(2026, 2, 2) + timedelta(days=(sequence % 28) * 7 + (sequence // 28) * 21)
     finish = start + timedelta(days=28 + (offset % 5) * 7)
     summary = epic_summary(spec.prefix, key, offset, variant)
@@ -371,6 +381,7 @@ def make_epic(
     if key == "CORE-1002":
         status = "Done" if variant == "updated" else "In Progress"
         resolution = "Done" if variant == "updated" else ""
+        resolved = "2026-08-14" if variant == "updated" else ""
     if key == "CORE-1003":
         parent = "INIT-200" if variant == "updated" else "INIT-100"
     if key == "CORE-1004":
@@ -411,10 +422,35 @@ def make_epic(
         fix_version = "Qualification Event 1;Shop Deliverable A"
     if key == "PLAT-4029" and variant == "updated":
         fix_version = ""
+    if key == "PLAT-4026":
+        fix_version = "Legacy Platform Release"
+        status = "Done"
+        resolution = "Done"
+        resolved = "2026-01-12"
+        start = date(2025, 10, 6)
+        finish_value = "2026-01-15"
+    if key == "PLAT-4027":
+        fix_version = "Resolved Date Review Release"
+        status = "Done"
+        resolution = "Done"
+        resolved = ""
+        start = date(2025, 11, 3)
+        finish_value = "2026-02-13"
+    if key == "OPS-5018":
+        fix_version = "Operations Recent Release"
+        status = "Done"
+        resolution = "Done"
+        resolved = "2026-08-20"
+        start = date(2026, 7, 6)
+        finish_value = "2026-08-21"
     if key == "OPS-5019":
         fix_version = "Qualification Event 2"
     if key == "OPS-5019" and variant == "updated":
         fix_version = "Qualification Event 2;Shop Deliverable B"
+    if key == "UNK-9001":
+        status = "To Do"
+        start = date(2024, 8, 5)
+        finish_value = "2024-12-15"
 
     return row(
         key=key,
@@ -425,6 +461,7 @@ def make_epic(
         fix_versions=fix_version,
         status=status,
         resolution=resolution,
+        resolved=resolved,
         target_start=start.isoformat(),
         target_end=finish_value,
         successors=successors,
@@ -461,6 +498,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
             logged_hours="1h 15m",
             status="Done",
             resolution="Done",
+            resolved="2026-04-10",
         ),
     ]
     eligible_epics = [item for item in epics if has_child_stories(item, variant)]
@@ -472,6 +510,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
             sequence += 1
             points = story_points(epic_key, local_index)
             status = story_status(epic_key, local_index, variant)
+            resolution = "Done" if status == "Done" else ""
             prefix = epic_key.split("-", 1)[0]
             issue_type = ("Story", "Task", "Bug")[sequence % 3]
             stories.append(
@@ -485,7 +524,8 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
                     story_points=str(points),
                     logged_hours=story_logged_hours(epic_key, local_index, variant),
                     status=status,
-                    resolution="Done" if status == "Done" else "",
+                    resolution=resolution,
+                    resolved=story_resolved_date(epic_key, local_index, variant, status),
                 )
             )
     if len(stories) != STORY_ROW_TARGET:
@@ -518,6 +558,8 @@ def story_counts(epic_keys: Sequence[str]) -> Dict[str, int]:
 
 
 def story_status(epic_key: str, local_index: int, variant: str) -> str:
+    if epic_key in {"PLAT-4026", "PLAT-4027", "OPS-5018"}:
+        return "Done"
     if epic_key == "CORE-1001":
         if variant == "baseline":
             return "Done" if local_index == 0 else "To Do"
@@ -548,6 +590,20 @@ def story_logged_hours(epic_key: str, local_index: int, variant: str) -> str:
             return f"{whole_hours}h {minutes}m"
         return f"{whole_hours}h"
     return f"{base:.2f}".rstrip("0").rstrip(".")
+
+
+def story_resolved_date(epic_key: str, local_index: int, variant: str, status: str) -> str:
+    if status != "Done":
+        return ""
+    if epic_key == "PLAT-4026":
+        return (date(2026, 1, 8) + timedelta(days=min(local_index, 10))).isoformat()
+    if epic_key == "PLAT-4027":
+        return ""
+    if epic_key == "OPS-5018":
+        return (date(2026, 8, 16) + timedelta(days=min(local_index, 10))).isoformat()
+    if epic_key == "CORE-1002" and variant == "updated":
+        return (date(2026, 8, 10) + timedelta(days=min(local_index, 10))).isoformat()
+    return ""
 
 
 def child_summary(issue_type: str, epic_summary_text: str, local_index: int) -> str:
@@ -600,6 +656,7 @@ def row(
     logged_hours: str = "",
     status: str = "",
     resolution: str = "",
+    resolved: str = "",
     target_start: str = "",
     target_end: str = "",
     successors: str = "",
@@ -617,6 +674,7 @@ def row(
         "Logged Hours": logged_hours,
         "Status": status,
         "Resolution": resolution,
+        "Resolved": resolved,
         "Target start": target_start,
         "Target end": target_end,
         "Outward issue link (Blocks)": successors,

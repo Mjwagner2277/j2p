@@ -150,6 +150,10 @@ def run_smoke(output_dir: Path) -> int:
             "CORE-1980",
             "WEB-2010",
             "DATA-3009",
+            "PLAT-4027",
+            "OPS-5018",
+            "Historical Items Suppressed",
+            "Completed FixVersions Hidden",
         ],
     )
     assert_resource_group_reports(
@@ -276,6 +280,7 @@ def assert_predecessor_coverage(path: Path, minimum_ratio: float) -> None:
 
 def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path: Path) -> None:
     project_only = {"CascadeBranchDriver", "CascadingDateChange"}
+    category_only = {"SuppressedHistoricalWarnings"}
     with case_path.open("r", encoding="utf-8", newline="") as handle:
         cases = list(csv.DictReader(handle))
     if len(cases) < 15:
@@ -289,12 +294,27 @@ def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path:
     for case in cases:
         jira_key = case["jira_key"]
         category = case["expected_category"]
+        if category == "ReportPresence":
+            if jira_key not in report_text:
+                missing.append(f"{jira_key}/{category} should be visible in the report")
+            continue
+        if category == "ReportHidden":
+            if jira_key in report_text:
+                missing.append(f"{jira_key}/{category} should be hidden from the report")
+            continue
         if category in project_only:
             if jira_key not in report_text:
                 missing.append(f"{jira_key}/{category} should be described in the report")
             continue
+        if category in category_only:
+            if not any(row["category"] == category for row in audit_rows):
+                missing.append(category)
+            continue
         if not any(row["jira_key"] == jira_key and row["category"] == category for row in audit_rows):
             missing.append(f"{jira_key}/{category}")
+            continue
+        if category == "SuppressedCompletedFixVersion" and jira_key in report_text:
+            missing.append(f"{jira_key}/{category} should be hidden from the report")
     if missing:
         raise AssertionError(f"Large scenario is missing expected review cases: {', '.join(missing)}")
 

@@ -2,7 +2,7 @@
 
 This folder is the full training scenario for j2p. It gives reviewers a project-wide Jira export that feels closer to a real portfolio.
 
-Rows 2-35 start the client walkthrough. Rows 17-35 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
+Rows 2-39 start the client walkthrough. Rows 17-39 are the authored epic examples that map directly to the report sections below, and rows 201-202 are authored child-row data-quality examples. The remaining rows are named scale data; they exist to prove the tool can handle a larger project-wide export, but they are not where the training story lives.
 
 At least 60% of included schedule-driving epic rows have valid predecessors. This is intentional so the Microsoft Project sandbox visibly exercises dependency population at portfolio scale, not just the handful of authored teaching rows.
 
@@ -50,7 +50,7 @@ Expected result:
 1200
 ```
 
-Then open the updated CSV and look at rows 17-35, then rows 201-202. Those rows are the complete teaching path.
+Then open the updated CSV and look at rows 17-39, then rows 201-202. Those rows are the complete teaching path.
 
 ## Step 2: Review The Prefix Rollup Mapping
 
@@ -73,6 +73,14 @@ rollup_modes:
 multi_fixversion_policy:
   default: reference
   OPS: split
+
+warning_suppression:
+  before: "2025-01-01"
+
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+  as_of_date: "2026-09-17"
 ```
 
 That means:
@@ -86,6 +94,8 @@ That means:
 | `OPS` | Operations | fixVersion with split handling |
 
 The `UNK` prefix is intentionally not configured. It appears in the report as an unknown-prefix review case.
+
+The fixed `as_of_date` keeps the training scenario repeatable. In a live team config, leave `as_of_date` blank unless you need to reproduce a prior audit exactly.
 
 ## Step 3: Run The Baseline Export
 
@@ -225,7 +235,10 @@ Training keys to find in the sandbox:
 | `CORE-1007` | Valid dependency change. |
 | `CORE-1980` | New epic added to the sandbox. |
 | `WEB-2010` | In-planning epic with no pointed child work. |
+| `PLAT-4026` | Stale completed fixVersion hidden from manager HTML reports but retained in CSV/audit detail. |
+| `PLAT-4027` | Completed fixVersion that stays visible because child work is missing `Resolved` dates. |
 | `PLAT-4028` | Default reference multi-fixVersion behavior. Confirm primary and reference rows. |
+| `OPS-5018` | Recently completed fixVersion that remains visible because it is inside the 90-day threshold. |
 | `OPS-5019` | Split multi-fixVersion behavior. Confirm both rows drive schedule. |
 
 For `PLAT-4028`, the sandbox should show two rows with the same `Jira Key`:
@@ -267,6 +280,8 @@ Confirm these high-level expectations:
 | Completed Epics | Epics that became done since the comparison baseline |
 | Logged Hours | Child story/task worklog hours rolled up to the scheduled epic rows |
 | Story Point Ratio | Completed story points delivered per 8 completed logged hours, limited to active scheduled epic rows |
+| Historical Items Suppressed | Old warnings before the configured cutoff were summarized instead of listed |
+| Completed FixVersions Hidden | Old completed fixVersion rollups omitted from manager HTML but retained in CSV outputs |
 
 Then read sections in this order:
 
@@ -313,15 +328,19 @@ examples\large-scenario\expected-review-cases.csv
 | Green | Dependency changed | updated row 24, `CORE-1007` | A new valid predecessor is written as a changed predecessor cell |
 | Red | Cascade branch driver finish change | updated row 21, `CORE-1004` | This is the intended Project scheduling branch driver candidate; the actual red cell is only selected during `update` on Windows with Microsoft Project |
 | Green | Downstream cascade item | updated row 22, `CORE-1005` | This is the intended downstream dependency item after `CORE-1004` |
-| Yellow/amber | Unknown prefix | updated row 35, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
+| Yellow/amber | Unknown prefix | updated row 38, `UNK-9000` | The prefix is not in `resource_groups`, so the item is excluded and reported |
 | Yellow/amber | Missing initiative parent | updated row 26, `CORE-1049` | `CORE` uses initiative rollup, so a missing parent excludes the epic |
 | Yellow/amber | Missing fixVersion | updated row 33, `PLAT-4029` | fixVersion-mode teams still need at least one fixVersion |
 | Report-only | Default reference multi-fixVersion | updated row 32, `PLAT-4028` | `PLAT` uses the default reference policy: one primary scheduled row plus one non-driving reference row |
-| Report-only | Configured split multi-fixVersion | updated row 34, `OPS-5019` | `OPS` uses split policy: one driving schedule row per fixVersion |
+| Report-only | Stale completed fixVersion hidden from manager HTML | updated row 34, `PLAT-4026` | The fixVersion is complete by Jira statuses and latest `Resolved` is older than 90 days, so HTML manager reports hide it while CSVs keep it |
+| Yellow/amber | Completed fixVersion missing `Resolved` date | updated row 35, `PLAT-4027` | A completed fixVersion stays visible when any issue in the group lacks a usable `Resolved` date |
+| Report-only | Recent completed fixVersion remains visible | updated row 36, `OPS-5018` | A completed fixVersion inside the 90-day threshold remains in the manager report |
+| Report-only | Configured split multi-fixVersion | updated row 37, `OPS-5019` | `OPS` uses split policy: one driving schedule row per fixVersion |
 | Yellow/amber | Baseline-only unmatched item | baseline row 25, `CORE-1048` | The item existed in the baseline but is not in the updated plan |
 | Blue | Missing dependency target | updated row 23, `CORE-1006` | Jira references `EXT-999`, which is not an included epic |
 | Blue | Self dependency | updated row 27, `WEB-2008` | An epic cannot block itself, so the dependency is skipped and reported |
 | Blue | Circular dependency | updated rows 29-30, `DATA-3008` and `DATA-3009` | One dependency is skipped to prevent a schedule cycle |
+| No color | Unparsed Jira target date | updated row 31, `DATA-3034` | Unparseable target dates are reported so the source export can be corrected |
 | Gray/green-gray | In planning | updated row 28, `WEB-2010` | The epic is included but has no pointed child stories/tasks |
 
 For `PLAT-4028`, the `planned-epics.csv` output has two rows with the same Jira key. The primary row has `Drives Schedule` set to `Yes`; the reference row has `Drives Schedule` set to `No` and points back to the primary schedule key. The multi-fixVersion audit item is informational; if the reference row is new relative to the baseline, its new Project cells are still colored green like any other added row.
@@ -334,6 +353,7 @@ Data-quality rows that do not produce Project cell colors:
 | --- | --- | --- |
 | Blank Jira key | updated row 201 | The CSV row is skipped and reported in `Reviewer Action Needed` |
 | Orphan child story | updated row 202, `CORE-899999` | The story is not counted toward any epic because `Epic Link` is blank |
+| Historical warning suppression | updated row 39, `UNK-9001` | The old unknown-prefix warning is suppressed by `warning_suppression.before` and summarized as `SuppressedHistoricalWarnings` |
 
 ## Step 7: Review Per-Project-Key CSVs
 

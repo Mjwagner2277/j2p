@@ -734,13 +734,20 @@ class J2PPlanningTests(unittest.TestCase):
             state_path = Path(temp) / "j2p-state.json"
             write_json(state_path, run_plan_to_state(baseline))
             follow_on = build_run_plan(updated_csv, config, snapshots_from_state(state_path))
+            paths = write_reports(follow_on, Path(temp) / "reports", config)
+            manager_report = paths["manager_report"].read_text(encoding="utf-8")
 
         self.assertEqual(follow_on.rollup_mode, "mixed")
         self.assertIn("CORE-1980", follow_on.epics)
         self.assertIn("WEB-2010", follow_on.epics)
+        self.assertIn("PLAT-4026", follow_on.epics)
+        self.assertIn("PLAT-4027", follow_on.epics)
+        self.assertIn("OPS-5018", follow_on.epics)
         self.assertNotIn("CORE-1049", follow_on.epics)
         self.assertEqual(follow_on.epics["WEB-2010"].in_planning, True)
         self.assertEqual(follow_on.epics["PLAT-4000"].rollup_mode, "fixVersion")
+        self.assertEqual(follow_on.stats["suppressed_completed_fixversion_rollups"], 1)
+        self.assertEqual(follow_on.stats["suppressed_audit_items"], 1)
         self.assertGreaterEqual(predecessor_coverage_ratio(follow_on), 0.60)
 
         categories = {item.category for item in follow_on.audit_items}
@@ -750,6 +757,7 @@ class J2PPlanningTests(unittest.TestCase):
                 "ChangedField",
                 "ChangedName",
                 "CircularDependencySkipped",
+                "CompletedFixVersionMissingResolvedDate",
                 "CompletedSinceLastUpdate",
                 "CsvRowMissingJiraKey",
                 "DependencyChange",
@@ -757,15 +765,24 @@ class J2PPlanningTests(unittest.TestCase):
                 "ExcludedUnknownPrefix",
                 "InPlanning",
                 "MissingDependencyTarget",
+                "MultiFixVersionReference",
+                "MultiFixVersionSplit",
                 "RollupMove",
                 "SelfDependencySkipped",
                 "StoryMissingEpicLink",
+                "SuppressedCompletedFixVersion",
+                "SuppressedHistoricalWarnings",
                 "UnmatchedProjectTask",
                 "UnparsedDate",
             }.issubset(categories)
         )
         colors = {item.color for item in follow_on.audit_items if item.color}
         self.assertTrue({"changed_cell", "review_needed", "dependency_review", "in_planning"}.issubset(colors))
+        self.assertNotIn("PLAT-4026", manager_report)
+        self.assertIn("PLAT-4027", manager_report)
+        self.assertIn("OPS-5018", manager_report)
+        self.assertIn("Historical Items Suppressed", manager_report)
+        self.assertIn("Completed FixVersions Hidden", manager_report)
 
     def test_schedule_review_marks_every_changed_branch_driver_red(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")

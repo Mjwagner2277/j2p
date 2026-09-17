@@ -1,5 +1,5 @@
 severity,category,jira_key,schedule_key,project_key,issue_type,summary,field,old_value,new_value,color,message,reviewer_action,source_row
-Warning,UnparsedDate,DATA-3034,,DATA,,,,not-a-date,,,Could not parse date 'not-a-date' on CSV row 31.,Use YYYY-MM-DD or configure a supported export date format.,31
+Warning,UnparsedDate,DATA-3034,,DATA,,,,not-a-date,,,Could not parse date 'not-a-date' on CSV row 31.,"Use YYYY-MM-DD, DD-MON-YY, or configure a supported export date format.",31
 Warning,CircularDependencySkipped,DATA-3009,DATA-3009,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency B,Dependency Review,,,dependency_review,Skipped circular dependency DATA-3009 -> DATA-3008.,Resolve the circular Jira blocker relationship.,30
 Info,ChangedField,DATA-3008,DATA-3008,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency A,% Complete,50,45,changed_cell,% Complete changed from '50' to '45'.,Review the changed sandbox cell.,29
 Info,ChangedField,DATA-3008,DATA-3008,DATA,Epic,Client Walkthrough - Warehouse migration circular dependency A,Total Story Points,20,22,changed_cell,Total Story Points changed from '20' to '22'.,Review the changed sandbox cell.,29

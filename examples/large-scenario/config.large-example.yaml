@@ -80,7 +80,7 @@ behavior:
   write_state_on_validate: false
 
 warning_suppression:
-  before: ""
+  before: "2025-01-01"
   date_fields:
     - target_end
     - target_start
@@ -92,7 +92,7 @@ warning_suppression:
 fixversion_completion_suppression:
   enabled: true
   stale_after_days: 90
-  as_of_date: ""
+  as_of_date: "2026-09-17"
   keep_audit_summary: true
 
 review_table:
