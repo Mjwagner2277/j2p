@@ -100,6 +100,12 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 resolution=table.get_first(row, columns.get("resolution", [])),
                 target_start=parse_date(table.get_first(row, columns.get("target_start", [])), audit, key, row_index),
                 target_end=parse_date(table.get_first(row, columns.get("target_end", [])), audit, key, row_index),
+                warning_suppression_date=parse_date(
+                    table.get_first(row, columns.get("warning_suppression_date", [])),
+                    audit,
+                    key,
+                    row_index,
+                ),
                 predecessors=parse_issue_keys(table.get_all(row, columns.get("predecessors", []))),
                 successors=parse_issue_keys(table.get_all(row, columns.get("successors", []))),
                 source_row=row_index,

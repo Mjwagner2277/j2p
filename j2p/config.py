@@ -49,6 +49,14 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "resolution": ["Resolution"],
         "target_start": ["Target start", "Target Start"],
         "target_end": ["Target end", "Target End"],
+        "warning_suppression_date": [
+            "Warning suppression date",
+            "Created",
+            "Created date",
+            "Resolved",
+            "Resolution date",
+            "Updated",
+        ],
         "successors": ["Outward issue link (Blocks)", "Blocks"],
         "predecessors": ["Inward issue link (Blocks)", "Blocked by", "is blocked by"],
     },
@@ -58,6 +66,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     },
     "metrics": {
         "hours_per_story_point": 8.0,
+    },
+    "warning_suppression": {
+        "before": "",
+        "date_fields": ["target_end", "target_start"],
+        "severities": ["Warning", "Review"],
+        "keep_summary": True,
     },
     "behavior": {
         "unknown_prefix": "exclude",
@@ -250,6 +264,50 @@ def normalize_config(config: Dict[str, Any]) -> None:
         raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
     metrics["hours_per_story_point"] = hours_per_story_point
     config["metrics"] = metrics
+
+    warning_suppression = config.get("warning_suppression", {})
+    if warning_suppression is None:
+        warning_suppression = {}
+    if not isinstance(warning_suppression, dict):
+        raise ConfigError("warning_suppression must be a YAML mapping.")
+
+    cutoff = warning_suppression.get("before", "")
+    warning_suppression["before"] = "" if cutoff is None else str(cutoff).strip()
+
+    date_fields = [
+        str(value).strip()
+        for value in ensure_list(warning_suppression.get("date_fields", ["target_end", "target_start"]))
+        if str(value).strip()
+    ]
+    if not date_fields:
+        date_fields = ["target_end", "target_start"]
+    allowed_date_fields = {"target_end", "target_start", "warning_suppression_date"}
+    invalid_date_fields = [value for value in date_fields if value not in allowed_date_fields]
+    if invalid_date_fields:
+        raise ConfigError(
+            "warning_suppression.date_fields only supports: "
+            f"{', '.join(sorted(allowed_date_fields))}. Invalid: {', '.join(invalid_date_fields)}."
+        )
+    warning_suppression["date_fields"] = date_fields
+
+    severity_lookup = {"error": "Error", "warning": "Warning", "review": "Review", "info": "Info"}
+    severities = []
+    for value in ensure_list(warning_suppression.get("severities", ["Warning", "Review"])):
+        severity_key = str(value).strip().lower()
+        if not severity_key:
+            continue
+        severity = severity_lookup.get(severity_key)
+        if not severity:
+            raise ConfigError(
+                "warning_suppression.severities only supports: "
+                "Error, Warning, Review, Info."
+            )
+        severities.append(severity)
+    if not severities:
+        severities = ["Warning", "Review"]
+    warning_suppression["severities"] = severities
+    warning_suppression["keep_summary"] = bool(warning_suppression.get("keep_summary", True))
+    config["warning_suppression"] = warning_suppression
 
     review_table = config.get("review_table", {})
     if review_table is None:

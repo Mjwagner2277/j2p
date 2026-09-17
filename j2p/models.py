@@ -42,6 +42,7 @@ class JiraIssue:
     resolution: str
     target_start: str
     target_end: str
+    warning_suppression_date: str
     predecessors: Set[str]
     successors: Set[str]
     source_row: int

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -159,6 +160,82 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("2026", str(project_date_for_com(plan.epics["TEAM-1"].target_start, "Start")))
         self.assertIn("2026", str(project_date_for_com(plan.epics["TEAM-1"].target_end, "Finish")))
 
+    def test_warning_suppression_before_cutoff_filters_historical_audit_items(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,Old missing parent,,,,,,In Progress,,2024-01-01,2024-12-31,,",
+                "TEAM-2,3,Epic,Current missing parent,,,,,,In Progress,,2025-01-01,2025-01-02,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "historical-warning.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(
+                FIXTURES / "mixed-config.yaml",
+                {"warning_suppression": {"before": "2025-01-01"}},
+            )
+            plan = build_run_plan(csv_path, config)
+
+        excluded_keys = {
+            item.jira_key
+            for item in plan.audit_items
+            if item.category == "ExcludedMissingRollup"
+        }
+        self.assertNotIn("TEAM-1", excluded_keys)
+        self.assertIn("TEAM-2", excluded_keys)
+        self.assertEqual(plan.stats["suppressed_audit_items"], 1)
+        self.assertIn("SuppressedHistoricalWarnings", {item.category for item in plan.audit_items})
+
+    def test_warning_suppression_can_use_configured_history_date_column(self) -> None:
+        rows = [
+            [
+                "Issue key",
+                "Issue id",
+                "Issue Type",
+                "Summary",
+                "Epic Link",
+                "Parent",
+                "Fix versions",
+                "Story Points",
+                "Logged Hours",
+                "Status",
+                "Resolution",
+                "Target start",
+                "Target end",
+                "Outward issue link (Blocks)",
+                "Inward issue link (Blocks)",
+                "Created",
+            ],
+            ["PROD-1", "1", "Initiative", "Program Alpha", "", "", "", "", "", "In Progress", "", "", "", "", "", ""],
+            ["TEAM-1", "2", "Epic", "Old missing parent", "", "", "", "", "", "In Progress", "", "", "", "", "", "2024-12-15"],
+            ["TEAM-2", "3", "Epic", "Current missing parent", "", "", "", "", "", "In Progress", "", "", "", "", "", "2025-01-02"],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "historical-warning-created.csv"
+            with csv_path.open("w", encoding="utf-8", newline="") as handle:
+                csv.writer(handle, lineterminator="\n").writerows(rows)
+            config = load_config(
+                FIXTURES / "mixed-config.yaml",
+                {
+                    "warning_suppression": {
+                        "before": "2025-01-01",
+                        "date_fields": ["warning_suppression_date"],
+                    }
+                },
+            )
+            plan = build_run_plan(csv_path, config)
+
+        excluded_keys = {
+            item.jira_key
+            for item in plan.audit_items
+            if item.category == "ExcludedMissingRollup"
+        }
+        self.assertNotIn("TEAM-1", excluded_keys)
+        self.assertIn("TEAM-2", excluded_keys)
+        self.assertEqual(plan.stats["suppressed_audit_items"], 1)
+
     def test_story_point_ratio_uses_configured_story_point_hours(self) -> None:
         self.assertEqual(calculate_story_point_ratio(40, 5, 8), 1)
         self.assertEqual(calculate_story_point_ratio(30, 5, 8), 1.33)
@@ -305,6 +382,28 @@ class J2PPlanningTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "review_table.exposed_columns"):
             load_config(None, {"review_table": {"exposed_columns": "finish"}})
 
+    def test_warning_suppression_rejects_unknown_date_field(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "warning_suppression.date_fields"):
+            load_config(
+                None,
+                {
+                    "warning_suppression": {
+                        "date_fields": ["created"],
+                    }
+                },
+            )
+
+    def test_warning_suppression_rejects_unknown_severity(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "warning_suppression.severities"):
+            load_config(
+                None,
+                {
+                    "warning_suppression": {
+                        "severities": ["Concern"],
+                    }
+                },
+            )
+
     def test_validate_cli_writes_manager_and_audit_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             buffer = StringIO()
@@ -364,6 +463,44 @@ class J2PPlanningTests(unittest.TestCase):
             audit_header = (run_dir / "audit-detail.csv").read_text(encoding="utf-8").splitlines()[0]
             self.assertIn("project_key", audit_header)
             self.assertIn("schedule_key", audit_header)
+
+    def test_validate_cli_can_override_warning_suppression_cutoff(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,Old missing parent,,,,,,In Progress,,2024-01-01,2024-12-31,,",
+                "TEAM-2,3,Epic,Current missing parent,,,,,,In Progress,,2025-01-01,2025-01-02,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "historical-warning.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(
+                    [
+                        "validate",
+                        "--jira-csv",
+                        str(csv_path),
+                        "--config",
+                        str(FIXTURES / "mixed-config.yaml"),
+                        "--output-dir",
+                        temp,
+                        "--run-id",
+                        "suppressed",
+                        "--suppress-warnings-before",
+                        "2025-01-01",
+                    ]
+                )
+            audit_csv = (Path(temp) / "j2p-run-suppressed" / "audit-detail.csv").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertNotIn("TEAM-1", audit_csv)
+        self.assertIn("TEAM-2", audit_csv)
+        self.assertIn("SuppressedHistoricalWarnings", audit_csv)
 
     def test_debug_visible_replaces_visible_in_help(self) -> None:
         parser = build_parser()

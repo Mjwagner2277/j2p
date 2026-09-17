@@ -261,6 +261,7 @@ Recommended Jira CSV columns:
 | Resolution | `Resolution` | Traceability and future status rules. |
 | Target start | `Target start` | Project custom date field and schedule review. |
 | Target end | `Target end` | Project custom date field and schedule review. |
+| Warning suppression date | `Created`, `Resolved`, custom date field | Optional source for suppressing historical warning noise when target dates are not enough. |
 | Predecessors | `Inward issue link (Blocks)`, `Blocked by`, `is blocked by` | Project predecessors. |
 | Successors | `Outward issue link (Blocks)`, `Blocks` | Project successors. |
 
@@ -556,6 +557,36 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `ExcludedMissingRollup` | Required initiative or fixVersion is missing. | Fix Jira parent/fixVersion or confirm exclusion. |
 | `ExcludedUnknownPrefix` | Jira key prefix is not configured. | Add prefix to YAML or confirm exclusion. |
 | `UnmatchedProjectTask` | Project baseline task is not in the current Jira plan. | Decide whether it should remain in the source schedule. |
+| `SuppressedHistoricalWarnings` | Older dated warning/review items were hidden by the configured historical cutoff. | Confirm the cutoff is intentional for this run. |
+
+## Suppressing Historical Warning Noise
+
+When a Jira export includes the full project history, older issues may violate rules that only apply to current work. j2p can suppress report and audit warnings for issues dated before a configurable cutoff.
+
+YAML example:
+
+```yaml
+warning_suppression:
+  before: 2025-01-01
+```
+
+One-off command example:
+
+```powershell
+python -m j2p validate `
+  --jira-csv .\project-wide-jira.csv `
+  --config .\config.yaml `
+  --suppress-warnings-before 2025-01-01
+```
+
+Important behavior:
+
+- Suppression does not remove valid epics from the Project sandbox.
+- By default, only `Warning` and `Review` audit items can be suppressed.
+- j2p checks Jira `Target end` first, then `Target start`.
+- If old issues lack target dates, map `columns.warning_suppression_date` to a Jira date such as `Created` or `Resolved`, then set `warning_suppression.date_fields` to check it.
+- Items without a usable suppression date remain visible for review.
+- The manager report shows a `Historical Items Suppressed` count when anything is hidden.
 
 ## Product User Checklist
 
@@ -567,6 +598,7 @@ Before running:
 - Confirm fixVersion teams have the right `multi_fixversion_policy`.
 - Confirm `done_statuses` matches the team's Jira workflow.
 - Confirm column headers in the CSV match the YAML `columns` configuration.
+- If the CSV contains old project history, confirm whether `warning_suppression.before` should be blank or set to the team's rule-enforcement start date.
 
 After running `validate`:
 

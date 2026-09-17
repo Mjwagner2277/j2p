@@ -131,6 +131,20 @@ The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
 - the HTML reports include a `Schedule Cascade Review` section that visualizes changed finish dates by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes a collapsible detail table
 - each resource-group HTML report includes schedule cascade branches whose starting issue belongs to that resource group
 
+## Historical Warning Suppression
+
+j2p supports a configurable warning-suppression cutoff for full-history Jira CSV exports.
+
+When `warning_suppression.before` is set:
+
+- matching report/audit items dated before the cutoff can be suppressed
+- the default eligible severities are `Warning` and `Review`
+- the default date lookup uses Jira `Target end` first and `Target start` second
+- teams can map an optional `warning_suppression_date` CSV column for Created, Resolved, or another governance date
+- items without a usable suppression date remain visible
+- included epics are still parsed and scheduled; suppression only reduces manager-report and audit CSV noise
+- the manager report shows the number of suppressed historical items
+
 ## Review Colors
 
 | Color | Meaning |

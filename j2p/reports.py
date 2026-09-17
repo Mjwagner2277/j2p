@@ -929,6 +929,15 @@ def decision_briefing(plan: RunPlan) -> str:
             pluralize(ratio_summary["epic_count"], "in-progress row", "in-progress rows"),
         ),
     ]
+    suppressed_count = int(plan.stats.get("suppressed_audit_items", 0) or 0)
+    if suppressed_count:
+        metrics.append(
+            (
+                "Historical Items Suppressed",
+                suppressed_count,
+                "Before configured warning cutoff",
+            )
+        )
     return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{render_metric_cards(metrics)}</div></section>"
 
 

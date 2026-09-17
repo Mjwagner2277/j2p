@@ -80,6 +80,7 @@ def build_run_plan(
     }
 
     issues = parse_issues(table, config, audit)
+    issues_by_key = {issue.key.upper(): issue for issue in issues if issue.key}
     issue_type_sets = {
         "initiative": lowered(config["issue_types"]["initiative"]),
         "epic": lowered(config["issue_types"]["epic"]),
@@ -249,6 +250,12 @@ def build_run_plan(
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(planned_epics, config)
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
+    audit, suppressed_audit_count = suppress_historical_audit_items(
+        audit,
+        issues_by_key,
+        planned_epics,
+        config,
+    )
     driving_epics = [epic for epic in planned_epics.values() if epic.drives_schedule]
     driving_logged_hours = round(sum(epic.logged_hours for epic in driving_epics), 2)
     driving_completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
@@ -265,6 +272,7 @@ def build_run_plan(
         "epics_excluded": excluded_count,
         "summary_rows": len(summaries),
         "audit_items": len(audit),
+        "suppressed_audit_items": suppressed_audit_count,
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
         "logged_hours": driving_logged_hours,
         "completed_logged_hours": driving_completed_logged_hours,
@@ -293,6 +301,102 @@ def build_run_plan(
         epics=planned_epics,
         audit_items=audit,
     )
+
+
+def suppress_historical_audit_items(
+    audit: List[AuditItem],
+    issues_by_key: Dict[str, JiraIssue],
+    planned_epics: Dict[str, PlanEpic],
+    config: Dict[str, Any],
+) -> tuple[List[AuditItem], int]:
+    settings = config.get("warning_suppression", {})
+    cutoff = warning_suppression_cutoff(settings)
+    if not cutoff:
+        return audit, 0
+
+    severities = set(settings.get("severities", ["Warning", "Review"]))
+    date_fields = settings.get("date_fields", ["target_end", "target_start"])
+    kept: List[AuditItem] = []
+    suppressed_count = 0
+    for item in audit:
+        if item.severity not in severities:
+            kept.append(item)
+            continue
+        item_date = audit_item_suppression_date(item, issues_by_key, planned_epics, date_fields)
+        if item_date and item_date < cutoff:
+            suppressed_count += 1
+            continue
+        kept.append(item)
+
+    if suppressed_count and settings.get("keep_summary", True):
+        kept.append(
+            AuditItem(
+                "Info",
+                "SuppressedHistoricalWarnings",
+                message=(
+                    f"Suppressed {suppressed_count} audit item(s) before {cutoff} "
+                    "using warning_suppression.before."
+                ),
+                reviewer_action=(
+                    "Historical Jira items were intentionally hidden from this run's review noise. "
+                    "Adjust warning_suppression.before if older issues need to be reviewed."
+                ),
+            )
+        )
+    return kept, suppressed_count
+
+
+def warning_suppression_cutoff(settings: Dict[str, Any]) -> str:
+    raw_cutoff = str(settings.get("before", "") or "").strip()
+    if not raw_cutoff:
+        return ""
+    audit: List[AuditItem] = []
+    parsed = parse_date(raw_cutoff, audit, "CONFIG", 0)
+    if audit or not normalized_iso_date(parsed):
+        raise J2PError(
+            "warning_suppression.before must be a valid date. "
+            "Use YYYY-MM-DD, for example 2025-01-01."
+        )
+    return parsed
+
+
+def audit_item_suppression_date(
+    item: AuditItem,
+    issues_by_key: Dict[str, JiraIssue],
+    planned_epics: Dict[str, PlanEpic],
+    date_fields: List[str],
+) -> str:
+    candidates: List[Any] = []
+    schedule_key = (item.schedule_key or "").upper()
+    jira_key = (item.jira_key or schedule_key.split("::", 1)[0]).upper()
+
+    planned = planned_epics.get(schedule_key)
+    if planned:
+        candidates.append(planned)
+    if jira_key:
+        issue = issues_by_key.get(jira_key)
+        if issue:
+            candidates.append(issue)
+        for epic in planned_epics.values():
+            if (epic.jira_key or epic.key).upper() == jira_key and epic not in candidates:
+                candidates.append(epic)
+
+    for field_name in date_fields:
+        for candidate in candidates:
+            date_value = normalized_iso_date(getattr(candidate, field_name, ""))
+            if date_value:
+                return date_value
+    return ""
+
+
+def normalized_iso_date(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        return datetime.strptime(text, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return ""
 
 
 __all__ = [
@@ -338,5 +442,6 @@ __all__ = [
     "split_multi_values",
     "story_point_ratio_field_name",
     "summary_id",
+    "suppress_historical_audit_items",
     "write_json",
 ]

@@ -60,6 +60,10 @@ columns:
     - Target start
   target_end:
     - Target end
+  warning_suppression_date:
+    - Created
+    - Resolved
+    - Warning suppression date
   predecessors:
     - Inward issue link (Blocks)
     - Blocked by
@@ -72,6 +76,16 @@ behavior:
   unknown_prefix: exclude
   hide_completed_epics: true
   write_state_on_validate: false
+
+warning_suppression:
+  before: ""
+  date_fields:
+    - target_end
+    - target_start
+  severities:
+    - Warning
+    - Review
+  keep_summary: true
 
 review_table:
   exposed_columns:

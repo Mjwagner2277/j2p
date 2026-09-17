@@ -149,6 +149,13 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
         help="Persistent state JSON path. Default: <output-dir>/j2p-state.json",
     )
     parser.add_argument("--run-id", help="Override timestamped run id; useful for repeatable tests.")
+    parser.add_argument(
+        "--suppress-warnings-before",
+        help=(
+            "Suppress configured warning/review audit items for Jira issues dated before this cutoff. "
+            "Example: 2025-01-01. Overrides warning_suppression.before in YAML."
+        ),
+    )
 
 
 def run_validate(args: argparse.Namespace) -> int:
@@ -226,7 +233,10 @@ def run_create(args: argparse.Namespace) -> int:
 
 
 def make_context(args: argparse.Namespace) -> Dict[str, Any]:
-    config = load_config(args.config)
+    overrides: Dict[str, Any] = {}
+    if getattr(args, "suppress_warnings_before", None):
+        overrides["warning_suppression"] = {"before": args.suppress_warnings_before}
+    config = load_config(args.config, overrides or None)
     run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = args.output_dir
     run_dir = output_dir / f"j2p-run-{run_id}"

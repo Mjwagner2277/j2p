@@ -80,6 +80,10 @@ columns:
     - Target start
   target_end:
     - Target end
+  warning_suppression_date:
+    - Created
+    - Resolved
+    - Warning suppression date
   predecessors:
     - Inward issue link (Blocks)
     - Blocked by
@@ -95,6 +99,16 @@ behavior:
 
 metrics:
   hours_per_story_point: 8
+
+warning_suppression:
+  before: ""
+  date_fields:
+    - target_end
+    - target_start
+  severities:
+    - Warning
+    - Review
+  keep_summary: true
 
 project_fields:
   jira_key: Text1
@@ -132,6 +146,7 @@ project_fields:
 | `columns` | Recommended | Built-in defaults | Mapping of logical j2p fields to one or more CSV headers | Lets j2p read different Jira export header names. |
 | `behavior` | No | Built-in defaults | Mapping | Operational guardrails. |
 | `metrics` | No | Built-in defaults | Mapping | Controls conversion rates such as hours per story point. |
+| `warning_suppression` | No | Disabled | Mapping | Suppresses selected report/audit warnings for dated historical Jira issues before a cutoff. |
 | `review_table` | No | Built-in defaults | `all` or list of exposed columns | Controls which columns are shown in the Microsoft Project `j2p Review` table. |
 | `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
@@ -279,6 +294,7 @@ columns:
 | `resolution` | No | All rows | Captured for traceability and future workflow decisions. |
 | `target_start` | Recommended | Epic rows | Jira target start date. |
 | `target_end` | Recommended | Epic rows | Jira target end date and schedule review. |
+| `warning_suppression_date` | Optional | All rows | Date used only when included in `warning_suppression.date_fields`. Common mappings are `Created`, `Resolved`, `Resolution date`, or a custom governance date. |
 | `predecessors` | Optional | Epic rows | Jira links meaning this epic is blocked by another epic. |
 | `successors` | Optional | Epic rows | Jira links meaning this epic blocks another epic. |
 
@@ -360,6 +376,58 @@ metrics:
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `hours_per_story_point` | `8` | Defines the logged-time block used for `Story Point Ratio`. With the default, j2p reports completed story points delivered per 8 completed logged hours. |
+
+## `warning_suppression`
+
+Suppresses historical report/audit noise when a full-project Jira CSV includes older issues that were not governed by the current j2p rules.
+
+Default:
+
+```yaml
+warning_suppression:
+  before: ""
+  date_fields:
+    - target_end
+    - target_start
+  severities:
+    - Warning
+    - Review
+  keep_summary: true
+```
+
+Example: hide warning/review items for issues whose Jira `Target end` date is before January 1, 2025.
+
+```yaml
+warning_suppression:
+  before: 2025-01-01
+```
+
+Rules:
+
+- Leave `before` blank to disable suppression.
+- The cutoff is exclusive. An item dated `2024-12-31` is suppressed by `before: 2025-01-01`; an item dated `2025-01-01` is not.
+- j2p still reads and schedules included historical rows. This only suppresses matching manager-report and audit CSV items.
+- Items without a usable suppression date are not suppressed.
+- By default, j2p checks `target_end` first and then `target_start`.
+- To suppress old rows that do not have target dates, map `columns.warning_suppression_date` to a Jira date column such as `Created` or `Resolved`, then put `warning_suppression_date` first in `date_fields`.
+- By default, only `Warning` and `Review` items are suppressed. Use `severities` only when your team intentionally wants to suppress other severities.
+- When `keep_summary` is true, the manager report and audit detail include one `SuppressedHistoricalWarnings` info row showing how many items were hidden.
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `before` | `""` | Date cutoff. Blank means no suppression. Supports the same Jira date parsing used for target dates, but `YYYY-MM-DD` is recommended. |
+| `date_fields` | `target_end`, then `target_start` | Ordered list of Jira date fields used to decide whether an audit item is historical. Supported values are `target_end`, `target_start`, and `warning_suppression_date`. |
+| `severities` | `Warning`, `Review` | Audit severities eligible for suppression. Supported values are `Error`, `Warning`, `Review`, and `Info`. |
+| `keep_summary` | `true` | Adds one informational audit item that documents the suppressed count. |
+
+Command-line override:
+
+```powershell
+python -m j2p validate `
+  --jira-csv .\project-wide-jira.csv `
+  --config .\config.yaml `
+  --suppress-warnings-before 2025-01-01
+```
 
 ## `review_table`
 
