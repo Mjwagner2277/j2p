@@ -259,6 +259,7 @@ Recommended Jira CSV columns:
 | Logged hours | `Logged Hours`, `Time Spent`, `Worklog Hours` | Worklog hour rollup from stories/tasks to epics and summaries. |
 | Status | `Status` | Completion calculations. |
 | Resolution | `Resolution` | Traceability and future status rules. |
+| Resolved | `Resolved` | Last completion date for stale completed fixVersion report suppression. |
 | Target start | `Target start` | Project custom date field and schedule review. |
 | Target end | `Target end` | Project custom date field and schedule review. |
 | Warning suppression date | `Created`, `Resolved`, custom date field | Optional source for suppressing historical warning noise when target dates are not enough. |
@@ -558,6 +559,39 @@ Each `by-project-key\<KEY>` folder contains the same CSV types filtered to one J
 | `ExcludedUnknownPrefix` | Jira key prefix is not configured. | Add prefix to YAML or confirm exclusion. |
 | `UnmatchedProjectTask` | Project baseline task is not in the current Jira plan. | Decide whether it should remain in the source schedule. |
 | `SuppressedHistoricalWarnings` | Older dated warning/review items were hidden by the configured historical cutoff. | Confirm the cutoff is intentional for this run. |
+| `SuppressedCompletedFixVersion` | A completed fixVersion was old enough to hide from HTML manager reports. | No manager action; detailed CSVs keep the audit trace. |
+| `CompletedFixVersionMissingResolvedDate` | A fixVersion is complete by status but one or more issues lack a usable `Resolved` date. | Populate Jira `Resolved` dates or leave the fixVersion visible. |
+
+## Completed FixVersion Report Suppression
+
+For fixVersion-based teams, j2p can hide old completed releases from the HTML manager reports without using a separate release metadata file.
+
+This rule uses the Jira issues CSV:
+
+- j2p groups every issue that declares a fixVersion.
+- A fixVersion is considered complete only when every issue in that group has a status in `done_statuses`.
+- j2p reads the `Resolved` date for every issue in that completed group.
+- The latest `Resolved` date is treated as the fixVersion's last completion date.
+- If that latest date is older than `fixversion_completion_suppression.stale_after_days`, the fixVersion rollup is hidden from HTML manager reports.
+
+Default YAML:
+
+```yaml
+columns:
+  resolved:
+    - Resolved
+
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+```
+
+Important behavior:
+
+- The Project sandbox is not pruned by this rule.
+- Detailed CSV outputs still include the hidden completed fixVersion rows.
+- If the CSV does not include a mapped `Resolved` column, this rule does not run.
+- If a completed fixVersion has missing `Resolved` dates, it stays visible and is reported for review.
 
 ## Suppressing Historical Warning Noise
 

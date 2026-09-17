@@ -69,6 +69,8 @@ If a fixVersion-mode epic has multiple fixVersions, j2p uses `multi_fixversion_p
 
 Reference-only rollup summaries keep counted story points at zero to avoid double-counting, but show the referenced epic's percent complete for visibility.
 
+For fixVersion rollups, j2p can hide stale completed releases from HTML manager reports without a release metadata file. A fixVersion is considered complete when every issue in the CSV that declares that fixVersion has a status in `done_statuses`. If every completed issue has a usable `Resolved` date and the latest `Resolved` date is older than the configured threshold, the rollup is hidden from HTML manager reports while remaining in detailed CSV outputs and the Project sandbox.
+
 ## Epic Identity
 
 Epics map to Project tasks by a stable j2p schedule key.

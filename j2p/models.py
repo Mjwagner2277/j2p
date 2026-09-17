@@ -40,6 +40,7 @@ class JiraIssue:
     logged_hours: float
     status: str
     resolution: str
+    resolved: str
     target_start: str
     target_end: str
     warning_suppression_date: str

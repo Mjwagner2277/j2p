@@ -98,6 +98,7 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 ),
                 status=table.get_first(row, columns["status"]),
                 resolution=table.get_first(row, columns.get("resolution", [])),
+                resolved=parse_date(table.get_first(row, columns.get("resolved", [])), audit, key, row_index),
                 target_start=parse_date(table.get_first(row, columns.get("target_start", [])), audit, key, row_index),
                 target_end=parse_date(table.get_first(row, columns.get("target_end", [])), audit, key, row_index),
                 warning_suppression_date=parse_date(

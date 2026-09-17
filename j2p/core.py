@@ -6,7 +6,7 @@ public planning facade used by the CLI and tests.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -250,6 +250,14 @@ def build_run_plan(
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(planned_epics, config)
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
+    fixversion_suppression_stats = apply_completed_fixversion_suppression(
+        issues,
+        planned_epics,
+        summaries,
+        config,
+        audit,
+        has_resolved_column=bool(column_map.get("resolved")),
+    )
     audit, suppressed_audit_count = suppress_historical_audit_items(
         audit,
         issues_by_key,
@@ -273,6 +281,7 @@ def build_run_plan(
         "summary_rows": len(summaries),
         "audit_items": len(audit),
         "suppressed_audit_items": suppressed_audit_count,
+        **fixversion_suppression_stats,
         "project_keys": sorted({epic.key_prefix for epic in planned_epics.values()}),
         "logged_hours": driving_logged_hours,
         "completed_logged_hours": driving_completed_logged_hours,
@@ -301,6 +310,133 @@ def build_run_plan(
         epics=planned_epics,
         audit_items=audit,
     )
+
+
+def apply_completed_fixversion_suppression(
+    issues: List[JiraIssue],
+    planned_epics: Dict[str, PlanEpic],
+    summaries: Dict[str, PlanSummary],
+    config: Dict[str, Any],
+    audit: List[AuditItem],
+    has_resolved_column: bool,
+) -> Dict[str, Any]:
+    settings = config.get("fixversion_completion_suppression", {})
+    stale_after_days = int(settings.get("stale_after_days", 90))
+    stats: Dict[str, Any] = {
+        "suppressed_completed_fixversion_summary_ids": [],
+        "suppressed_completed_fixversion_rollups": 0,
+        "suppressed_completed_fixversion_epic_rows": 0,
+        "fixversion_completion_suppression_active": False,
+        "fixversion_completion_suppression_as_of": "",
+        "fixversion_completion_suppression_stale_after_days": stale_after_days,
+    }
+    if not settings.get("enabled", True) or not has_resolved_column:
+        return stats
+
+    as_of = fixversion_suppression_as_of(settings)
+    cutoff = as_of - timedelta(days=stale_after_days)
+    done_statuses = lowered(config.get("done_statuses", []))
+    issues_by_fixversion: Dict[str, List[JiraIssue]] = {}
+    for issue in issues:
+        for fix_version in issue.fix_versions:
+            issues_by_fixversion.setdefault(fix_version, []).append(issue)
+
+    suppressed_ids: List[str] = []
+    for summary in sorted(summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
+        if summary.rollup_mode != "fixVersion":
+            continue
+        fix_version_issues = issues_by_fixversion.get(summary.key, [])
+        if not fix_version_issues:
+            continue
+        if not all(issue.status.strip().lower() in done_statuses for issue in fix_version_issues):
+            continue
+        resolved_dates = [
+            normalized_iso_date(issue.resolved)
+            for issue in fix_version_issues
+            if normalized_iso_date(issue.resolved)
+        ]
+        if len(resolved_dates) != len(fix_version_issues):
+            missing = [issue for issue in fix_version_issues if not normalized_iso_date(issue.resolved)]
+            audit.append(
+                AuditItem(
+                    "Review",
+                    "CompletedFixVersionMissingResolvedDate",
+                    jira_key=missing[0].key if missing else "",
+                    schedule_key=summary.summary_id,
+                    issue_type="fixVersion",
+                    summary=summary.name,
+                    field="Resolved",
+                    color="review_needed",
+                    message=(
+                        f"FixVersion '{summary.key}' is complete by status but "
+                        f"{len(missing)} issue(s) are missing a usable Resolved date."
+                    ),
+                    reviewer_action=(
+                        "Keep the fixVersion visible until Jira Resolved dates are populated "
+                        "or suppression is intentionally disabled."
+                    ),
+                    source_row=missing[0].source_row if missing else None,
+                )
+            )
+            continue
+
+        latest_resolved = max(resolved_dates)
+        latest_resolved_date = date.fromisoformat(latest_resolved)
+        if latest_resolved_date >= cutoff:
+            continue
+
+        suppressed_ids.append(summary.summary_id)
+        if settings.get("keep_audit_summary", True):
+            audit.append(
+                AuditItem(
+                    "Info",
+                    "SuppressedCompletedFixVersion",
+                    jira_key=fix_version_issues[0].key,
+                    schedule_key=summary.summary_id,
+                    issue_type="fixVersion",
+                    summary=summary.name,
+                    field="Resolved",
+                    old_value=latest_resolved,
+                    new_value=f"Hidden from manager HTML reports after {stale_after_days} days",
+                    message=(
+                        f"FixVersion '{summary.key}' is complete by Jira status and its latest "
+                        f"Resolved date is older than {stale_after_days} days."
+                    ),
+                    reviewer_action="No manager review needed unless the release should remain visible.",
+                    source_row=fix_version_issues[0].source_row,
+                )
+            )
+
+    suppressed_id_set = set(suppressed_ids)
+    hidden_epic_rows = [
+        epic
+        for epic in planned_epics.values()
+        if summary_id(epic.rollup_mode, epic.rollup_key) in suppressed_id_set
+    ]
+    stats.update(
+        {
+            "suppressed_completed_fixversion_summary_ids": sorted(suppressed_id_set),
+            "suppressed_completed_fixversion_rollups": len(suppressed_id_set),
+            "suppressed_completed_fixversion_epic_rows": len(hidden_epic_rows),
+            "fixversion_completion_suppression_active": True,
+            "fixversion_completion_suppression_as_of": as_of.isoformat(),
+        }
+    )
+    return stats
+
+
+def fixversion_suppression_as_of(settings: Dict[str, Any]) -> date:
+    raw_as_of = str(settings.get("as_of_date", "") or "").strip()
+    if not raw_as_of:
+        return datetime.now().date()
+    audit: List[AuditItem] = []
+    parsed = parse_date(raw_as_of, audit, "CONFIG", 0)
+    if audit or not normalized_iso_date(parsed):
+        raise J2PError(
+            "fixversion_completion_suppression.as_of_date must be a valid date. "
+            "Use YYYY-MM-DD, for example 2026-09-17."
+        )
+    return date.fromisoformat(parsed)
 
 
 def suppress_historical_audit_items(
@@ -442,6 +578,7 @@ __all__ = [
     "split_multi_values",
     "story_point_ratio_field_name",
     "summary_id",
+    "apply_completed_fixversion_suppression",
     "suppress_historical_audit_items",
     "write_json",
 ]

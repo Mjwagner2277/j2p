@@ -47,6 +47,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         ],
         "status": ["Status"],
         "resolution": ["Resolution"],
+        "resolved": ["Resolved", "Resolution date", "Resolution Date"],
         "target_start": ["Target start", "Target Start"],
         "target_end": ["Target end", "Target End"],
         "warning_suppression_date": [
@@ -72,6 +73,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "date_fields": ["target_end", "target_start"],
         "severities": ["Warning", "Review"],
         "keep_summary": True,
+    },
+    "fixversion_completion_suppression": {
+        "enabled": True,
+        "stale_after_days": 90,
+        "as_of_date": "",
+        "keep_audit_summary": True,
     },
     "behavior": {
         "unknown_prefix": "exclude",
@@ -308,6 +315,26 @@ def normalize_config(config: Dict[str, Any]) -> None:
     warning_suppression["severities"] = severities
     warning_suppression["keep_summary"] = bool(warning_suppression.get("keep_summary", True))
     config["warning_suppression"] = warning_suppression
+
+    fixversion_suppression = config.get("fixversion_completion_suppression", {})
+    if fixversion_suppression is None:
+        fixversion_suppression = {}
+    if not isinstance(fixversion_suppression, dict):
+        raise ConfigError("fixversion_completion_suppression must be a YAML mapping.")
+    fixversion_suppression["enabled"] = bool(fixversion_suppression.get("enabled", True))
+    try:
+        stale_after_days = int(fixversion_suppression.get("stale_after_days", 90))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("fixversion_completion_suppression.stale_after_days must be a positive integer.") from exc
+    if stale_after_days <= 0:
+        raise ConfigError("fixversion_completion_suppression.stale_after_days must be greater than zero.")
+    fixversion_suppression["stale_after_days"] = stale_after_days
+    as_of_date = fixversion_suppression.get("as_of_date", "")
+    fixversion_suppression["as_of_date"] = "" if as_of_date is None else str(as_of_date).strip()
+    fixversion_suppression["keep_audit_summary"] = bool(
+        fixversion_suppression.get("keep_audit_summary", True)
+    )
+    config["fixversion_completion_suppression"] = fixversion_suppression
 
     review_table = config.get("review_table", {})
     if review_table is None:

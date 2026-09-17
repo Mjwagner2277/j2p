@@ -301,6 +301,89 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("MultiFixVersionReference", categories)
         self.assertNotIn("ExcludedMissingRollup", categories)
 
+    def test_stale_completed_fixversion_is_hidden_from_manager_html(self) -> None:
+        rows = [
+            [
+                "Issue key",
+                "Issue id",
+                "Issue Type",
+                "Summary",
+                "Epic Link",
+                "Fix versions",
+                "Story Points",
+                "Status",
+                "Resolution",
+                "Resolved",
+                "Target start",
+                "Target end",
+                "Outward issue link (Blocks)",
+                "Inward issue link (Blocks)",
+            ],
+            ["TEAM-1", "1", "Epic", "Old release epic", "", "Release 2024", "", "Done", "Done", "2026-01-01", "2025-12-01", "2026-01-05", "", ""],
+            ["TEAM-11", "2", "Story", "Old release story", "TEAM-1", "Release 2024", "5", "Done", "Done", "2026-01-05", "", "", "", ""],
+            ["TEAM-2", "3", "Epic", "Recent release epic", "", "Release 2026", "", "Done", "Done", "2026-08-01", "2026-08-01", "2026-08-10", "", ""],
+            ["TEAM-21", "4", "Story", "Recent release story", "TEAM-2", "Release 2026", "3", "Done", "Done", "2026-08-02", "", "", "", ""],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "fixversion-complete.csv"
+            with csv_path.open("w", encoding="utf-8", newline="") as handle:
+                csv.writer(handle, lineterminator="\n").writerows(rows)
+            config = load_config(
+                FIXTURES / "fixversion-config.yaml",
+                {"fixversion_completion_suppression": {"as_of_date": "2026-09-17"}},
+            )
+            plan = build_run_plan(csv_path, config)
+            paths = write_reports(plan, Path(temp) / "reports", config)
+            report = paths["manager_report"].read_text(encoding="utf-8")
+            summary_csv = paths["summary_rollups"].read_text(encoding="utf-8")
+
+        self.assertEqual(plan.stats["suppressed_completed_fixversion_rollups"], 1)
+        self.assertIn("SuppressedCompletedFixVersion", {item.category for item in plan.audit_items})
+        self.assertIn("fixVersion:Release 2024", plan.summaries)
+        self.assertIn("Release 2024", summary_csv)
+        self.assertNotIn("Release 2024", report)
+        self.assertNotIn("Old release epic", report)
+        self.assertIn("Release 2026", report)
+        self.assertIn("Completed FixVersions Hidden", report)
+
+    def test_completed_fixversion_missing_resolved_stays_visible(self) -> None:
+        rows = [
+            [
+                "Issue key",
+                "Issue id",
+                "Issue Type",
+                "Summary",
+                "Epic Link",
+                "Fix versions",
+                "Story Points",
+                "Status",
+                "Resolution",
+                "Resolved",
+                "Target start",
+                "Target end",
+                "Outward issue link (Blocks)",
+                "Inward issue link (Blocks)",
+            ],
+            ["TEAM-1", "1", "Epic", "Missing resolved epic", "", "Release Missing", "", "Done", "Done", "2026-01-01", "2025-12-01", "2026-01-05", "", ""],
+            ["TEAM-11", "2", "Story", "Missing resolved story", "TEAM-1", "Release Missing", "5", "Done", "Done", "", "", "", "", ""],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "fixversion-missing-resolved.csv"
+            with csv_path.open("w", encoding="utf-8", newline="") as handle:
+                csv.writer(handle, lineterminator="\n").writerows(rows)
+            config = load_config(
+                FIXTURES / "fixversion-config.yaml",
+                {"fixversion_completion_suppression": {"as_of_date": "2026-09-17"}},
+            )
+            plan = build_run_plan(csv_path, config)
+            paths = write_reports(plan, Path(temp) / "reports", config)
+            report = paths["manager_report"].read_text(encoding="utf-8")
+
+        self.assertEqual(plan.stats["suppressed_completed_fixversion_rollups"], 0)
+        self.assertIn("CompletedFixVersionMissingResolvedDate", {item.category for item in plan.audit_items})
+        self.assertIn("Release Missing", report)
+        self.assertIn("Missing resolved epic", report)
+
     def test_fixversion_policy_can_split_multi_fixversion_epics(self) -> None:
         csv_text = "\n".join(
             [
@@ -400,6 +483,17 @@ class J2PPlanningTests(unittest.TestCase):
                 {
                     "warning_suppression": {
                         "severities": ["Concern"],
+                    }
+                },
+            )
+
+    def test_fixversion_completion_suppression_rejects_invalid_stale_days(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "stale_after_days"):
+            load_config(
+                None,
+                {
+                    "fixversion_completion_suppression": {
+                        "stale_after_days": 0,
                     }
                 },
             )

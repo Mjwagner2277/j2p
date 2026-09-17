@@ -76,6 +76,8 @@ columns:
     - Status
   resolution:
     - Resolution
+  resolved:
+    - Resolved
   target_start:
     - Target start
   target_end:
@@ -109,6 +111,12 @@ warning_suppression:
     - Warning
     - Review
   keep_summary: true
+
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+  as_of_date: ""
+  keep_audit_summary: true
 
 project_fields:
   jira_key: Text1
@@ -147,6 +155,7 @@ project_fields:
 | `behavior` | No | Built-in defaults | Mapping | Operational guardrails. |
 | `metrics` | No | Built-in defaults | Mapping | Controls conversion rates such as hours per story point. |
 | `warning_suppression` | No | Disabled | Mapping | Suppresses selected report/audit warnings for dated historical Jira issues before a cutoff. |
+| `fixversion_completion_suppression` | No | Enabled when `Resolved` is present | Mapping | Hides stale completed fixVersion rollups from HTML manager reports. |
 | `review_table` | No | Built-in defaults | `all` or list of exposed columns | Controls which columns are shown in the Microsoft Project `j2p Review` table. |
 | `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
@@ -292,6 +301,7 @@ columns:
 | `logged_hours` | Optional | Story/task/bug/sub-task rows | Hours summed to epic rows and summary rollups. Unparsed nonblank values are reported and counted as zero. |
 | `status` | Required for percent complete | Epic and child rows | Determines done/in-progress status. |
 | `resolution` | No | All rows | Captured for traceability and future workflow decisions. |
+| `resolved` | Optional | All rows with fixVersion | Jira completion date used by `fixversion_completion_suppression`. The default mapped CSV header is `Resolved`. |
 | `target_start` | Recommended | Epic rows | Jira target start date. |
 | `target_end` | Recommended | Epic rows | Jira target end date and schedule review. |
 | `warning_suppression_date` | Optional | All rows | Date used only when included in `warning_suppression.date_fields`. Common mappings are `Created`, `Resolved`, `Resolution date`, or a custom governance date. |
@@ -428,6 +438,40 @@ python -m j2p validate `
   --config .\config.yaml `
   --suppress-warnings-before 2025-01-01
 ```
+
+## `fixversion_completion_suppression`
+
+Hides stale completed fixVersion rollups from the HTML manager reports without requiring a separate Jira release metadata file.
+
+Default:
+
+```yaml
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+  as_of_date: ""
+  keep_audit_summary: true
+```
+
+j2p activates this rule only when the Jira CSV contains a mapped `resolved` column, which defaults to the CSV header `Resolved`.
+
+How j2p decides a fixVersion is stale and complete:
+
+- The rollup must be a fixVersion rollup.
+- Every Jira issue in the CSV that declares that fixVersion must have a status in `done_statuses`.
+- Every issue in that completed fixVersion group must have a usable `Resolved` date.
+- j2p uses the latest `Resolved` date across the group as the fixVersion's last completion date.
+- If the latest completion date is older than `stale_after_days`, the fixVersion rollup is hidden from HTML manager reports.
+- The Project sandbox and detailed CSV outputs remain complete; this rule only prunes manager-facing HTML views.
+
+If a fixVersion is complete by status but one or more issues are missing `Resolved`, j2p keeps it visible and reports `CompletedFixVersionMissingResolvedDate`.
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `enabled` | `true` | Enables manager-report hiding for stale completed fixVersion rollups when the `Resolved` column is present. |
+| `stale_after_days` | `90` | Number of days after the latest issue `Resolved` date before a completed fixVersion is hidden. |
+| `as_of_date` | `""` | Optional run date override for repeatable audits and tests. Blank means today's date. |
+| `keep_audit_summary` | `true` | Adds a non-action audit detail row for each hidden completed fixVersion in CSV outputs. |
 
 ## `review_table`
 

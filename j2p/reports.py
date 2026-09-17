@@ -368,6 +368,88 @@ def resource_group_run_plan(plan: RunPlan, config: Dict[str, Any], resource_grou
     )
 
 
+def completed_fixversion_report_plan(plan: RunPlan) -> RunPlan:
+    suppressed_ids = set(plan.stats.get("suppressed_completed_fixversion_summary_ids", []))
+    suppressed_ids &= set(plan.summaries)
+    if not suppressed_ids:
+        return plan
+
+    epics = {
+        key: epic
+        for key, epic in plan.epics.items()
+        if summary_id(epic.rollup_mode, epic.rollup_key) not in suppressed_ids
+    }
+    summaries = {
+        key: summary
+        for key, summary in plan.summaries.items()
+        if key not in suppressed_ids
+    }
+    audit_items = [
+        item
+        for item in plan.audit_items
+        if item.severity == "Error"
+        or not audit_item_matches_suppressed_fixversion(plan, item, suppressed_ids)
+    ]
+
+    driving_epics = [epic for epic in epics.values() if epic.drives_schedule]
+    completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
+    completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
+    hidden_epic_rows = len(plan.epics) - len(epics)
+    stats = dict(plan.stats)
+    stats.update(
+        {
+            "epics_included": len({epic.jira_key or epic.key for epic in epics.values()}),
+            "planned_epic_rows": len(epics),
+            "summary_rows": len(summaries),
+            "audit_items": len(audit_items),
+            "project_keys": sorted({epic.key_prefix for epic in epics.values() if epic.key_prefix}),
+            "logged_hours": round(sum(epic.logged_hours for epic in driving_epics), 2),
+            "completed_logged_hours": completed_logged_hours,
+            "story_point_ratio": calculate_story_point_ratio(
+                completed_logged_hours,
+                completed_points,
+                float(plan.stats.get("hours_per_story_point", 8.0)),
+            ),
+            "suppressed_completed_fixversion_summary_ids": sorted(suppressed_ids),
+            "suppressed_completed_fixversion_rollups": len(suppressed_ids),
+            "suppressed_completed_fixversion_epic_rows": hidden_epic_rows,
+            "multi_fixversion_epics": len(
+                {
+                    epic.jira_key or epic.key
+                    for epic in epics.values()
+                    if epic.row_role in {"Primary", "Reference", "Split"}
+                }
+            ),
+        }
+    )
+    return RunPlan(
+        generated_at=plan.generated_at,
+        jira_csv=plan.jira_csv,
+        rollup_mode=plan.rollup_mode,
+        column_map=plan.column_map,
+        stats=stats,
+        summaries=summaries,
+        epics=epics,
+        audit_items=audit_items,
+    )
+
+
+def audit_item_matches_suppressed_fixversion(
+    plan: RunPlan,
+    item: AuditItem,
+    suppressed_ids: set[str],
+) -> bool:
+    if item.category == "SuppressedCompletedFixVersion":
+        return True
+    if item.schedule_key in suppressed_ids:
+        return True
+    for key in (item.schedule_key, item.jira_key):
+        epic = epic_for_key(plan, key)
+        if epic and summary_id(epic.rollup_mode, epic.rollup_key) in suppressed_ids:
+            return True
+    return False
+
+
 def audit_item_resource_group(plan: RunPlan, item: AuditItem) -> str:
     for key in (item.schedule_key, item.jira_key):
         epic = epic_for_key(plan, key)
@@ -539,6 +621,8 @@ def write_manager_html(
     cascade_root_resource_group: Optional[str] = None,
     by_project_key_path: Optional[Path] = None,
 ) -> None:
+    plan = completed_fixversion_report_plan(plan)
+    cascade_display_plan = completed_fixversion_report_plan(cascade_plan or plan)
     action_needed = [
         item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}
     ]
@@ -580,7 +664,7 @@ def write_manager_html(
         ),
     ]
     cascade_section = render_schedule_cascade_review(
-        cascade_plan or plan,
+        cascade_display_plan,
         project_update_run=sandbox_path is not None,
         root_resource_group=cascade_root_resource_group,
     )
@@ -936,6 +1020,15 @@ def decision_briefing(plan: RunPlan) -> str:
                 "Historical Items Suppressed",
                 suppressed_count,
                 "Before configured warning cutoff",
+            )
+        )
+    hidden_fixversion_count = int(plan.stats.get("suppressed_completed_fixversion_rollups", 0) or 0)
+    if hidden_fixversion_count:
+        metrics.append(
+            (
+                "Completed FixVersions Hidden",
+                hidden_fixversion_count,
+                f"{plan.stats.get('suppressed_completed_fixversion_epic_rows', 0)} completed row(s) omitted",
             )
         )
     return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{render_metric_cards(metrics)}</div></section>"
@@ -1383,6 +1476,8 @@ def render_report_context(
         ["Summary Rollup Rows", plan.stats.get("summary_rows", 0)],
         ["Project Keys", ", ".join(plan.stats.get("project_keys", []))],
         ["Multi-FixVersion Epics", plan.stats.get("multi_fixversion_epics", 0)],
+        ["Completed FixVersions Hidden", plan.stats.get("suppressed_completed_fixversion_rollups", 0)],
+        ["Completed FixVersion Rows Hidden", plan.stats.get("suppressed_completed_fixversion_epic_rows", 0)],
     ]
     return render_collapsible(
         "Report Context",
