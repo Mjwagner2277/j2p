@@ -1,30 +1,33 @@
 # Large Jira CSV Export For j2p
 
-This guide explains how to create a j2p-ready Jira CSV when the project is larger than the Jira issue navigator export limit. It is intended for Jira Data Center or Jira Server style deployments, which are the locally hosted enterprise versions of Jira.
+This guide explains how to create a j2p-ready Jira CSV when the Jira result set is larger than the browser export limit. It is written for non-technical users working in Jira Data Center or Jira Server, the locally hosted enterprise versions of Jira.
 
-## Recommended Approach
+The preferred workflow is browser-based Jira export in several smaller batches. It is slower than an API export, but it is easier to teach, easier to repeat, and does not require users to know REST APIs, custom field IDs, service accounts, or scripts.
 
-For large projects, use the Jira REST API with pagination instead of the browser CSV export.
+## What You Are Trying To Produce
 
-Why:
+At the end of this process, you should have one consolidated CSV file:
 
-- Jira issue navigator CSV exports are commonly capped or slowed down by instance settings.
-- Browser exports can time out or produce very large files that are hard to verify.
-- REST pagination lets you pull all matching issues in controlled batches.
-- You can select only the fields j2p needs instead of exporting every Jira field.
-- You can check row counts and duplicate Jira keys before handing the file to j2p.
+```text
+jira-project-wide-export.csv
+```
 
-Use the browser export only for smaller filters or as a quick spot-check.
+That file should contain the full project-wide issue set needed by j2p:
 
-## What j2p Needs From Jira
+- initiatives, when your teams roll epics up to initiatives
+- epics
+- child stories/tasks/bugs used for percent complete and hours calculations
+- completed issues, when they are needed for completion math or stale fixVersion decisions
 
-The CSV must include the project-wide issue set, not just epics.
+Do not export only changed issues. j2p needs the full current project picture.
 
-j2p includes only initiative/fixVersion rollups and epics in the Project schedule, but it uses child story/task rows to calculate percent complete, logged hours, and Story Point Ratio.
+## Fields To Include
 
-At minimum, export these fields or their configured equivalents:
+Before exporting, configure the Jira issue navigator columns so they include the fields j2p needs. Prefer `CSV (Current fields)` or the equivalent option in your Jira instance. Avoid `CSV (All fields)` unless a Jira admin tells you to use it.
 
-| j2p Need | Typical Jira Field |
+At minimum, include these columns or your configured equivalents:
+
+| j2p Need | Typical Jira Column |
 | --- | --- |
 | Stable issue key | `Issue key` |
 | Jira internal issue id | `Issue id` |
@@ -42,11 +45,31 @@ At minimum, export these fields or their configured equivalents:
 
 Use the exact column names from your YAML config when they differ from these examples.
 
-## Step 1: Build A Stable JQL Query
+## Browser Workflow Overview
 
-Start with the same logical scope every sprint. Do not export only changed issues.
+For large projects, the browser workflow is:
 
-Example for an initiative-based project:
+1. Create one master Jira search.
+2. Confirm the total issue count.
+3. Split the search into smaller non-overlapping batches.
+4. Export each batch as CSV using the same columns.
+5. Combine the batch CSVs into one CSV.
+6. Check total row count and duplicate Jira keys.
+7. Run `j2p validate`.
+
+The most important rule is that every issue must appear in exactly one batch.
+
+## Step 1: Create The Master Jira Search
+
+In Jira:
+
+1. Go to the issue search page or issue navigator.
+2. Switch to advanced/JQL search if available.
+3. Enter the full project query.
+4. Add the columns listed in `Fields To Include`.
+5. Save the filter if your organization allows it.
+
+Example initiative-based project query:
 
 ```jql
 project in (CORE, WEB, DATA, PLAT, OPS)
@@ -54,7 +77,7 @@ AND issuetype in (Initiative, Epic, Story, Task, Bug)
 ORDER BY key ASC
 ```
 
-Example for a fixVersion-based program:
+Example fixVersion-based project query:
 
 ```jql
 project in (CORE, WEB, DATA, PLAT, OPS)
@@ -63,175 +86,159 @@ AND fixVersion is not EMPTY
 ORDER BY key ASC
 ```
 
-Recommended rules:
+Record the total result count shown by Jira. You will use it later to confirm that the batches add back up to the same number.
 
-- Include epics and their child stories/tasks.
-- Include initiatives if your teams roll epics up to initiatives.
-- Include fixVersions if your teams roll epics up to fixVersions.
-- Include done and historical issues if they are still needed for completion or stale release logic.
-- Keep `ORDER BY key ASC` so batches are deterministic.
+## Step 2: Choose A Batch Strategy
 
-## Step 2: Identify Jira Field IDs
+If the master search is over the export limit, split it into batches. Use a field that will not overlap.
 
-Jira REST API results use field IDs for custom fields, such as `customfield_10016`.
+Recommended split options:
 
-Ask a Jira admin for the field IDs, or query Jira:
+| Split Method | Best When | Notes |
+| --- | --- | --- |
+| By Jira project key | Work is naturally separated by teams or products. | Easiest to understand. Works well when each project key is under the limit. |
+| By created date range | One project key still has too many issues. | Most reliable date-based split because `created` does not change. |
+| By issue type | Initiatives/epics/stories are large but uneven groups. | Useful as a second split, not always enough by itself. |
+| By fixVersion | fixVersion teams already organize work by release. | Watch for epics with multiple fixVersions. |
 
-```powershell
-$baseUrl = "https://jira.example.com"
-$credential = Get-Credential
+Avoid splitting by status if possible. Status changes over time and makes repeatability harder.
 
-Invoke-RestMethod `
-  -Uri "$baseUrl/rest/api/2/field" `
-  -Credential $credential `
-  -Headers @{ Accept = "application/json" } |
-  Select-Object id, name |
-  Sort-Object name
-```
+## Step 3: Export Batches By Project Key
 
-Record the IDs for fields such as Story Points, Epic Link, Target start, Target end, and any logged-hours field your Jira instance exposes.
+Use this first if each Jira key prefix is under the export limit.
 
-## Step 3: Export With REST Pagination
+Batch 1:
 
-This PowerShell example writes one consolidated CSV. It uses Jira REST API pagination with `startAt` and `maxResults`.
-
-Update the field IDs before running.
-
-```powershell
-$baseUrl = "https://jira.example.com"
-$credential = Get-Credential
-$outFile = ".\jira-project-wide-export.csv"
-
-$jql = @"
-project in (CORE, WEB, DATA, PLAT, OPS)
+```jql
+project = CORE
 AND issuetype in (Initiative, Epic, Story, Task, Bug)
 ORDER BY key ASC
-"@
-
-$fields = @(
-  "key",
-  "id",
-  "issuetype",
-  "summary",
-  "status",
-  "resolution",
-  "resolutiondate",
-  "fixVersions",
-  "parent",
-  "issuelinks",
-  "customfield_10008", # Epic Link example
-  "customfield_10016", # Story Points example
-  "customfield_12345", # Target start example
-  "customfield_12346", # Target end example
-  "customfield_12347"  # Logged hours example, if applicable
-)
-
-$batchSize = 500
-$startAt = 0
-$allRows = New-Object System.Collections.Generic.List[object]
-
-do {
-  $body = @{
-    jql = $jql
-    startAt = $startAt
-    maxResults = $batchSize
-    fields = $fields
-  } | ConvertTo-Json -Depth 10
-
-  Write-Host "Reading Jira issues starting at $startAt..."
-
-  $response = Invoke-RestMethod `
-    -Method Post `
-    -Uri "$baseUrl/rest/api/2/search" `
-    -Credential $credential `
-    -ContentType "application/json" `
-    -Headers @{ Accept = "application/json" } `
-    -Body $body
-
-  foreach ($issue in $response.issues) {
-    $f = $issue.fields
-
-    $blocks = @()
-    $blockedBy = @()
-    foreach ($link in @($f.issuelinks)) {
-      if ($link.type.name -eq "Blocks" -and $link.outwardIssue) {
-        $blocks += $link.outwardIssue.key
-      }
-      if ($link.type.name -eq "Blocks" -and $link.inwardIssue) {
-        $blockedBy += $link.inwardIssue.key
-      }
-    }
-
-    $allRows.Add([pscustomobject]@{
-      "Issue key" = $issue.key
-      "Issue id" = $issue.id
-      "Issue Type" = $f.issuetype.name
-      "Summary" = $f.summary
-      "Epic Link" = $f.customfield_10008
-      "Parent" = $f.parent.key
-      "Fix versions" = (@($f.fixVersions) | ForEach-Object { $_.name }) -join "; "
-      "Story Points" = $f.customfield_10016
-      "Logged Hours" = $f.customfield_12347
-      "Status" = $f.status.name
-      "Resolution" = if ($f.resolution) { $f.resolution.name } else { "" }
-      "Resolved" = $f.resolutiondate
-      "Target start" = $f.customfield_12345
-      "Target end" = $f.customfield_12346
-      "Outward issue link (Blocks)" = $blocks -join "; "
-      "Inward issue link (Blocks)" = $blockedBy -join "; "
-    })
-  }
-
-  $startAt += $response.maxResults
-} while ($startAt -lt $response.total)
-
-$allRows |
-  Sort-Object "Issue key" |
-  Export-Csv -Path $outFile -NoTypeInformation -Encoding UTF8
-
-Write-Host "Wrote $($allRows.Count) rows to $outFile"
 ```
 
-Use a batch size your Jira admins are comfortable with. `500` is a conservative starting point. If your instance handles it well, you can raise it. If Jira is slow or returns errors, lower it.
+Batch 2:
 
-## Step 4: Validate The CSV Before j2p
-
-Check total rows:
-
-```powershell
-$rows = Import-Csv .\jira-project-wide-export.csv
-$rows.Count
+```jql
+project = WEB
+AND issuetype in (Initiative, Epic, Story, Task, Bug)
+ORDER BY key ASC
 ```
 
-Check duplicate Jira keys:
+Batch 3:
 
-```powershell
-$rows |
-  Group-Object "Issue key" |
-  Where-Object Count -gt 1 |
-  Select-Object Name, Count
+```jql
+project = DATA
+AND issuetype in (Initiative, Epic, Story, Task, Bug)
+ORDER BY key ASC
 ```
 
-Check issue type coverage:
+For each batch:
 
-```powershell
-$rows |
-  Group-Object "Issue Type" |
-  Sort-Object Count -Descending |
-  Select-Object Name, Count
+1. Run the JQL.
+2. Confirm the result count is under your Jira export limit.
+3. Confirm the visible columns are the j2p-required columns.
+4. Export `CSV (Current fields)` or your instance's equivalent current-fields CSV option.
+5. Save the file with a clear name, such as:
+
+```text
+batch-01-CORE.csv
+batch-02-WEB.csv
+batch-03-DATA.csv
 ```
 
-Check missing rollup fields on epics:
+After exporting all batches, add the result counts together. The sum should equal the master search count.
 
-```powershell
-$rows |
-  Where-Object { $_."Issue Type" -eq "Epic" -and -not $_."Parent" -and -not $_."Fix versions" } |
-  Select-Object "Issue key", Summary, Status
+## Step 4: Split Large Project Keys By Created Date
+
+If a single project key still has too many issues, split that project by created date.
+
+Example for `CORE`:
+
+```jql
+project = CORE
+AND issuetype in (Initiative, Epic, Story, Task, Bug)
+AND created < "2024-01-01"
+ORDER BY key ASC
 ```
 
-The duplicate check should return no rows. The issue type count should include epics and the child issue types used for completion math.
+```jql
+project = CORE
+AND issuetype in (Initiative, Epic, Story, Task, Bug)
+AND created >= "2024-01-01"
+AND created < "2025-01-01"
+ORDER BY key ASC
+```
 
-## Step 5: Run j2p Validate
+```jql
+project = CORE
+AND issuetype in (Initiative, Epic, Story, Task, Bug)
+AND created >= "2025-01-01"
+ORDER BY key ASC
+```
+
+Use half-open ranges:
+
+```text
+created >= start date
+created < next start date
+```
+
+This avoids overlap on boundary dates.
+
+If a date range is still too large, split it into smaller ranges such as quarters or months.
+
+## Step 5: Export The Same Columns Every Time
+
+Every batch must use the same columns in the same order.
+
+Before each export:
+
+1. Confirm the Jira issue navigator columns have not changed.
+2. Export current fields, not all fields.
+3. Save the CSV without editing it.
+
+Do not mix export types. For example, do not export some batches as current fields and others as all fields.
+
+## Step 6: Combine Batch CSVs
+
+Use a spreadsheet tool such as Excel when the files are reasonably sized.
+
+Simple Excel method:
+
+1. Open the first batch CSV.
+2. Save it as the combined file, such as `jira-project-wide-export.csv`.
+3. Open the second batch CSV.
+4. Copy all data rows except the header row.
+5. Paste those rows at the bottom of the combined file.
+6. Repeat for each batch.
+7. Save the combined file as CSV UTF-8 if Excel offers that option.
+
+Important:
+
+- Keep only one header row.
+- Do not change column names.
+- Do not reorder columns after combining.
+- Do not remove child story/task rows.
+- Do not remove completed rows unless the j2p owner confirms they are not needed.
+
+If Excel struggles with the file size, ask a Jira admin or technical teammate to combine the files using Power Query, PowerShell, or another approved tool.
+
+## Step 7: Check The Combined CSV
+
+Open the combined CSV in Excel and check:
+
+| Check | How |
+| --- | --- |
+| Total row count | The row count excluding the header should equal the sum of all batch counts. |
+| Duplicate keys | Sort or filter by `Issue key` and look for duplicates. |
+| Missing header rows | Search for repeated `Issue key` values that appear as a row, which usually means a copied header was pasted into the middle. |
+| Issue type coverage | Filter `Issue Type` and confirm epics plus child story/task types are present. |
+| Rollup coverage | Filter epics with blank `Parent` and blank `Fix versions`; these may be excluded by j2p. |
+
+If duplicate keys exist, do not run j2p yet. Find the overlapping batches and fix the JQL split.
+
+## Step 8: Run j2p Validate
+
+For a normal sprint review:
 
 ```powershell
 py -3.14 -m j2p validate `
@@ -243,7 +250,7 @@ py -3.14 -m j2p validate `
   --compare-state
 ```
 
-If this is the first accepted baseline export, use `--write-state` instead of `--compare-state`:
+For the first accepted baseline export:
 
 ```powershell
 py -3.14 -m j2p validate `
@@ -255,57 +262,59 @@ py -3.14 -m j2p validate `
   --write-state
 ```
 
-## Browser Export Fallback
+Then open:
 
-Use the Jira issue navigator export only when the result set is under your instance limit.
-
-Recommended browser-export rules:
-
-- Export current fields, not all fields.
-- Add only the columns j2p needs.
-- Split large exports into non-overlapping batches.
-- Use stable split criteria such as `created` ranges or project key.
-- Keep each batch below the instance export limit.
-- Confirm that the sum of batch counts equals the original full-query count.
-- Merge the CSV files carefully and keep only one header row.
-
-Example split by created date:
-
-```jql
-project in (CORE, WEB, DATA, PLAT, OPS)
-AND created >= "2026-01-01"
-AND created < "2026-04-01"
-ORDER BY key ASC
+```text
+review-output\Customer-Portal-Program\sprints\Sprint-24.10\runs\<run-folder>\reports\html\Manager-Review-Report.html
 ```
 
-```jql
-project in (CORE, WEB, DATA, PLAT, OPS)
-AND created >= "2026-04-01"
-AND created < "2026-07-01"
-ORDER BY key ASC
-```
+## Batch Tracking Template
 
-Do not mix UI export batches with REST API batches for the same export. Use one method for the entire file so it is easier to reason about missing or duplicate rows.
+Use this table while exporting:
 
-## When To Ask A Jira Admin
+| Batch File | JQL Split | Jira Count | Exported? | Notes |
+| --- | --- | ---: | --- | --- |
+| `batch-01-CORE.csv` | `project = CORE` |  |  |  |
+| `batch-02-WEB.csv` | `project = WEB` |  |  |  |
+| `batch-03-DATA-2024.csv` | `project = DATA AND created >= "2024-01-01" AND created < "2025-01-01"` |  |  |  |
+| Total | Must equal master search count |  |  |  |
 
-Ask a Jira admin for help when:
+Keep this tracking table with the exported files so reviewers can confirm how the full CSV was built.
 
-- You do not know the custom field IDs.
-- The REST API denies access.
-- Jira caps `maxResults` lower than expected.
-- Worklog/logged-hours data is not available in the search result.
-- Exporting thousands of issues slows the Jira node.
-- You need service-account authentication instead of personal credentials.
+## When To Ask For Help
 
-For very large or recurring enterprise exports, a service account plus REST pagination is usually the cleanest operational model.
+Ask a Jira admin or technical teammate for help when:
+
+- A batch cannot be made small enough for browser export.
+- Excel cannot open or save the combined CSV.
+- The export options do not include current-fields CSV.
+- Required fields are not available as issue navigator columns.
+- Logged hours/worklog data is not available in the browser export.
+- The duplicate key check finds duplicates and the overlap is not obvious.
+- The combined row count does not match the expected total.
+
+## Admin/Advanced Fallback: REST API Pagination
+
+For very large or recurring enterprise exports, a Jira admin may prefer REST API pagination. This is more reliable and easier to automate, but it is not the preferred workflow for non-technical users.
+
+The Jira REST API search endpoint supports paginated JQL search with `startAt`, `maxResults`, and selected `fields`.
+
+Admin users can:
+
+1. Query `/rest/api/2/search`.
+2. Select only the fields j2p needs.
+3. Page through results with `startAt`.
+4. Write one consolidated UTF-8 CSV.
+5. Run duplicate and row-count checks.
+
+Use this path only when the browser workflow is too slow, too large, or blocked by Jira limits.
 
 ## Final Hand-Off Checklist
 
 Before giving the CSV to a schedule owner:
 
-- The CSV is UTF-8 encoded.
-- The row count matches the Jira query total.
+- The CSV is saved as UTF-8 when possible.
+- The row count matches the Jira master search total.
 - There are no duplicate `Issue key` values.
 - Epics are present.
 - Child stories/tasks are present.
