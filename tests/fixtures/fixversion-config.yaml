@@ -16,3 +16,8 @@ resource_groups:
 multi_fixversion_policy:
   default: reference
   DATA: split
+
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+  keep_audit_summary: true

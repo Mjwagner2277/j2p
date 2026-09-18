@@ -51,6 +51,8 @@ columns:
     - Status
   resolution:
     - Resolution
+  resolved:
+    - Resolved
   target_start:
     - Target start
   target_end:
@@ -67,6 +69,11 @@ behavior:
   unknown_prefix: exclude
   hide_completed_epics: true
   write_state_on_validate: false
+
+fixversion_completion_suppression:
+  enabled: true
+  stale_after_days: 90
+  keep_audit_summary: true
 
 project_fields:
   jira_key: Text1

@@ -89,6 +89,10 @@ warning_suppression:
     - Review
   keep_summary: true
 
+# Completed fixVersion rollups are hidden from manager HTML reports only when
+# every issue declaring that fixVersion is done, every issue has a usable
+# Resolved date, and the latest Resolved date is more than this many days old.
+# The hidden rollup is still retained in CSV audit output for traceability.
 fixversion_completion_suppression:
   enabled: true
   stale_after_days: 90
