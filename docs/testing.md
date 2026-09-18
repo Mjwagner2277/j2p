@@ -66,9 +66,19 @@ py -3.14 -m j2p validate `
   --run-id local-check
 ```
 
+## Reliability and scale checks
+
+The unit suite includes separate failure-injection tests for run publication,
+atomic state recovery, Project saves/dependencies/resources, strict input/config
+validation, profiles/support bundles, and bounded cascade rendering. These are
+included in the normal smoke command.
+
+Run the deterministic 5k/10k benchmark separately using
+`scripts/benchmark_large_exports.py`; see [performance.md](performance.md).
+
 ## Windows Microsoft Project Smoke Test
 
-The cross-platform smoke test does not open Microsoft Project. Before a release that changes `j2p/project.py`, also run this on a Windows machine with Microsoft Project desktop and `pywin32` installed:
+Run the repeatable [Windows acceptance harness](windows-acceptance.md) and retain its JSON results with the release. The cross-platform smoke test does not open Microsoft Project. Before a release that changes `j2p/project.py`, also run this on a Windows machine with Microsoft Project desktop and `pywin32` installed:
 
 ```powershell
 py -3.14 -m pip install -e ".[project]"

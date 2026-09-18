@@ -403,3 +403,11 @@ py -3.14 -m j2p update `
 | Can I rerun the same sprint? | Yes, with `--allow-existing-sprint`. |
 | Does j2p edit the source-of-truth `.mpp`? | No. It copies the source file into a sandbox and updates the sandbox. |
 | Can I use reports without Microsoft Project? | Yes. Use `validate`; it creates reports but does not create or update `.mpp` files. |
+
+## Failed runs and saved settings
+
+See [run operations](run-operations.md) for saved project profiles, `doctor`,
+expected export counts, atomic state publication, and support bundles. A failed
+run retains its diagnostics but does not advance root state or reserve a new
+sprint. Retry with a new run ID. An existing successful sprint still needs
+`--allow-existing-sprint`; this never permits overwriting an existing run ID.

@@ -1,9 +1,7 @@
 """Configuration loading for j2p.
 
-The project intentionally avoids a hard dependency on PyYAML. If PyYAML is
-installed, it is used. Otherwise a small YAML subset parser supports the
-configuration patterns used by this repository: nested maps, scalar values,
-and string lists.
+The same restricted YAML reader is used on every installation: nested maps,
+scalar values and string lists. Unsupported YAML features fail explicitly.
 """
 
 from __future__ import annotations
@@ -13,6 +11,8 @@ import math
 import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+
+from .yaml_subset import YamlSubsetError, parse_yaml
 
 
 DEFAULT_CONFIG: Dict[str, Any] = {
@@ -68,6 +68,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     },
     "metrics": {
         "hours_per_story_point": 8.0,
+        "logged_hours_unit": "hours",
+        "logged_hours_units": {},
+        "logged_hours_source": "direct",
+    },
+    "input": {
+        "csv_max_field_chars": 8 * 1024 * 1024,
     },
     "warning_suppression": {
         "before": "",
@@ -182,16 +188,124 @@ def load_config(path: Optional[Path], overrides: Optional[Dict[str, Any]] = None
 
 
 def read_yaml_file(path: Path) -> Dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
     try:
-        import yaml  # type: ignore
-    except ImportError:
-        return parse_yaml_subset(text)
-    data = yaml.safe_load(text)
-    return data or {}
+        return parse_yaml_subset(path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeError, ConfigError) as exc:
+        raise ConfigError(f"Could not read config {path}: {exc}") from exc
+
+
+def validate_config_shape(config: Dict[str, Any]) -> None:
+    """Validate before normalization so coercion cannot conceal invalid settings."""
+    if not isinstance(config, dict):
+        raise ConfigError("Config must be a mapping.")
+    if "rollup_mode" in config:
+        raise ConfigError("Top-level rollup_mode is no longer supported. Use rollup_modes per prefix.")
+    if isinstance(config.get("behavior"), dict) and "multiple_fix_versions" in config["behavior"]:
+        raise ConfigError("behavior.multiple_fix_versions is no longer supported. Use multi_fixversion_policy.")
+    unknown = set(config) - set(DEFAULT_CONFIG)
+    if unknown:
+        raise ConfigError(f"Unknown config setting(s): {', '.join(sorted(map(str, unknown)))}.")
+
+    def strings(value: Any, path: str, allow_empty: bool = False) -> None:
+        values = value if isinstance(value, list) else [value]
+        if not values and not allow_empty:
+            raise ConfigError(f"{path} must contain at least one string.")
+        if any(not isinstance(item, str) or not item.strip() for item in values):
+            raise ConfigError(f"{path} must be a string or a list of nonempty strings.")
+
+    dynamic = {"resource_groups", "rollup_modes", "multi_fixversion_policy"}
+    string_maps = {"project_fields", "project_field_names", "colors", *dynamic}
+    boolean_keys = {
+        "behavior": {"hide_completed_epics", "write_state_on_validate"},
+        "warning_suppression": {"keep_summary"},
+        "fixversion_completion_suppression": {"enabled", "keep_audit_summary"},
+        "planning_horizon": {"enabled"},
+        "review_table": {"include_audit_columns"},
+    }
+    integer_keys = {
+        "input": {"csv_max_field_chars"},
+        "fixversion_completion_suppression": {"stale_after_days"},
+        "planning_horizon": {"immediate_months", "bucket_months"},
+    }
+    for section, value in config.items():
+        if section == "done_statuses":
+            strings(value, section)
+            continue
+        if section == "multi_fixversion_policy" and isinstance(value, str):
+            continue
+        if not isinstance(value, dict):
+            raise ConfigError(f"{section} must be a mapping.")
+        if section not in dynamic:
+            unknown_keys = set(value) - set(DEFAULT_CONFIG[section])
+            if unknown_keys:
+                raise ConfigError(f"Unknown {section} setting(s): {', '.join(sorted(map(str, unknown_keys)))}.")
+        for key, item in value.items():
+            path = f"{section}.{key}"
+            if not isinstance(key, str) or not key.strip():
+                raise ConfigError(f"{section} keys must be nonempty strings.")
+            if section in {"columns", "issue_types"}:
+                strings(item, path, allow_empty=section == "columns")
+            elif section in string_maps:
+                if not isinstance(item, str) or not item.strip():
+                    raise ConfigError(f"{path} must be a nonempty string.")
+            elif key in boolean_keys.get(section, set()):
+                if type(item) is not bool:
+                    raise ConfigError(f"{path} must be true or false, without quotes.")
+            elif key in integer_keys.get(section, set()):
+                if type(item) is not int or item <= 0:
+                    raise ConfigError(f"{path} must be a positive integer.")
+            elif section == "metrics" and key == "hours_per_story_point":
+                if isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(item) or item <= 0:
+                    raise ConfigError(f"{path} must be a finite positive number.")
+            elif section == "metrics" and key == "logged_hours_units":
+                if not isinstance(item, dict) or any(
+                    not isinstance(header, str) or not header.strip() or unit not in ("hours", "minutes", "seconds")
+                    for header, unit in item.items()
+                ):
+                    raise ConfigError(f"{path} must map column headers to hours, minutes or seconds.")
+                normalized_headers = [re.sub(r"\s+", " ", header.strip()).casefold() for header in item]
+                if len(normalized_headers) != len(set(normalized_headers)):
+                    raise ConfigError(f"{path} contains duplicate column headers after normalization.")
+            elif section == "warning_suppression" and key in {"date_fields", "severities"}:
+                strings(item, path)
+            elif section == "review_table" and key == "exposed_columns":
+                strings(item, path, allow_empty=True)
+            elif not isinstance(item, str):
+                raise ConfigError(f"{path} must be a string.")
+    if config["behavior"]["unknown_prefix"] != "exclude":
+        raise ConfigError("behavior.unknown_prefix only supports 'exclude'.")
+    metrics = config["metrics"]
+    if metrics["logged_hours_unit"] not in {"hours", "minutes", "seconds"}:
+        raise ConfigError("metrics.logged_hours_unit must be hours, minutes or seconds.")
+    if metrics["logged_hours_source"] not in {"direct", "aggregate"}:
+        raise ConfigError("metrics.logged_hours_source must be direct or aggregate.")
+    if config["input"]["csv_max_field_chars"] > 64 * 1024 * 1024:
+        raise ConfigError("input.csv_max_field_chars must be at most 67108864 (64 MiB characters).")
+    for key, color in config["colors"].items():
+        if not re.fullmatch(r"#[0-9A-Fa-f]{6}", color):
+            raise ConfigError(f"colors.{key} must be a six-digit hex color, for example '#C6EFCE'.")
+    from .jira import parse_date
+    for section, key in (
+        ("warning_suppression", "before"),
+        ("fixversion_completion_suppression", "as_of_date"),
+        ("planning_horizon", "as_of_date"),
+    ):
+        value = config[section][key]
+        if value:
+            date_audit = []
+            parse_date(value, date_audit, "CONFIG", 0)
+            if date_audit:
+                raise ConfigError(f"{section}.{key} must be a valid date; use YYYY-MM-DD.")
+    for section in ("resource_groups", "rollup_modes", "multi_fixversion_policy"):
+        value = config[section]
+        if isinstance(value, dict):
+            keys = [key.strip().upper() for key in value]
+            if len(keys) != len(set(keys)):
+                raise ConfigError(f"{section} contains duplicate prefixes after normalization.")
 
 
 def normalize_config(config: Dict[str, Any]) -> None:
+    validate_config_shape(config)
     fields = config.get("project_fields")
     if not isinstance(fields, dict):
         raise ConfigError("project_fields must be a mapping.")
@@ -224,7 +338,7 @@ def normalize_config(config: Dict[str, Any]) -> None:
 
     config["done_statuses"] = [str(v) for v in ensure_list(config.get("done_statuses", []))]
     config["resource_groups"] = {
-        str(k).upper(): str(v) for k, v in config.get("resource_groups", {}).items()
+        str(k).strip().upper(): str(v).strip() for k, v in config.get("resource_groups", {}).items()
     }
 
     raw_rollup_modes = config.get("rollup_modes", {})
@@ -294,6 +408,10 @@ def normalize_config(config: Dict[str, Any]) -> None:
     if not math.isfinite(hours_per_story_point) or hours_per_story_point <= 0:
         raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
     metrics["hours_per_story_point"] = hours_per_story_point
+    metrics["logged_hours_units"] = {
+        re.sub(r"\s+", " ", header.strip()).casefold(): unit
+        for header, unit in metrics["logged_hours_units"].items()
+    }
     config["metrics"] = metrics
 
     warning_suppression = config.get("warning_suppression", {})
@@ -414,113 +532,10 @@ def deep_merge(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
 
 
 def parse_yaml_subset(text: str) -> Dict[str, Any]:
-    lines = _clean_yaml_lines(text)
-    if not lines:
-        return {}
-    parsed, index = _parse_block(lines, 0, lines[0][1])
-    if index != len(lines):
-        line_number = lines[index][0]
-        raise ConfigError(f"Could not parse YAML near line {line_number}.")
-    if not isinstance(parsed, dict):
-        raise ConfigError("Top-level YAML value must be a mapping.")
-    return parsed
-
-
-def _clean_yaml_lines(text: str) -> List[tuple[int, int, str]]:
-    cleaned: List[tuple[int, int, str]] = []
-    for line_number, raw in enumerate(text.splitlines(), start=1):
-        if "\t" in raw[: len(raw) - len(raw.lstrip())]:
-            raise ConfigError(f"Tabs are not supported for YAML indentation on line {line_number}.")
-        stripped = raw.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        raw = re.sub(r"\s+#.*$", "", raw).rstrip()
-        indent = len(raw) - len(raw.lstrip(" "))
-        cleaned.append((line_number, indent, raw.strip()))
-    return cleaned
-
-
-def _parse_block(
-    lines: List[tuple[int, int, str]], index: int, indent: int
-) -> tuple[Any, int]:
-    is_list = lines[index][2].startswith("- ")
-    if is_list:
-        values: List[Any] = []
-        while index < len(lines):
-            line_number, current_indent, text = lines[index]
-            if current_indent < indent:
-                break
-            if current_indent > indent:
-                raise ConfigError(f"Unexpected indentation on line {line_number}.")
-            if not text.startswith("- "):
-                break
-            item_text = text[2:].strip()
-            if item_text:
-                values.append(_parse_scalar(item_text))
-                index += 1
-            else:
-                if index + 1 >= len(lines) or lines[index + 1][1] <= current_indent:
-                    values.append(None)
-                    index += 1
-                else:
-                    child, index = _parse_block(lines, index + 1, lines[index + 1][1])
-                    values.append(child)
-        return values, index
-
-    mapping: Dict[str, Any] = {}
-    while index < len(lines):
-        line_number, current_indent, text = lines[index]
-        if current_indent < indent:
-            break
-        if current_indent > indent:
-            raise ConfigError(f"Unexpected indentation on line {line_number}.")
-        if ":" not in text:
-            raise ConfigError(f"Expected 'key: value' on line {line_number}.")
-        key, raw_value = text.split(":", 1)
-        key = key.strip()
-        raw_value = raw_value.strip()
-        if not key:
-            raise ConfigError(f"Empty key on line {line_number}.")
-        if raw_value:
-            mapping[key] = _parse_scalar(raw_value)
-            index += 1
-        else:
-            if index + 1 >= len(lines) or lines[index + 1][1] <= current_indent:
-                mapping[key] = {}
-                index += 1
-            else:
-                child, index = _parse_block(lines, index + 1, lines[index + 1][1])
-                mapping[key] = child
-    return mapping, index
-
-
-def _parse_scalar(value: str) -> Any:
-    value = value.strip()
-    if not value:
-        return ""
-    if value[0] in {"'", '"'} and value[-1:] == value[0]:
-        return value[1:-1]
-    lower = value.lower()
-    if lower in {"true", "false"}:
-        return lower == "true"
-    if lower in {"null", "none", "~"}:
-        return None
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return []
-        return [_parse_scalar(part.strip()) for part in inner.split(",")]
-    if re.fullmatch(r"-?\d+", value):
-        try:
-            return int(value)
-        except ValueError:
-            pass
-    if re.fullmatch(r"-?\d+\.\d+", value):
-        try:
-            return float(value)
-        except ValueError:
-            pass
-    return value
+    try:
+        return parse_yaml(text)
+    except YamlSubsetError as exc:
+        raise ConfigError(str(exc)) from exc
 
 
 def logical_columns(config: Dict[str, Any], name: str) -> List[str]:

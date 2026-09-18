@@ -6,8 +6,12 @@ command needs to open or write an MPP file.
 
 from __future__ import annotations
 
+import hashlib
+import math
 import os
+import re
 import shutil
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -106,6 +110,7 @@ def apply_plan_to_sandbox(
         session.apply_review_formatting(plan, config)
         project_progress("Saving sandbox MPP")
         session.save()
+        session.verify_saved_plan(plan, config)
         project_progress("Finished Project sandbox update")
     return plan.audit_items
 
@@ -136,6 +141,7 @@ def create_project_from_plan(
         session.apply_review_formatting(plan, config)
         project_progress("Saving initial sandbox MPP")
         session.save()
+        session.verify_saved_plan(plan, config)
         project_progress("Finished initial Project file creation")
     return plan.audit_items
 
@@ -162,6 +168,8 @@ class MicrosoftProjectSession:
         self.saved_successfully = False
         self.owns_app = False
         self.com_initialized = False
+        self.project_path: Optional[Path] = None
+        self.resource_assignment_warnings: List[str] = []
 
     def __enter__(self) -> "MicrosoftProjectSession":
         try:
@@ -169,15 +177,33 @@ class MicrosoftProjectSession:
             self.com_initialized = True
         except Exception:
             pass
-        self.app = self.create_application()
-        self.configure_application_window()
-        return self
+        try:
+            self.app = self.create_application()
+            self.previous_window_state = {
+                name: safe_get(self.app, name) for name in ("Visible", "DisplayAlerts")
+            }
+            self.configure_application_window()
+            return self
+        except Exception:
+            if self.com_initialized:
+                self.pythoncom.CoUninitialize()
+                self.com_initialized = False
+            raise
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         try:
             if self.project is not None:
-                self.close_project(save_changes=exc_type is None and self.saved_successfully)
+                try:
+                    self.close_project(save_changes=False)
+                except Exception as cleanup_error:
+                    if exc_type is None:
+                        raise
+                    project_progress(f"Project cleanup also failed: {cleanup_error}")
         finally:
+            if self.app is not None and not self.owns_app:
+                for name, value in getattr(self, "previous_window_state", {}).items():
+                    if value != "":
+                        safe_set(self.app, name, value)
             if self.app is not None and self.owns_app and not self.visible:
                 try:
                     self.app.Quit()
@@ -211,7 +237,8 @@ class MicrosoftProjectSession:
 
     def configure_application_window(self) -> None:
         try:
-            self.app.Visible = self.visible
+            if getattr(self, "owns_app", True) or self.visible:
+                self.app.Visible = self.visible
         except Exception:
             pass
         try:
@@ -224,14 +251,19 @@ class MicrosoftProjectSession:
         if not path.exists():
             raise ProjectAutomationError(f"Project file does not exist: {path}")
         try:
-            self.app.FileOpen(Name=str(path))
+            result = self.app.FileOpen(Name=str(path))
         except Exception:
-            self.app.FileOpen(str(path))
+            result = self.app.FileOpen(str(path))
+        require_project_command(result, "open sandbox")
         self.project = self.app.ActiveProject
+        self.project_path = path
+        self.saved_successfully = False
+        self.assert_project_identity()
         self.apply_gantt_chart_view()
         project_progress("Project file opened")
 
     def new(self) -> None:
+        self.project_path = None
         self.project = self.create_blank_project()
         if self.project is None:
             self.project = safe_get(self.app, "ActiveProject")
@@ -240,6 +272,7 @@ class MicrosoftProjectSession:
                 "Microsoft Project did not return an active blank project after creating a new file. "
                 f"{PROJECT_TASK_MANAGER_RESOLUTION}"
             )
+        self.unsaved_project_name = str(safe_get(self.project, "Name"))
         self.apply_gantt_chart_view()
         project_progress("Blank Project file ready")
 
@@ -254,6 +287,7 @@ class MicrosoftProjectSession:
             ):
                 try:
                     project = create_project()
+                    require_project_command(project, "create blank project")
                     return project or safe_get(self.app, "ActiveProject")
                 except Exception as exc:
                     errors.append(str(exc))
@@ -269,7 +303,7 @@ class MicrosoftProjectSession:
             lambda: self.app.FileNew(),
         ):
             try:
-                create_project()
+                require_project_command(create_project(), "create blank project")
                 project = safe_get(self.app, "ActiveProject")
                 if project:
                     return project
@@ -296,54 +330,173 @@ class MicrosoftProjectSession:
         except Exception:
             pass
 
+    def assert_project_identity(self, expected_path: Optional[Path] = None) -> None:
+        """Never write or save a different project that became active in the UI."""
+        expected = expected_path or getattr(self, "project_path", None)
+        if expected is None:
+            # Unsaved projects do not have a filesystem identity yet. Their name must
+            # remain the one returned by new(), including when using a borrowed app.
+            if hasattr(self, "unsaved_project_name"):
+                actual_name = str(safe_get(safe_get(self.app, "ActiveProject"), "Name"))
+                if not self.unsaved_project_name or actual_name != self.unsaved_project_name:
+                    raise ProjectAutomationError("The active unsaved Project changed before Save As.")
+            return
+        try:
+            actual = Path(str(self.app.ActiveProject.FullName)).expanduser().resolve()
+            bound = Path(str(self.project.FullName)).expanduser().resolve()
+        except Exception as exc:
+            raise ProjectAutomationError("Could not verify the active Microsoft Project file identity.") from exc
+        if actual != expected.resolve() or bound != expected.resolve():
+            raise ProjectAutomationError(
+                f"Active Microsoft Project file does not match the sandbox. Expected: {expected}; "
+                f"active: {actual}; bound: {bound}. No further writes are allowed."
+            )
+
     def save(self) -> None:
-        self.app.FileSave()
+        self.assert_project_identity()
+        self.saved_successfully = False
+        require_project_command(self.app.FileSave(), "save sandbox")
+        self.assert_project_identity()
+        self.require_saved_file()
         self.saved_successfully = True
         project_progress("Project save complete")
 
     def save_as(self, path: Path) -> None:
         path = path.expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
+        self.assert_project_identity()
+        self.saved_successfully = False
         try:
-            self.app.FileSaveAs(Name=str(path))
+            result = self.app.FileSaveAs(Name=str(path))
         except Exception:
-            self.app.FileSaveAs(str(path))
+            result = self.app.FileSaveAs(str(path))
+        require_project_command(result, "save sandbox as a new file")
+        self.project = self.app.ActiveProject
+        self.project_path = path
+        self.assert_project_identity()
+        self.require_saved_file()
         self.saved_successfully = True
         project_progress("Project Save As complete")
 
+    def require_saved_file(self) -> None:
+        path = getattr(self, "project_path", None)
+        if path is None or not path.is_file() or path.stat().st_size == 0:
+            raise ProjectAutomationError(f"Microsoft Project did not produce a nonempty sandbox file: {path}")
+
     def close_project(self, save_changes: bool) -> None:
+        self.assert_project_identity()
         save_option = 1 if save_changes else 0
-        try:
-            self.app.FileCloseEx(Save=save_option, NoAuto=True, CheckIn=False)
-            return
-        except Exception:
-            pass
-        try:
-            self.app.FileCloseEx(save_option, True, False)
-            return
-        except Exception:
-            pass
-        try:
-            self.app.FileClose(Save=save_option)
-            return
-        except Exception:
-            pass
-        self.app.FileClose()
+        errors = []
+        for close in (
+            lambda: self.app.FileCloseEx(Save=save_option, NoAuto=True, CheckIn=False),
+            lambda: self.app.FileCloseEx(save_option, True, False),
+            lambda: self.app.FileClose(Save=save_option),
+        ):
+            try:
+                self.assert_project_identity()
+                require_project_command(close(), "close sandbox with an explicit save policy")
+                active = safe_get(self.app, "ActiveProject")
+                expected_path = getattr(self, "project_path", None)
+                current_path = str(safe_get(active, "FullName")) if active else ""
+                if expected_path is not None and current_path and Path(current_path).resolve() == expected_path.resolve():
+                    raise ProjectAutomationError("Project reported close success but the sandbox is still active.")
+                if expected_path is None and getattr(self, "unsaved_project_name", ""):
+                    if str(safe_get(active, "Name")) == self.unsaved_project_name:
+                        raise ProjectAutomationError("Project reported close success but the blank project is still active.")
+                return
+            except Exception as exc:
+                errors.append(str(exc))
+        raise ProjectAutomationError("Could not close the sandbox safely: " + " | ".join(errors))
 
     def recalculate(self) -> None:
+        self.assert_project_identity()
         project_progress("Project recalculation started")
-        try:
-            self.app.CalculateProject()
-            project_progress("Project recalculation complete")
-        except Exception:
+        errors = []
+        for calculate in (lambda: self.app.CalculateProject(), lambda: self.app.CalculateAll()):
             try:
-                self.app.CalculateAll()
+                require_project_command(calculate(), "recalculate sandbox")
                 project_progress("Project recalculation complete")
-            except Exception:
-                project_progress("Project recalculation command was rejected; continuing")
-                pass
+                return
+            except Exception as exc:
+                errors.append(str(exc))
+        raise ProjectAutomationError("Microsoft Project could not recalculate the sandbox: " + " | ".join(errors))
+
+    def verify_saved_plan(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+        """Require the persisted file to retain the verified plan before reporting success."""
+        self.saved_successfully = False
+        plan.stats.pop("project_verification", None)
+        self.require_saved_file()
+        self.verify_plan(plan, config)
+        before = {key: asdict(value) for key, value in self.snapshot_tasks(config).items()}
+        path = self.project_path
+        project_progress("Closing and reopening the saved sandbox for verification")
+        self.close_project(save_changes=False)
+        self.project = None
+        persisted_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.open(path)
+        fields_verified = self.verify_plan(plan, config)
+        after = {key: asdict(value) for key, value in self.snapshot_tasks(config).items()}
+        if before != after:
+            changed = sorted(key for key in set(before) | set(after) if before.get(key) != after.get(key))
+            raise ProjectAutomationError(
+                "Saved sandbox readback changed task state for: " + ", ".join(changed[:20])
+            )
+        self.saved_successfully = True
+        plan.stats["project_verification"] = {
+            "project_version": str(safe_get(self.app, "Version")),
+            "path": str(path),
+            "save_reopen": True,
+            "verified_epics": len(plan.epics),
+            "verified_fields": fields_verified,
+            "sha256": persisted_hash,
+        }
+        project_progress("Saved sandbox verification passed")
+
+    def verify_plan(self, plan: RunPlan, config: Dict[str, Any]) -> int:
+        self.assert_project_identity()
+        tasks = self.index_tasks_by_key(config)
+        count = 0
+        for epic in plan.epics.values():
+            task = tasks.get(epic.key.upper())
+            if task is None:
+                raise ProjectAutomationError(f"Saved sandbox is missing epic {epic.key}.")
+            context = epic_context(epic)
+            for field, value in epic_assignments(epic, config):
+                verify_project_value(task, field, value, context)
+                count += 1
+            for logical, date_text in (("jira_target_start", epic.target_start), ("jira_target_end", epic.target_end)):
+                if date_text:
+                    field = config["project_fields"][logical]
+                    if project_date_to_iso(safe_get(task, field)) != date_text:
+                        raise ProjectAutomationError(f"Jira date readback failed: {context}, field={field}.")
+                    count += 1
+            verify_project_value(task, "Manual", False, context)
+            verify_project_value(task, "Active", not epic.completed and epic.drives_schedule, context)
+            parent = self.find_rollup_summary(epic.rollup_mode, epic.rollup_key, config)
+            self.verify_outline_parent(task, parent, context)
+            self.verify_managed_resource_assignment(task, epic.resource_group)
+            if epic.drives_schedule:
+                predecessors = [tasks.get(key.upper()) for key in epic.predecessors]
+                if any(item is None for item in predecessors):
+                    raise ProjectAutomationError(f"Cannot verify predecessor tasks for {epic.key}.")
+                error = verify_project_predecessors(
+                    task, [str(item.ID) for item in predecessors], predecessors
+                )
+                if error:
+                    raise ProjectAutomationError(f"Dependency verification failed for {epic.key}: {error}")
+        for summary in plan.summaries.values():
+            task = self.find_rollup_summary(summary.rollup_mode, summary.key, config)
+            if task is None:
+                raise ProjectAutomationError(f"Saved sandbox is missing rollup {summary.key}.")
+            for field, value in summary_assignments(summary, config):
+                if field == "PercentComplete":
+                    continue  # Native summary completion is recalculated by Project from child durations.
+                verify_project_value(task, field, value, f"rollup={summary.key}")
+                count += 1
+        return count
 
     def configure_custom_fields(self, config: Dict[str, Any]) -> None:
+        self.assert_project_identity()
         configured = [
             (logical_name, project_field)
             for logical_name, project_field in config.get("project_fields", {}).items()
@@ -355,7 +508,7 @@ class MicrosoftProjectSession:
             friendly_name = config.get("project_field_names", {}).get(logical_name)
             try:
                 field_id = self.app.FieldNameToFieldConstant(project_field)
-                self.app.CustomFieldRename(field_id, friendly_name)
+                require_project_command(self.app.CustomFieldRename(field_id, friendly_name), "rename custom field")
             except Exception as exc:
                 raise ProjectAutomationError(
                     f"Could not configure Project custom field {project_field} as {friendly_name}: {exc}"
@@ -366,13 +519,18 @@ class MicrosoftProjectSession:
     def snapshot_tasks(self, config: Dict[str, Any]) -> Dict[str, ProjectTaskSnapshot]:
         snapshots: Dict[str, ProjectTaskSnapshot] = {}
         fields = config.get("project_fields", {})
-        for task in self.iter_tasks():
+        self.index_tasks_by_key(config)
+        task_list = self.iter_tasks()
+        tasks_by_id = {str(safe_get(task, "ID")): task for task in task_list}
+        for task in task_list:
             jira_key = safe_get(task, fields.get("jira_key", "Text1"))
             j2p_key = safe_get(task, fields.get("j2p_key", "Text10"))
             rollup_key = safe_get(task, fields.get("rollup_key", "Text5"))
             snapshot_key = j2p_key or jira_key or rollup_key
             if not snapshot_key:
                 continue
+            if str(snapshot_key).upper() in snapshots:
+                raise ProjectAutomationError(f"Duplicate Project snapshot key {snapshot_key}: {project_task_context(task)}")
             snapshots[str(snapshot_key).upper()] = ProjectTaskSnapshot(
                 key=str(snapshot_key).upper(),
                 jira_key=str(jira_key),
@@ -395,8 +553,8 @@ class MicrosoftProjectSession:
                 target_end=project_date_to_iso(safe_get(task, fields.get("jira_target_end", "Date2"))),
                 start=project_date_to_iso(safe_get(task, "Start")),
                 finish=project_date_to_iso(safe_get(task, "Finish")),
-                predecessors=parse_project_key_list(str(safe_get(task, "Predecessors"))),
-                successors=parse_project_key_list(str(safe_get(task, "Successors"))),
+                predecessors=snapshot_relationship_keys(task, "Predecessors", tasks_by_id, config),
+                successors=snapshot_relationship_keys(task, "Successors", tasks_by_id, config),
                 row_role=str(safe_get(task, fields.get("row_role", "Text11"))),
                 fix_version=str(safe_get(task, fields.get("fix_version", "Text12"))),
                 drives_schedule=safe_bool(safe_get(task, fields.get("drives_schedule", "Flag4"))),
@@ -414,6 +572,8 @@ class MicrosoftProjectSession:
         write_dependencies: bool = True,
         dependency_write_mode: str = "fast",
     ) -> None:
+        self.assert_project_identity()
+        self.index_tasks_by_key(config)  # Reject ambiguous rows before any task mutation.
         project_progress("Setting existing Project tasks to auto scheduled")
         self.set_auto_scheduled()
         project_progress("Indexing Project tasks by Jira key")
@@ -427,6 +587,7 @@ class MicrosoftProjectSession:
         if total_epics:
             project_progress(f"Writing {total_epics} epic row(s)")
         for index, epic in enumerate(epics, start=1):
+            self.assert_project_identity()
             if index == 1 or index % 50 == 0 or index == total_epics:
                 project_progress(f"Epic row write progress: {index}/{total_epics} row(s)")
             parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
@@ -469,10 +630,7 @@ class MicrosoftProjectSession:
 
     def set_auto_scheduled(self) -> None:
         for task in self.iter_tasks():
-            try:
-                task.Manual = False
-            except Exception:
-                pass
+            write_required_project_value(task, "Manual", False, project_task_context(task))
 
     def iter_tasks(self) -> List[Any]:
         tasks = []
@@ -481,8 +639,8 @@ class MicrosoftProjectSession:
         for index in range(1, int(self.project.Tasks.Count) + 1):
             try:
                 task = self.project.Tasks(index)
-            except Exception:
-                continue
+            except Exception as exc:
+                raise ProjectAutomationError(f"Could not read Project task row {index}.") from exc
             if task is not None:
                 tasks.append(task)
         return tasks
@@ -494,7 +652,13 @@ class MicrosoftProjectSession:
         for task in self.iter_tasks():
             key = safe_get(task, j2p_key_field) or safe_get(task, key_field)
             if key:
-                result[str(key).upper()] = task
+                normalized = str(key).strip().upper()
+                if normalized in result:
+                    raise ProjectAutomationError(
+                        f"Duplicate Project key {normalized}: {project_task_context(result[normalized])}; "
+                        f"{project_task_context(task)}. Resolve duplicate matching keys in the source schedule."
+                    )
+                result[normalized] = task
         return result
 
     def ensure_summaries(
@@ -510,23 +674,17 @@ class MicrosoftProjectSession:
             if task is None:
                 task = self.find_rollup_summary(summary.rollup_mode, summary.key, config)
             if task is None:
-                task = self.project.Tasks.Add(summary.name)
-            try:
-                task.Manual = False
-            except Exception:
-                pass
-            if summary.rollup_mode == "initiative":
-                setattr(task, fields.get("jira_key", "Text1"), summary.key)
-                setattr(task, fields.get("jira_issue_type", "Text3"), "Initiative")
-            else:
-                setattr(task, fields.get("jira_issue_type", "Text3"), "FixVersion")
-            setattr(task, fields.get("rollup_mode", "Text4"), summary.rollup_mode)
-            setattr(task, fields.get("rollup_key", "Text5"), summary.key)
-            setattr(task, fields.get("total_story_points", "Number1"), summary.total_story_points)
-            setattr(task, fields.get("completed_story_points", "Number2"), summary.completed_story_points)
-            setattr(task, fields.get("logged_hours", "Number3"), summary.logged_hours)
-            setattr(task, story_point_ratio_project_field(config), summary.story_point_ratio)
-            task.PercentComplete = summary.percent_complete
+                try:
+                    task = self.project.Tasks.Add(summary.name)
+                except Exception:
+                    raise ProjectAutomationError(
+                        f"Microsoft Project rejected summary creation: rollup={summary.key}, "
+                        f"field=Name, {value_metadata(summary.name)}."
+                    ) from None
+            context = f"rollup={summary.key}"
+            write_required_project_value(task, "Manual", False, context)
+            for field, value in summary_assignments(summary, config):
+                write_required_project_value(task, field, value, context)
             summary_tasks[summary.summary_id] = task
         return summary_tasks
 
@@ -536,7 +694,8 @@ class MicrosoftProjectSession:
         for task in self.iter_tasks():
             same_mode = str(safe_get(task, mode_field)) == rollup_mode
             same_key = str(safe_get(task, rollup_field)).upper() == rollup_key.upper()
-            if same_mode and same_key:
+            issue_type = str(safe_get(task, config.get("project_fields", {}).get("jira_issue_type", "Text3")))
+            if same_mode and same_key and (safe_bool(safe_get(task, "Summary")) or issue_type in {"Initiative", "FixVersion"}):
                 return task
         return None
 
@@ -549,9 +708,15 @@ class MicrosoftProjectSession:
             try:
                 self.app.SelectRow(Row=int(task.ID), RowRelative=False)
                 self.app.OutlineIndent(1)
-            except Exception:
-                pass
+            except Exception as exc:
+                raise ProjectAutomationError(f"Could not indent {epic_context(epic)} under its rollup.") from exc
+        self.verify_outline_parent(task, summary_task, epic_context(epic))
         return task
+
+    def verify_outline_parent(self, task: Any, summary_task: Any, context: str) -> None:
+        actual = safe_get(task, "OutlineParent")
+        if summary_task is None or not actual or project_task_identity(actual) != project_task_identity(summary_task):
+            raise ProjectAutomationError(f"Microsoft Project did not retain the required outline parent: {context}.")
 
     def ensure_epic_under_summary(
         self,
@@ -567,6 +732,7 @@ class MicrosoftProjectSession:
         if current_parent:
             current_rollup = str(safe_get(current_parent, rollup_field))
         if current_rollup.upper() == epic.rollup_key.upper():
+            self.verify_outline_parent(task, summary_task, epic_context(epic))
             return task
 
         try:
@@ -580,88 +746,39 @@ class MicrosoftProjectSession:
             except Exception:
                 self.app.SelectRow(Row=int(moved_task.ID), RowRelative=False)
                 self.app.OutlineIndent(1)
+            self.verify_outline_parent(moved_task, summary_task, epic_context(epic))
             return moved_task
         except Exception as exc:
-            plan.audit_items.append(
-                AuditItem(
-                    "Warning",
-                    "ProjectRollupMoveFailed",
-                    jira_key=epic.key,
-                    issue_type="Epic",
-                    summary=epic.summary,
-                    field="Rollup Key",
-                    old_value=current_rollup,
-                    new_value=epic.rollup_key,
-                    color="review_needed",
-                    message=f"Could not move the Project task under the requested rollup: {exc}",
-                    reviewer_action="Move this task manually in the sandbox or rerun after correcting the Project outline.",
-                )
-            )
-            return task
+            raise ProjectAutomationError(
+                f"Could not move {epic_context(epic)} under rollup {epic.rollup_key}: {exc}"
+            ) from exc
 
     def update_epic_task(self, task: Any, epic: PlanEpic, config: Dict[str, Any], plan: RunPlan) -> None:
         fields = config.get("project_fields", {})
-        try:
-            task.Manual = False
-        except Exception:
-            pass
+        write_required_project_value(task, "Manual", False, epic_context(epic))
         for field, value in epic_assignments(epic, config):
-            try:
-                setattr(task, field, value)
-            except Exception:
-                # COM exception descriptions may contain sensitive field contents.
-                raise ProjectAutomationError(
-                    f"Microsoft Project rejected epic write: {epic_context(epic)}, "
-                    f"field={field}, {value_metadata(value)}. "
-                    "Check the field mapping and the sandbox field's formula/lookup restrictions."
-                ) from None
+            write_required_project_value(task, field, value, epic_context(epic))
         try:
             self.set_native_resource_group(task, epic.resource_group)
-        except Exception:
+        except Exception as exc:
             raise ProjectAutomationError(
                 f"Microsoft Project rejected epic resource assignment: {epic_context(epic)}, "
-                f"field=ResourceGroup, {value_metadata(epic.resource_group)}. "
-                "Check the sandbox resources and assignment restrictions."
-            ) from None
-        self.write_project_date(
-            task,
-            epic,
-            plan,
-            fields.get("jira_target_start", "Date1"),
-            "Jira Target Start",
-            "Start",
-        )
-        self.write_project_date(
-            task,
-            epic,
-            plan,
-            fields.get("jira_target_end", "Date2"),
-            "Jira Target End",
-            "Finish",
-        )
-        if epic.completed:
-            try:
-                task.Active = False
-            except Exception:
-                pass
-            try:
-                task.HideBar = True
-            except Exception:
-                pass
-        elif not epic.drives_schedule:
-            try:
-                task.Active = False
-            except Exception:
-                pass
-        else:
-            try:
-                task.Active = True
-            except Exception:
-                pass
-            try:
-                task.HideBar = False
-            except Exception:
-                pass
+                f"field=ResourceGroup, {value_metadata(epic.resource_group)}. {exc}"
+            ) from exc
+        for warning in getattr(self, "resource_assignment_warnings", []):
+            plan.audit_items.append(
+                AuditItem("Warning", "ProjectUnmanagedResourcePreserved", jira_key=epic.jira_key or epic.key,
+                          schedule_key=epic.key, issue_type="Epic", summary=epic.summary,
+                          field="Resource Group", color="review_needed", message=warning,
+                          reviewer_action="Review legacy resource assignments manually; j2p only replaces resources bearing its ownership marker.")
+            )
+        self.write_project_date(task, epic, plan, fields.get("jira_target_start", "Date1"), "Jira Target Start", "Start")
+        self.write_project_date(task, epic, plan, fields.get("jira_target_end", "Date2"), "Jira Target End", "Finish")
+        write_required_project_value(task, "Active", not epic.completed and epic.drives_schedule, epic_context(epic))
+        try:
+            task.HideBar = bool(epic.completed)
+        except Exception:
+            pass  # Cosmetic only; Active and Manual are required above.
 
     def write_project_date(
         self,
@@ -744,34 +861,80 @@ class MicrosoftProjectSession:
             return ""
 
     def set_native_resource_group(self, task: Any, resource_group: str) -> None:
-        if not resource_group:
-            return
-        resource = self.ensure_group_resource(resource_group)
-        if self.task_has_resource(task, resource):
-            return
-        if self.assign_resource_to_task(task, resource):
-            return
-        raise ProjectAutomationError(
-            "Could not populate the native Microsoft Project Resource Group field. "
-            "Project calculates that task field from assigned resources, and j2p could not assign "
-            f"the resource group placeholder '{resource_group}'."
-        )
+        self.resource_assignment_warnings = []
+        desired = self.ensure_group_resource(resource_group) if resource_group else None
+        assignments = self.resource_assignments(task)
+        if desired is not None and not self.task_has_resource(task, desired):
+            if not self.assign_resource_to_task(task, desired):
+                raise ProjectAutomationError(f"Could not assign j2p resource group {resource_group}.")
+        # Delete only assignments whose resource carries j2p's persisted ownership marker.
+        for assignment, resource in assignments:
+            if is_managed_group_resource(resource):
+                if desired is None or int(resource.ID) != int(desired.ID):
+                    try:
+                        require_project_command(assignment.Delete(), "remove previous j2p resource assignment")
+                    except Exception as exc:
+                        raise ProjectAutomationError("Could not remove the previous managed resource assignment.") from exc
+            elif safe_get(resource, "Group"):
+                self.resource_assignment_warnings.append(
+                    f"Preserved unmanaged resource '{safe_get(resource, 'Name')}' with group "
+                    f"'{safe_get(resource, 'Group')}'. Native Resource Group may contain multiple groups."
+                )
+        self.verify_managed_resource_assignment(task, resource_group)
+
+    def resource_assignments(self, task: Any) -> List[Tuple[Any, Any]]:
+        result = []
+        try:
+            resources = {int(resource.ID): resource for resource in self.iter_resources()}
+            for index in range(1, int(task.Assignments.Count) + 1):
+                assignment = task.Assignments(index)
+                resource = resources.get(int(assignment.ResourceID))
+                if resource is None:
+                    raise ProjectAutomationError("An assigned Project resource could not be resolved.")
+                result.append((assignment, resource))
+        except Exception as exc:
+            raise ProjectAutomationError("Could not read Project resource assignments safely.") from exc
+        return result
+
+    def iter_resources(self) -> List[Any]:
+        try:
+            return [resource for index in range(1, int(self.project.Resources.Count) + 1)
+                    for resource in [self.project.Resources(index)] if resource is not None]
+        except Exception as exc:
+            raise ProjectAutomationError("Could not read the Project resource collection.") from exc
+
+    def verify_managed_resource_assignment(self, task: Any, resource_group: str) -> None:
+        owned = [resource for _assignment, resource in self.resource_assignments(task)
+                 if is_managed_group_resource(resource)]
+        expected = 1 if resource_group else 0
+        if len(owned) != expected or (owned and (
+            str(safe_get(owned[0], "Group")) != resource_group
+            or resource_ownership_notes(owned[0]) != managed_resource_marker(resource_group)
+        )):
+            raise ProjectAutomationError(
+                f"Project did not retain exactly {expected} managed resource assignment(s) for group '{resource_group}'."
+            )
 
     def ensure_group_resource(self, resource_group: str) -> Any:
-        resource = self.find_resource(resource_group)
-        if resource is None:
+        marker = managed_resource_marker(resource_group)
+        matches = [resource for resource in self.iter_resources() if resource_ownership_notes(resource) == marker]
+        if len(matches) > 1:
+            raise ProjectAutomationError(f"Duplicate managed Project resources for group '{resource_group}'.")
+        if matches:
+            resource = matches[0]
+        else:
+            name = resource_group
+            if self.find_resource(name) is not None:
+                digest = hashlib.sha256(resource_group.encode("utf-8")).hexdigest()[:12]
+                name = f"[j2p:{digest}] {resource_group}"[:255]
+                if self.find_resource(name) is not None:
+                    raise ProjectAutomationError(f"Reserved j2p resource name already belongs to an unmanaged resource: {name}")
             try:
-                resource = self.project.Resources.Add(resource_group)
+                resource = self.project.Resources.Add(name)
             except Exception as exc:
-                raise ProjectAutomationError(
-                    f"Could not create Microsoft Project resource '{resource_group}' for Resource Group mapping."
-                ) from exc
-        try:
-            resource.Group = resource_group
-        except Exception as exc:
-            raise ProjectAutomationError(
-                f"Could not set Microsoft Project resource group for resource '{resource_group}'."
-            ) from exc
+                raise ProjectAutomationError(f"Could not create j2p Project resource '{name}'.") from exc
+            write_required_project_value(resource, "Notes", marker, f"resource_group={resource_group}")
+        write_required_project_value(resource, "Group", resource_group, f"resource_group={resource_group}")
         return resource
 
     def find_resource(self, resource_name: str) -> Optional[Any]:
@@ -843,6 +1006,7 @@ class MicrosoftProjectSession:
             )
         processed = 0
         for epic, task in writable_items:
+            self.assert_project_identity()
             processed += 1
             if processed == 1 or processed % 25 == 0 or processed == total:
                 project_progress(f"Project predecessor write progress: {processed}/{total} task(s)")
@@ -917,7 +1081,7 @@ class MicrosoftProjectSession:
         predecessor_tasks: Optional[List[Any]] = None,
         dependency_write_mode: str = "fast",
     ) -> str:
-        if not verify_project_predecessors(task, expected_ids):
+        if not verify_project_predecessors(task, expected_ids, predecessor_tasks):
             return ""
         if dependency_write_mode == "diagnostic":
             return self.write_project_predecessors_diagnostic(
@@ -945,7 +1109,7 @@ class MicrosoftProjectSession:
         if not expected_ids:
             if clear_error:
                 return f"fast clear failed: {clear_error}"
-            return verify_project_predecessors(task, expected_ids)
+            return verify_project_predecessors(task, expected_ids, predecessor_tasks)
 
         errors: List[str] = []
         if clear_error:
@@ -960,7 +1124,7 @@ class MicrosoftProjectSession:
         )
         for text in predecessor_texts:
             text_error = self.set_project_predecessor_text(task, text)
-            readback_error = verify_project_predecessors(task, expected_ids)
+            readback_error = verify_project_predecessors(task, expected_ids, predecessor_tasks)
             if not text_error and not readback_error:
                 return ""
             details = []
@@ -975,7 +1139,7 @@ class MicrosoftProjectSession:
             if clear_error:
                 errors.append(f"fast object-link clear failed: {clear_error}")
             link_error = self.link_project_predecessors(task, predecessor_tasks)
-            readback_error = verify_project_predecessors(task, expected_ids)
+            readback_error = verify_project_predecessors(task, expected_ids, predecessor_tasks)
             if not link_error and not readback_error:
                 return ""
             details = []
@@ -1013,7 +1177,7 @@ class MicrosoftProjectSession:
             clear_error = self.clear_project_predecessors(task)
             if clear_error:
                 return f"clear failed: {clear_error}"
-            return verify_project_predecessors(task, expected_ids)
+            return verify_project_predecessors(task, expected_ids, predecessor_tasks)
 
         attempts: List[Tuple[str, Any]] = []
         if predecessor_tasks:
@@ -1047,7 +1211,7 @@ class MicrosoftProjectSession:
             if clear_error:
                 errors.append(f"{method_name}: clear failed before attempt: {clear_error}")
             attempt_error = attempt()
-            readback_error = verify_project_predecessors(task, expected_ids)
+            readback_error = verify_project_predecessors(task, expected_ids, predecessor_tasks)
             if not attempt_error and not readback_error:
                 return ""
             details = []
@@ -1091,7 +1255,7 @@ class MicrosoftProjectSession:
             except Exception as exc:
                 first_error = exc
             try:
-                dependencies.Add(predecessor_task, 0)
+                dependencies.Add(predecessor_task, 1, 0)
                 continue
             except Exception as exc:
                 errors.append(
@@ -1296,6 +1460,7 @@ class MicrosoftProjectSession:
             )
 
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+        self.assert_project_identity()
         project_progress("Indexing Project tasks for review formatting")
         task_by_key = self.index_tasks_by_key(config)
         formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
@@ -2245,7 +2410,7 @@ def project_table_column_already_present_error(error: Any) -> bool:
 
 
 def project_call_failed(result: Any) -> bool:
-    return result is False or result == 0
+    return result is False or (isinstance(result, (int, float)) and result == 0)
 
 
 def safe_get(task: Any, name: str) -> Any:
@@ -2336,9 +2501,7 @@ def parse_project_key_list(value: str) -> List[str]:
 
 
 def project_predecessor_ids(value: str) -> List[str]:
-    import re
-
-    return re.findall(r"\b(\d+)(?:[A-Z]{0,2})?(?:[+-]\d+[a-zA-Z]+)?\b", value)
+    return [task_id for task_id, _kind, _lag in parse_project_dependency_text(value)]
 
 
 def project_task_has_predecessors(task: Any) -> bool:
@@ -2384,22 +2547,211 @@ def project_unique_id_predecessor_text(predecessor_tasks: List[Any]) -> str:
     return ",".join(unique_ids)
 
 
-def verify_project_predecessors(task: Any, expected_ids: List[str]) -> str:
+def verify_project_predecessors(
+    task: Any, expected_ids: List[str], predecessor_tasks: Optional[List[Any]] = None
+) -> str:
     current_value = str(safe_get(task, "Predecessors"))
-    current_ids = unique_columns(project_predecessor_ids(current_value) + current_predecessor_task_ids(task))
-    missing_ids = [predecessor_id for predecessor_id in expected_ids if predecessor_id not in current_ids]
-    unexpected_ids = [predecessor_id for predecessor_id in current_ids if predecessor_id not in expected_ids]
+    try:
+        links = project_predecessor_links(task)
+    except ProjectAutomationError as exc:
+        return str(exc)
+    current_ids = [link[0] for link in links]
+    missing_ids = [key for key in expected_ids if key not in current_ids]
+    unexpected_ids = [key for key in current_ids if key not in expected_ids]
     if missing_ids:
-        return (
-            f"Microsoft Project did not retain predecessor ID(s) {', '.join(missing_ids)}. "
-            f"Current Project value: '{current_value}'."
-        )
+        return (f"Microsoft Project did not retain predecessor ID(s) {', '.join(missing_ids)}. "
+                f"Current Project value: '{current_value}'.")
     if unexpected_ids:
-        return (
-            f"Microsoft Project retained unexpected predecessor ID(s) {', '.join(unexpected_ids)}. "
-            f"Current Project value: '{current_value}'."
-        )
+        return (f"Microsoft Project retained unexpected predecessor ID(s) {', '.join(unexpected_ids)}. "
+                f"Current Project value: '{current_value}'.")
+    if len(current_ids) != len(set(current_ids)):
+        return "Microsoft Project retained duplicate predecessor links."
+    expected_identity = {str(item.ID): project_task_identity(item) for item in predecessor_tasks or []}
+    for task_id, identity, link_type, lag in links:
+        if link_type != 1 or not project_lag_is_zero(lag):
+            return f"Predecessor ID {task_id} must be Finish-to-Start with zero lag; type={link_type}, lag={lag}."
+        if identity and task_id in expected_identity and identity != expected_identity[task_id]:
+            return f"Predecessor ID {task_id} resolves to a different Project task identity."
     return ""
+
+
+def project_predecessor_links(task: Any) -> List[Tuple[str, str, int, Any]]:
+    """Read stable object identities and semantics; text parsing is a checked fallback."""
+    collection = safe_get(task, "TaskDependencies")
+    try:
+        count = int(collection.Count)
+    except (AttributeError, TypeError, ValueError):
+        count = None
+    except Exception as exc:
+        raise ProjectAutomationError("Could not read Project dependency collection.") from exc
+    if count is not None:
+        links = []
+        for index in range(1, count + 1):
+            try:
+                dependency = collection(index)
+                source = getattr(dependency, "From")
+                target = dependency.To
+                if project_task_identity(target) != project_task_identity(task):
+                    continue
+                links.append((str(source.ID), project_task_identity(source), int(dependency.Type), dependency.Lag))
+            except Exception as exc:
+                raise ProjectAutomationError("Could not read complete Project dependency identity/type/lag.") from exc
+        return links
+    try:
+        predecessor_text = str(task.Predecessors)
+    except Exception as exc:
+        raise ProjectAutomationError("Could not read Project predecessor fields or object-model links.") from exc
+    return [(task_id, "", link_type, lag) for task_id, link_type, lag in parse_project_dependency_text(predecessor_text)]
+
+
+def parse_project_dependency_text(value: str) -> List[Tuple[str, int, str]]:
+    if not value.strip():
+        return []
+    result = []
+    types = {"FF": 0, "FS": 1, "SF": 2, "SS": 3}
+    for token in re.split(r"[,;]", value):
+        match = re.fullmatch(r"\s*(\d+)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+(?:\.\d+)?(?:[a-zA-Z%]+)?)?\s*", token, re.I)
+        if not match:
+            raise ProjectAutomationError(
+                f"Cannot verify Project dependency text {token!r}; its object-model relationship data is unavailable."
+            )
+        result.append((match[1], types[(match[2] or "FS").upper()], (match[3] or "0").replace(" ", "")))
+    return result
+
+
+def project_lag_is_zero(value: Any) -> bool:
+    if isinstance(value, (int, float)):
+        return math.isfinite(value) and value == 0
+    return re.fullmatch(r"[+-]?0+(?:\.0+)?[a-zA-Z%]*", str(value).strip()) is not None
+
+
+def project_task_identity(task: Any) -> str:
+    unique_id = safe_int(safe_get(task, "UniqueID"))
+    if unique_id > 0:
+        external = "external:" if safe_bool(safe_get(task, "ExternalTask")) else ""
+        return f"{external}uid:{unique_id}"
+    task_id = safe_int(safe_get(task, "ID"))
+    if task_id > 0:
+        return f"id:{task_id}"
+    raise ProjectAutomationError("Project task has no readable positive ID or UniqueID.")
+
+
+def project_task_context(task: Any) -> str:
+    return f"Project row={safe_get(task, 'ID')}, UniqueID={safe_get(task, 'UniqueID')}"
+
+
+def snapshot_relationship_keys(
+    task: Any, direction: str, tasks_by_id: Dict[str, Any], config: Dict[str, Any]
+) -> List[str]:
+    field = "PredecessorTasks" if direction == "Predecessors" else "SuccessorTasks"
+    related = safe_get(task, field)
+    try:
+        count = int(related.Count)
+    except (AttributeError, TypeError, ValueError):
+        count = None
+    except Exception as exc:
+        raise ProjectAutomationError(f"Could not read {field} for {project_task_context(task)}.") from exc
+    if count is not None:
+        try:
+            targets = [related(index) for index in range(1, count + 1)]
+        except Exception as exc:
+            raise ProjectAutomationError(f"Could not enumerate {field} for {project_task_context(task)}.") from exc
+    else:
+        text = str(safe_get(task, direction))
+        # Legacy/custom views may expose Jira keys directly.
+        explicit_keys = parse_project_key_list(text)
+        if explicit_keys and not re.match(r"^\s*\d", text):
+            return explicit_keys
+        targets = []
+        for task_id, _kind, _lag in parse_project_dependency_text(text):
+            target = tasks_by_id.get(task_id)
+            if target is None:
+                raise ProjectAutomationError(f"Cannot resolve {direction} task ID {task_id} in the Project snapshot.")
+            targets.append(target)
+    fields = config.get("project_fields", {})
+    keys = []
+    for target in targets:
+        key = safe_get(target, fields.get("j2p_key", "Text10")) or safe_get(target, fields.get("jira_key", "Text1"))
+        keys.append(str(key).upper() if key else "PROJECT:" + project_task_identity(target))
+    return sorted(set(keys))
+
+
+def require_project_command(result: Any, operation: str) -> None:
+    if project_call_failed(result):
+        raise ProjectAutomationError(f"Microsoft Project returned False while attempting to {operation}.")
+
+
+def verify_project_value(task: Any, field: str, expected: Any, context: str) -> None:
+    try:
+        actual = getattr(task, field)
+    except Exception:
+        raise ProjectAutomationError(f"Microsoft Project field readback failed: {context}, field={field}.") from None
+    if isinstance(expected, bool):
+        if isinstance(actual, str):
+            normalized = actual.strip().lower()
+            parsed = True if normalized in {"true", "yes", "1", "-1"} else False if normalized in {"false", "no", "0"} else None
+        elif isinstance(actual, (bool, int, float)) and actual in (0, 1, -1):
+            parsed = bool(actual)
+        else:
+            parsed = None
+        matches = parsed is expected
+    elif isinstance(expected, (int, float)):
+        try:
+            matches = math.isclose(float(actual), float(expected), rel_tol=1e-8, abs_tol=1e-6)
+        except (TypeError, ValueError):
+            matches = False
+    else:
+        matches = str(actual) == str(expected)
+    if not matches:
+        raise ProjectAutomationError(
+            f"Microsoft Project did not retain the requested value: {context}, field={field}, {value_metadata(expected)}."
+        )
+
+
+def write_required_project_value(task: Any, field: str, value: Any, context: str) -> None:
+    try:
+        setattr(task, field, value)
+    except Exception:
+        raise ProjectAutomationError(
+            f"Microsoft Project rejected write: {context}, field={field}, {value_metadata(value)}. "
+            "Check field mapping, formula/lookup restrictions, and Project edition capabilities."
+        ) from None
+    verify_project_value(task, field, value, context)
+
+
+def summary_assignments(summary: Any, config: Dict[str, Any]) -> List[Tuple[str, Any]]:
+    fields = config.get("project_fields", {})
+    values = [("Name", summary.name)]
+    if summary.rollup_mode == "initiative":
+        values.append((fields.get("jira_key", "Text1"), summary.key))
+    values.extend([
+        (fields.get("jira_issue_type", "Text3"), "Initiative" if summary.rollup_mode == "initiative" else "FixVersion"),
+        (fields.get("rollup_mode", "Text4"), summary.rollup_mode),
+        (fields.get("rollup_key", "Text5"), summary.key),
+        (fields.get("total_story_points", "Number1"), summary.total_story_points),
+        (fields.get("completed_story_points", "Number2"), summary.completed_story_points),
+        (fields.get("logged_hours", "Number3"), summary.logged_hours),
+        (story_point_ratio_project_field(config), summary.story_point_ratio),
+        ("PercentComplete", summary.percent_complete),
+    ])
+    return values
+
+
+def managed_resource_marker(resource_group: str) -> str:
+    return "j2p-managed-resource-v1:" + hashlib.sha256(resource_group.encode("utf-8")).hexdigest()
+
+
+def resource_ownership_notes(resource: Any) -> str:
+    try:
+        return str(resource.Notes)
+    except Exception:
+        raise ProjectAutomationError(
+            f"Could not read resource ownership marker: resource={safe_get(resource, 'Name')}."
+        ) from None
+
+
+def is_managed_group_resource(resource: Any) -> bool:
+    return re.fullmatch(r"j2p-managed-resource-v1:[0-9a-f]{64}", resource_ownership_notes(resource)) is not None
 
 
 def append_resource_name(current: str, resource_name: str) -> str:

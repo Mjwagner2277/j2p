@@ -71,11 +71,17 @@ Install from the repository root:
 py -3.14 -m pip install -e ".[project]"
 ```
 
-For report-only validation on macOS, Linux, or a Windows machine without Microsoft Project:
+For report-only validation on Windows without Microsoft Project:
 
 ```powershell
 py -3.14 -m pip install -e .
 ```
+
+On macOS or Linux, install with `python3 -m pip install -e .` and run commands
+with `python3 -m j2p` instead of the Windows Python launcher.
+
+See [run operations](run-operations.md) for saved profiles, read-only setup checks,
+expected export counts, failure recovery, and support bundles.
 
 Report-only validation can parse Jira CSVs and create HTML/CSV reports. It cannot create or update `.mpp` files because that requires Microsoft Project desktop automation.
 
@@ -135,15 +141,17 @@ py -3.14 -m j2p update `
 
 ## Command Reference
 
-Common arguments:
+Common arguments (values may also come from `--profile`):
 
 | Argument | Applies To | Required | Meaning |
 | --- | --- | --- | --- |
-| `--jira-csv` | `validate`, `create`, `update` | Yes | Path to the project-wide Jira CSV export. |
+| `--jira-csv` | `validate`, `create`, `update` | Yes | One or more CSV batch paths; may be repeated. |
+| `--profile` | `validate`, `create`, `update` | No | Saved JSON project settings; explicit arguments override them. |
+| `--expected-issues` | `validate`, `create`, `update` | No | Expected count of unique issue keys across all batches. |
 | `--config` | `validate`, `create`, `update` | Recommended | Path to YAML configuration. If omitted, built-in defaults are used. |
 | `--output-dir` | `validate`, `create`, `update` | No | Base folder for reports, state, and timestamped run folders. Default is `review-output`. |
-| `--state-path` | `validate`, `create`, `update` | No | Custom path for persistent state JSON. Default is `<output-dir>\j2p-state.json`. |
-| `--run-id` | `validate`, `create`, `update` | No | Overrides timestamp naming. Useful for repeatable tests or examples. |
+| `--state-path` | `validate`, `create`, `update` | No | Custom path for persistent state JSON. Default is `<output-dir>\<Project>\j2p-state.json`. |
+| `--run-id` | `validate`, `create`, `update` | No | Overrides timestamp naming. Must be new and contain no path separators; existing run IDs are never overwritten. |
 | `--project-name` | `validate`, `create`, `update` | Yes | Program/project folder name that groups all resource groups and sprint runs. |
 | `--sprint` | `validate`, `update` | Required for `update` | Sprint or planning increment value encoded into the output folder. |
 | `--allow-existing-sprint` | `validate`, `update` | No | Allows a second run under an existing project/sprint folder. Without this, j2p stops when that sprint already exists. |
@@ -406,7 +414,7 @@ Supported input examples:
 
 By default, logged hours are written to the Microsoft Project custom number field `Number3` and shown with the display name `Logged Hours`. Summary rollups also include logged hours from their driving epic rows. Reference-only rollups show referenced logged hours for visibility without making those rows drive the schedule.
 
-If a logged-hours value is present but cannot be parsed, j2p treats it as `0` for calculation and adds an `UnparsedLoggedHours` warning to the manager report so the source CSV can be corrected.
+A nonblank logged-hours value must parse completely; malformed, negative, or non-finite values stop validation with file, row, and issue context. Blank values remain zero. See [input validation](input-validation.md) for time units and aggregate-field rules.
 
 ## Story Point Ratio
 
@@ -575,7 +583,7 @@ Each `reports\csv\by-project-key\<KEY>` folder contains the same CSV types filte
 | `MultiFixVersionReference` | Multi-fixVersion epic was handled with reference policy. | Confirm the first fixVersion should be primary. |
 | `MultiFixVersionSplit` | Multi-fixVersion epic was handled with split policy. | Confirm each fixVersion should drive schedule. |
 | `MissingDependencyTarget` | Jira dependency points outside the included epic set. | Add the target to the export/config or fix the Jira link. |
-| `UnparsedLoggedHours` | A logged-hours value was present but not readable as hours. | Correct the Jira export value to decimal hours, `HH:MM`, or duration text such as `1h 30m`. |
+| Logged-hours validation error | A nonblank value was not completely readable as nonnegative time. | Correct the reported file and row, then rerun. |
 | `CircularDependencySkipped` | Dependency would create a cycle. | Fix blocker links in Jira. |
 | `SelfDependencySkipped` | Epic references itself. | Fix blocker links in Jira. |
 | `ExcludedMissingRollup` | Required initiative or fixVersion is missing. | Fix Jira parent/fixVersion or confirm exclusion. |

@@ -700,3 +700,27 @@ Before running with a new team's Jira export:
 7. Review `CSV Column Mapping Used` in `reports\html\Manager-Review-Report.html`.
 8. Review `FIELD_MAPPING.md`.
 9. Fix YAML or Jira data-quality issues before running `update`.
+
+## Input limits, numeric time units, and deterministic syntax
+
+See [input validation](input-validation.md) for the supported YAML syntax and
+strict type checks. Parser behavior no longer depends on whether PyYAML is installed.
+Unknown keys, quoted booleans, malformed numeric values and unsupported syntax fail
+with a specific configuration path or line number.
+
+```yaml
+input:
+  csv_max_field_chars: 8388608
+metrics:
+  hours_per_story_point: 8
+  logged_hours_unit: hours
+  logged_hours_units:
+    Time Spent: seconds
+  logged_hours_source: direct
+```
+
+Numeric units may be `hours`, `minutes`, or `seconds`; source-header overrides
+apply only to numeric values. Unit-bearing durations remain explicit. Known
+aggregate fields require `logged_hours_source: aggregate` and nonoverlapping
+exported hierarchy levels. Verify the export's time units instead of inferring
+them from the CSV header.

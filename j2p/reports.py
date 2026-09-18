@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import csv
+import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from .formatting import format_number, html_escape
+from .cascade import CascadeGraph, CascadeProjection
 from .metrics import calculate_percent, calculate_story_point_ratio
 from .models import AuditItem, RunPlan
 from .rollups import build_summaries, multi_fixversion_policy_for_prefix, summary_id
@@ -291,6 +293,7 @@ def write_html_report_index(
 <body>
   <h1>j2p HTML Reports</h1>
   <p>Open the overall manager report first, then use resource-group reports when reviewing team-specific items.</p>
+  {render_manifest_link(path)}
   <table>
     <thead><tr><th>Report</th><th>Link</th></tr></thead>
     <tbody>
@@ -324,6 +327,20 @@ def relative_html_path(base_dir: Path, target: Path) -> str:
         return target.relative_to(base_dir).as_posix()
     except ValueError:
         return target.as_posix()
+
+
+def render_manifest_link(report_path: Path) -> str:
+    """Link a run's manifest when present; standalone legacy reports need none."""
+    candidates = [report_path.parent / "run-manifest.json"]
+    for parent in report_path.parents:
+        if parent.name == "reports":
+            candidates.append(parent.parent / "run-manifest.json")
+            break
+    for manifest in candidates:
+        if manifest.is_file():
+            relative = Path(os.path.relpath(manifest, report_path.parent)).as_posix()
+            return f'<p class="muted"><a href="{html_escape(relative)}">Run manifest and input provenance</a></p>'
+    return ""
 
 
 def resource_group_run_plan(plan: RunPlan, config: Dict[str, Any], resource_group: str) -> RunPlan:
@@ -872,6 +889,11 @@ def write_manager_html(
       display: grid;
       gap: 8px;
     }}
+    .cascade-reference, .cascade-limit {{
+      color: var(--muted);
+      font-size: 13px;
+      margin: 4px 0;
+    }}
     .table-wrap {{
       width: 100%;
       overflow-x: auto;
@@ -968,6 +990,7 @@ def write_manager_html(
     </div>
   </header>
   <main>
+    {render_manifest_link(path)}
     {decision_briefing(plan)}
     {render_story_point_ratio_breakdown(plan)}
     {render_rollup_status(plan)}
@@ -1074,8 +1097,9 @@ def render_schedule_cascade_review(
         key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
     }
     leaf_keys = changed_keys - driver_keys
-    roots = cascade_root_keys(plan, changed_keys)
-    downstream_counts = cascade_downstream_counts(plan, changed_keys)
+    graph = CascadeGraph({key: changed_successors(plan, key, changed_keys) for key in changed_keys})
+    roots = graph.roots
+    downstream_counts = graph.downstream_counts
     branch_roots = [
         key for key in roots if key in driver_keys or changed_successors(plan, key, changed_keys)
     ]
@@ -1088,7 +1112,7 @@ def render_schedule_cascade_review(
         key=lambda key: (-downstream_counts.get(key, 0), key),
     )
     if root_resource_group:
-        visible_keys = cascade_branch_keys(plan, branch_roots, changed_keys)
+        visible_keys = graph.reachable(branch_roots)
         cascade_items = {
             key: item for key, item in cascade_items.items() if key in visible_keys
         }
@@ -1102,10 +1126,14 @@ def render_schedule_cascade_review(
         ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
         ("Green Finish Changes", len(leaf_keys), "Changed leaves or independent rows"),
     ]
-    branch_html = "".join(
-        render_cascade_branch(plan, cascade_items, root_key, downstream_counts)
-        for root_key in branch_roots
-    )
+    projection = CascadeProjection(graph)
+    branches = []
+    for root_key in branch_roots:
+        if projection.entries >= projection.max_entries:
+            projection.entry_limited = True
+            break
+        branches.append(render_cascade_branch(plan, cascade_items, root_key, downstream_counts, projection))
+    branch_html = "".join(branches)
     if not branch_html:
         branch_html = (
             "<p class=\"empty\">"
@@ -1117,6 +1145,12 @@ def render_schedule_cascade_review(
         render_schedule_cascade_table(plan, cascade_items),
         f"{len(changed_keys)} finish-date change(s). Open for old/new dates and changed downstream successors.",
     )
+    limit_notice = ""
+    if projection.entry_limited or projection.depth_limited:
+        limit_notice = (
+            '<p class="cascade-limit">Visual tree shortened to keep this report responsive. '
+            'Review the complete detail table or audit-detail.csv for omitted branches.</p>'
+        )
     return (
         "<section><h2>Schedule Cascade Review</h2>"
         "<div class=\"cascade-review\">"
@@ -1125,8 +1159,12 @@ def render_schedule_cascade_review(
         "Red cards are changed finish dates that also have changed downstream successors. "
         "Green cards are changed finish dates with no changed downstream successor. "
         "Branches are collapsed and ordered from most downstream affected issues to least. "
-        "Nested branches follow the Jira dependency links written to Project as predecessor relationships."
+        "Nested branches follow the Jira dependency links written to Project as predecessor relationships. "
+        "Shared downstream issues are shown once, with references on other paths. "
+        f"The visual tree is limited to {projection.max_entries} cards/references and {projection.max_depth} levels. "
+        "The complete Schedule Cascade Detail table and audit-detail.csv retain all finish changes."
         "</p>"
+        f"{limit_notice}"
         f"<div class=\"cascade-flow\">{branch_html}</div>"
         "</div></section>"
         f"{detail_table}"
@@ -1181,7 +1219,7 @@ def cascade_branch_keys(plan: RunPlan, branch_roots: Sequence[str], changed_keys
 
 
 def cascade_downstream_counts(plan: RunPlan, changed_keys: set[str]) -> Dict[str, int]:
-    return {key: len(cascade_downstream_keys(plan, key, changed_keys)) for key in changed_keys}
+    return CascadeGraph({key: changed_successors(plan, key, changed_keys) for key in changed_keys}).downstream_counts
 
 
 def cascade_downstream_keys(plan: RunPlan, key: str, changed_keys: set[str]) -> set[str]:
@@ -1213,9 +1251,10 @@ def render_cascade_branch(
     cascade_items: Dict[str, AuditItem],
     root_key: str,
     downstream_counts: Dict[str, int],
+    projection: Optional[CascadeProjection] = None,
 ) -> str:
     downstream_count = downstream_counts.get(root_key, 0)
-    branch_body = render_cascade_node(plan, cascade_items, root_key, set(), downstream_counts)
+    branch_body = render_cascade_node(plan, cascade_items, root_key, set(), downstream_counts, projection)
     item = cascade_items[root_key]
     epic = plan.epics.get(root_key)
     jira_key = item.jira_key or (epic.jira_key if epic else "") or root_key
@@ -1244,36 +1283,46 @@ def render_cascade_node(
     key: str,
     path: set[str],
     downstream_counts: Dict[str, int],
+    projection: Optional[CascadeProjection] = None,
 ) -> str:
-    item = cascade_items[key]
-    is_driver = item.category == "CascadeBranchDriver"
-    epic = plan.epics.get(key)
-    jira_key = item.jira_key or (epic.jira_key if epic else "") or key
-    schedule_key = item.schedule_key or key
-    summary = item.summary or (epic.summary if epic else "")
-    changed_keys = set(cascade_items)
-    successor_keys = [] if key in path else sorted_changed_successors(plan, key, changed_keys, downstream_counts)
-    label = "Driver" if is_driver else "Changed"
-    node_html = (
-        f"<div class=\"cascade-node {'driver' if is_driver else 'changed'}\">"
-        "<div class=\"cascade-node-title\">"
-        f"{html_escape(jira_key)} <span>{html_escape(label)}</span>"
-        "</div>"
-        f"<div class=\"cascade-node-summary\">{html_escape(summary)}</div>"
-        f"<div class=\"cascade-node-dates\">Finish: {html_escape(item.old_value or 'blank')} -> {html_escape(item.new_value or 'blank')}</div>"
-    )
-    if schedule_key != jira_key:
-        node_html += f"<div class=\"cascade-node-dates\">Schedule row: {html_escape(schedule_key)}</div>"
-    node_html += "</div>"
-    if successor_keys:
-        child_path = set(path)
-        child_path.add(key)
-        children = "".join(
-            render_cascade_node(plan, cascade_items, successor_key, child_path, downstream_counts)
-            for successor_key in successor_keys
+    if projection is None:
+        changed_keys = set(cascade_items)
+        projection = CascadeProjection(CascadeGraph({
+            current: changed_successors(plan, current, changed_keys) for current in changed_keys
+        }), seen=set(path))
+    fragments = []
+    for action, current in projection.events(key):
+        if action == "open":
+            fragments.append('<div class="cascade-children">')
+            continue
+        if action == "close":
+            fragments.append("</div>")
+            continue
+        if action in {"limit", "depth"}:
+            fragments.append('<p class="cascade-limit">Further branches are listed in the complete detail table and audit-detail.csv.</p>')
+            continue
+        item = cascade_items[current]
+        epic = plan.epics.get(current)
+        jira_key = item.jira_key or (epic.jira_key if epic else "") or current
+        if action == "reference":
+            fragments.append(f'<p class="cascade-reference">Shared issue {html_escape(jira_key)}: already shown above; see the complete detail table for its finish change.</p>')
+            continue
+        is_driver = item.category == "CascadeBranchDriver"
+        schedule_key = item.schedule_key or current
+        summary = item.summary or (epic.summary if epic else "")
+        label = "Driver" if is_driver else "Changed"
+        node_html = (
+            f"<div class=\"cascade-node {'driver' if is_driver else 'changed'}\">"
+            "<div class=\"cascade-node-title\">"
+            f"{html_escape(jira_key)} <span>{html_escape(label)}</span>"
+            "</div>"
+            f"<div class=\"cascade-node-summary\">{html_escape(summary)}</div>"
+            f"<div class=\"cascade-node-dates\">Finish: {html_escape(item.old_value or 'blank')} -> {html_escape(item.new_value or 'blank')}</div>"
         )
-        node_html += f"<div class=\"cascade-children\">{children}</div>"
-    return node_html
+        if schedule_key != jira_key:
+            node_html += f"<div class=\"cascade-node-dates\">Schedule row: {html_escape(schedule_key)}</div>"
+        fragments.append(node_html + "</div>")
+    return "".join(fragments)
 
 
 def render_schedule_cascade_table(plan: RunPlan, cascade_items: Dict[str, AuditItem]) -> str:

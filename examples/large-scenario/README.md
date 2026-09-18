@@ -105,13 +105,15 @@ The fixed `as_of_date` keeps the training scenario repeatable. In a live team co
 
 ## Step 3: Run The Baseline Export
 
+Use a fresh output folder for this walkthrough; the committed `report-example` files are previews. Run IDs are exclusive, so choose new IDs or a new output folder when repeating the walkthrough.
+
 This report-only command writes the baseline state file used for comparison. It does not create a Microsoft Project file.
 
 ```powershell
 py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-baseline-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\examples\large-scenario\report-example `
+  --output-dir .\review-output\large-scenario-reports `
   --project-name "Large Scenario Project" `
   --run-id baseline-1200 `
   --write-state
@@ -120,7 +122,7 @@ py -3.14 -m j2p validate `
 Expected output folder:
 
 ```text
-examples\large-scenario\report-example\Large-Scenario-Project\runs\j2p-run-baseline-1200\
+review-output\large-scenario-reports\Large-Scenario-Project\runs\j2p-run-baseline-1200\
 ```
 
 ## Step 4: Run The Updated Export Against The Baseline
@@ -131,7 +133,7 @@ This report-only command writes the updated manager report and CSV audit files. 
 py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\examples\large-scenario\report-example `
+  --output-dir .\review-output\large-scenario-reports `
   --project-name "Large Scenario Project" `
   --sprint "Sprint 24.10" `
   --run-id updated-1200 `
@@ -141,7 +143,7 @@ py -3.14 -m j2p validate `
 Open the generated manager report:
 
 ```text
-examples\large-scenario\report-example\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\html\Manager-Review-Report.html
+review-output\large-scenario-reports\Large-Scenario-Project\sprints\Sprint-24.10\runs\j2p-run-updated-1200\reports\html\Manager-Review-Report.html
 ```
 
 ## Step 5: Create Project Files For Windows Review

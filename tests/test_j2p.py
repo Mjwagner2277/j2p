@@ -333,7 +333,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(plan.epics["TEAM-1"].story_point_ratio, 1.25)
         self.assertEqual(plan.stats["story_point_ratio"], 1.25)
 
-    def test_unparsed_logged_hours_are_reported_without_stopping_run(self) -> None:
+    def test_unparsed_logged_hours_stop_run_with_context(self) -> None:
         csv_text = "\n".join(
             [
                 "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Logged Hours,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
@@ -346,10 +346,11 @@ class J2PPlanningTests(unittest.TestCase):
             csv_path = Path(temp) / "bad-hours.csv"
             csv_path.write_text(csv_text, encoding="utf-8")
             config = load_config(FIXTURES / "mixed-config.yaml")
-            plan = build_run_plan(csv_path, config)
-
-        self.assertEqual(plan.epics["TEAM-1"].logged_hours, 0)
-        self.assertIn("UnparsedLoggedHours", {item.category for item in plan.audit_items})
+            with self.assertRaises(J2PError) as raised:
+                build_run_plan(csv_path, config)
+        self.assertIn("logged", str(raised.exception).lower())
+        self.assertIn("TEAM-11", str(raised.exception))
+        self.assertIn("bad-hours.csv", str(raised.exception))
 
     def test_fixversion_mode_defaults_multi_fixversion_epics_to_reference_rows(self) -> None:
         config = load_config(FIXTURES / "fixversion-config.yaml")
@@ -1818,8 +1819,12 @@ class FakeProjectApp:
     def FileCloseEx(self, Save: int, NoAuto: bool, CheckIn: bool) -> None:
         self.close_ex_calls.append((Save, NoAuto, CheckIn))
 
-    def FileSaveAs(self, Name: str) -> None:
+    def FileSaveAs(self, Name: str) -> bool:
+        from types import SimpleNamespace
         self.save_as_paths.append(Name)
+        Path(Name).write_bytes(b"synthetic saved Project")
+        self.ActiveProject = SimpleNamespace(FullName=Name)
+        return True
 
 
 class FakeWin32Com:

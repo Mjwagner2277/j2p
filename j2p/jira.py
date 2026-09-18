@@ -15,13 +15,16 @@ from .models import AuditItem, J2PError, JiraIssue
 
 JIRA_KEY_RE = re.compile(r"\b[A-Z][A-Z0-9]+-\d+\b")
 SINGLE_BYTE_FALLBACK_ENCODINGS = ("cp1252", "latin-1")
+DEFAULT_MAX_FIELD_CHARS = 8 * 1024 * 1024
+NUMBER_RE = re.compile(r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
+AGGREGATE_HOURS_HEADERS = {"σ time spent", "aggregate time spent"}
 
 
 class CsvTable:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, max_field_chars: int = DEFAULT_MAX_FIELD_CHARS) -> None:
         self.path = path
         try:
-            rows, self.encoding = read_csv_rows(path)
+            rows, self.encoding = read_csv_rows(path, max_field_chars)
         except OSError as exc:
             raise J2PError(f"Could not read Jira CSV {path}: {exc.strerror}") from exc
         if not rows:
@@ -29,6 +32,12 @@ class CsvTable:
         self.headers = [header.strip() for header in rows[0]]
         self.row_numbers = [index for index, row in enumerate(rows[1:], start=2) if any(cell.strip() for cell in row)]
         self.rows = [row for row in rows[1:] if any(cell.strip() for cell in row)]
+        for number, row in zip(self.row_numbers, self.rows):
+            if len(row) != len(self.headers):
+                raise J2PError(
+                    f"CSV {path}, row {number}: expected {len(self.headers)} columns, got {len(row)}. "
+                    "Re-export the file or correct its quoting and trailing empty columns."
+                )
         self.header_index: Dict[str, List[int]] = {}
         for index, header in enumerate(self.headers):
             self.header_index.setdefault(normalize_header(header), []).append(index)
@@ -55,11 +64,17 @@ class CsvTable:
         return values
 
     def get_first(self, row: Sequence[str], candidates: Sequence[str]) -> str:
-        values = self.get_all(row, candidates)
-        return values[0] if values else ""
+        return self.get_first_with_header(row, candidates)[1]
+
+    def get_first_with_header(self, row: Sequence[str], candidates: Sequence[str]) -> Tuple[str, str]:
+        for candidate in candidates:
+            for index in self.header_index.get(normalize_header(candidate), []):
+                if index < len(row) and row[index].strip():
+                    return self.headers[index], row[index].strip()
+        return self.selected_header(candidates), ""
 
 
-def read_csv_rows(path: Path) -> Tuple[List[List[str]], str]:
+def read_csv_rows(path: Path, max_field_chars: int = DEFAULT_MAX_FIELD_CHARS) -> Tuple[List[List[str]], str]:
     raw = path.read_bytes()
     attempted: List[str] = []
     failures: List[str] = []
@@ -75,7 +90,17 @@ def read_csv_rows(path: Path) -> Tuple[List[List[str]], str]:
         if decoded_text_looks_binary(text):
             failures.append(f"{encoding}: decoded text contains NUL characters")
             continue
-        return list(csv.reader(io.StringIO(text))), encoding
+        previous_limit = csv.field_size_limit(max_field_chars)
+        reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+        try:
+            return list(reader), encoding
+        except csv.Error as exc:
+            raise J2PError(
+                f"Could not parse CSV {path} near physical line {reader.line_num}: {exc}. "
+                f"Configured maximum field length: {max_field_chars} characters."
+            ) from exc
+        finally:
+            csv.field_size_limit(previous_limit)
     attempted_text = ", ".join(attempted)
     failure_text = "; ".join(failures)
     details = f" Details: {failure_text}" if failure_text else ""
@@ -132,6 +157,18 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                     source_row=row_index,
                 )
             )
+        point_header, point_value = table.get_first_with_header(row, columns["story_points"])
+        hours_header, hours_value = table.get_first_with_header(row, columns.get("logged_hours", []))
+        metrics = config.get("metrics", {})
+        if hours_value and normalize_header(hours_header) in AGGREGATE_HOURS_HEADERS and metrics.get("logged_hours_source", "direct") != "aggregate":
+            raise J2PError(
+                f"CSV {table.path}, row {row_index}, Jira key {key}, field {hours_header!r}: "
+                "aggregate logged time requires metrics.logged_hours_source: aggregate."
+            )
+        hours_unit = metrics.get("logged_hours_units", {}).get(
+            normalize_header(hours_header), metrics.get("logged_hours_unit", "hours")
+        )
+        context = f"CSV {table.path}, row {row_index}, Jira key {key}"
         issues.append(
             JiraIssue(
                 key=key,
@@ -141,12 +178,15 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 epic_link=table.get_first(row, columns["epic_link"]).upper(),
                 parent=table.get_first(row, columns.get("parent", [])).upper(),
                 fix_versions=split_multi_values(table.get_all(row, columns.get("fix_versions", []))),
-                story_points=parse_number(table.get_first(row, columns["story_points"])),
+                story_points=parse_number(point_value, context=context, field=point_header or "Story Points"),
                 logged_hours=parse_logged_hours(
-                    table.get_first(row, columns.get("logged_hours", [])),
+                    hours_value,
                     audit,
                     key,
                     row_index,
+                    numeric_unit=hours_unit,
+                    source_file=str(table.path),
+                    field=hours_header or "Logged Hours",
                 ),
                 status=table.get_first(row, columns["status"]),
                 resolution=table.get_first(row, columns.get("resolution", [])),
@@ -168,18 +208,22 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
     return issues
 
 
-def parse_number(value: str) -> Optional[float]:
+def parse_number(value: str, *, context: str = "CSV", field: str = "numeric value") -> Optional[float]:
     if value is None:
         return None
-    cleaned = str(value).strip().replace(",", "")
-    if not cleaned:
+    raw = str(value).strip()
+    if not raw:
         return None
     try:
-        number = float(cleaned)
+        number = float(raw.replace(",", ""))
     except ValueError:
-        return None
+        raise J2PError(f"{context}, field={field!r}: invalid numeric value {raw!r}.") from None
     if not math.isfinite(number):
-        raise J2PError("CSV numeric value must be finite; NaN and infinity are not supported.")
+        raise J2PError(f"{context}, field={field!r}: value {raw!r} must be finite; NaN and infinity are not supported.")
+    if not NUMBER_RE.fullmatch(raw):
+        raise J2PError(f"{context}, field={field!r}: invalid numeric format {raw!r}; use decimal numbers or grouped thousands.")
+    if number < 0:
+        raise J2PError(f"{context}, field={field!r}: value {raw!r} must be nonnegative.")
     return number
 
 
@@ -188,17 +232,24 @@ def parse_logged_hours(
     audit: Optional[List[AuditItem]] = None,
     key: str = "",
     row_index: int = 0,
+    *,
+    numeric_unit: str = "hours",
+    source_file: str = "",
+    field: str = "Logged Hours",
 ) -> float:
     raw = "" if value is None else str(value).strip()
     if not raw:
         return 0.0
-    numeric = parse_number(raw)
-    if numeric is not None:
-        return numeric
+    context = f"CSV {source_file or '<input>'}, row {row_index}, Jira key {key or '<unknown>'}"
+    unit_divisors = {"hours": 1.0, "minutes": 60.0, "seconds": 3600.0}
+    if numeric_unit not in unit_divisors:
+        raise J2PError(f"{context}, field={field!r}: unsupported numeric time unit {numeric_unit!r}.")
+    if NUMBER_RE.fullmatch(raw) or raw.casefold() in {"nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}:
+        return parse_number(raw, context=context, field=field) / unit_divisors[numeric_unit]
     time_text = raw.lower().replace(",", " ")
-    clock_match = re.fullmatch(r"(\d+):([0-5]\d)(?::[0-5]\d)?", time_text)
+    clock_match = re.fullmatch(r"(\d+):([0-5]\d)(?::([0-5]\d))?", time_text)
     if clock_match:
-        return round(int(clock_match.group(1)) + int(clock_match.group(2)) / 60, 2)
+        return int(clock_match.group(1)) + int(clock_match.group(2)) / 60 + int(clock_match.group(3) or 0) / 3600
     multipliers = {
         "w": 40.0,
         "week": 40.0,
@@ -223,29 +274,22 @@ def parse_logged_hours(
         "seconds": 1.0 / 3600.0,
     }
     total = 0.0
-    matched = False
-    for amount, unit in re.findall(r"(-?\d+(?:\.\d+)?)\s*([a-z]+)", time_text):
+    position = 0
+    for match in re.finditer(r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([a-z]+)", time_text):
+        if time_text[position:match.start()].strip():
+            break
+        amount, unit = match.groups()
         multiplier = multipliers.get(unit)
-        if multiplier is not None:
-            matched = True
-            total += float(amount) * multiplier
-    if matched:
-        return round(total, 2)
-    if audit is not None:
-        audit.append(
-            AuditItem(
-                "Warning",
-                "UnparsedLoggedHours",
-                jira_key=key,
-                field="Logged Hours",
-                old_value=raw,
-                new_value="0",
-                message=f"Could not parse logged hours '{raw}' on CSV row {row_index}.",
-                reviewer_action="Use decimal hours, HH:MM, or duration text such as 1h 30m.",
-                source_row=row_index,
-            )
-        )
-    return 0.0
+        if multiplier is None:
+            break
+        total += parse_number(amount, context=context, field=field) * multiplier
+        position = match.end()
+    if position and not time_text[position:].strip() and math.isfinite(total):
+        return total
+    raise J2PError(
+        f"{context}, field={field!r}: could not parse complete logged time {raw!r}. "
+        "Use a nonnegative number in the configured unit, HH:MM[:SS], or duration text such as 1h 30m."
+    )
 
 
 def parse_date(value: str, audit: List[AuditItem], key: str, row_index: int) -> str:

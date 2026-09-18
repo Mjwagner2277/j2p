@@ -66,7 +66,6 @@ def build_run_plan(
     paths = [jira_csv] if isinstance(jira_csv, (str, Path)) else list(jira_csv)
     if not paths:
         raise J2PError("At least one Jira CSV is required.")
-    tables = [CsvTable(Path(path)) for path in paths]
     audit: List[AuditItem] = []
     baseline = baseline or {}
     required = ["jira_key", "issue_type", "summary", "epic_link", "story_points", "status"]
@@ -75,25 +74,33 @@ def build_run_plan(
         required.append("parent")
     if "fixVersion" in configured_rollup_modes:
         required.append("fix_versions")
-    for table in tables:
+    column_headers = {name: [] for name in sorted(config.get("columns", {}))}
+    issues = []
+    seen = {}
+    duplicate_count = 0
+    csv_batches = []
+    for path in paths:
+        table = CsvTable(Path(path), config.get("input", {}).get("csv_max_field_chars", 8 * 1024 * 1024))
         missing = [name for name in required if not table.has_any(logical_columns(config, name))]
         if missing:
             details = ", ".join(f"{name}: {logical_columns(config, name)}" for name in missing)
             raise J2PError(f"CSV {table.path} is missing required mapped columns: {details}")
 
-    column_map = {
-        name: " | ".join(dict.fromkeys(
-            table.selected_header(logical_columns(config, name)) for table in tables
-            if table.selected_header(logical_columns(config, name))
-        ))
-        for name in sorted(config.get("columns", {}).keys())
-    }
-    issues = []
-    seen = {}
-    duplicate_count = 0
-    for table in tables:
+        batch_column_map = {}
+        for name in column_headers:
+            header = table.selected_header(logical_columns(config, name))
+            batch_column_map[name] = header
+            if header and header not in column_headers[name]:
+                column_headers[name].append(header)
+        batch_metadata = {
+            "path": str(table.path.resolve()), "encoding": table.encoding,
+            "rows_read": len(table.rows), "issues_read": 0,
+            "unique_issues_added": 0, "duplicates_skipped": 0,
+            "column_map": batch_column_map,
+        }
         batch_audit = []
         batch = parse_issues(table, config, batch_audit)
+        batch_metadata["issues_read"] = len(batch)
         for item in batch_audit:
             item.source_file = str(table.path)
         audit.extend(batch_audit)
@@ -106,13 +113,18 @@ def build_run_plan(
                     current_values.pop(metadata)
                     prior_values.pop(metadata)
                 if current_values != prior_values:
+                    changed_fields = sorted(
+                        name for name, value in current_values.items() if value != prior_values[name]
+                    )
                     raise J2PError(
                         f"Conflicting duplicate Jira key {issue.key}: "
                         f"{prior.source_file} row {prior.source_row} and "
                         f"{issue.source_file} row {issue.source_row}. "
+                        f"Conflicting fields: {', '.join(changed_fields)}. "
                         "Export consistent batches from the same snapshot; no version was selected."
                     )
                 duplicate_count += 1
+                batch_metadata["duplicates_skipped"] += 1
                 audit.append(AuditItem(
                     "Info", "DuplicateCsvIssueSkipped", jira_key=issue.key,
                     message=f"Repeated issue counted once; first seen in {prior.source_file} row {prior.source_row}.",
@@ -121,6 +133,11 @@ def build_run_plan(
                 continue
             seen[issue.key] = issue
             issues.append(issue)
+            batch_metadata["unique_issues_added"] += 1
+        csv_batches.append(batch_metadata)
+        # Retain normalized issues and compact provenance, not every raw export.
+        del batch, table
+    column_map = {name: " | ".join(headers) for name, headers in column_headers.items()}
     issues_by_key = {issue.key.upper(): issue for issue in issues if issue.key}
     issue_type_sets = {
         "initiative": lowered(config["issue_types"]["initiative"]),
@@ -139,6 +156,8 @@ def build_run_plan(
     stories = [
         issue for issue in issues if issue.issue_type.strip().lower() in issue_type_sets["story"]
     ]
+    if config.get("metrics", {}).get("logged_hours_source", "direct") == "aggregate":
+        validate_aggregate_time_scope(stories)
 
     story_rollup_by_epic: Dict[str, Dict[str, float]] = {}
     stories_by_epic: Dict[str, List[JiraIssue]] = {}
@@ -157,6 +176,22 @@ def build_run_plan(
                     source_row=story.source_row,
                 )
             )
+            continue
+        parent_issue = issues_by_key.get(story.epic_link)
+        if parent_issue is None or parent_issue.issue_type.strip().lower() not in issue_type_sets["epic"]:
+            missing_parent = parent_issue is None
+            audit.append(AuditItem(
+                "Warning", "StoryEpicNotFound" if missing_parent else "StoryParentNotEpic",
+                jira_key=story.key, issue_type=story.issue_type, summary=story.summary,
+                field="Epic Link", old_value=story.epic_link,
+                message=(
+                    f"Child work links to {story.epic_link}, which is "
+                    + ("missing from the combined export." if missing_parent else f"a {parent_issue.issue_type}, not an epic.")
+                    + " Its points and logged hours are omitted from the schedule."
+                ),
+                reviewer_action="Include the parent epic in an export batch or correct the Epic Link.",
+                source_row=story.source_row, source_file=story.source_file,
+            ))
             continue
         stories_by_epic.setdefault(story.epic_link.upper(), []).append(story)
         points = story.story_points or 0.0
@@ -310,6 +345,23 @@ def build_run_plan(
             )
         add_multi_fixversion_audit(audit, epic, assignments, rollup_mode)
 
+    included_jira_keys = {epic.jira_key or epic.key for epic in planned_epics.values()}
+    attached_story_count = sum(len(children) for children in stories_by_epic.values())
+    used_story_count = 0
+    for parent_key, children in stories_by_epic.items():
+        if parent_key in included_jira_keys:
+            used_story_count += len(children)
+            continue
+        for story in children:
+            audit.append(AuditItem(
+                "Warning", "StoryEpicExcluded", jira_key=story.key,
+                issue_type=story.issue_type, summary=story.summary, field="Epic Link",
+                old_value=parent_key,
+                message=f"Parent epic {parent_key} was excluded by resource or rollup rules. This child's points and logged hours are omitted from the schedule.",
+                reviewer_action="Review the parent epic's exclusion or confirm this child work is outside the schedule scope.",
+                source_row=story.source_row, source_file=story.source_file,
+            ))
+
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(planned_epics, config)
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
@@ -334,13 +386,18 @@ def build_run_plan(
     driving_completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
 
     stats = {
-        "csv_rows_read": sum(len(table.rows) for table in tables),
-        "csv_files_read": len(tables),
+        "csv_rows_read": sum(batch["rows_read"] for batch in csv_batches),
+        "csv_files_read": len(csv_batches),
+        "csv_batches": csv_batches,
         "duplicate_csv_issues_skipped": duplicate_count,
         "jira_issues_read": len(issues),
+        "unique_issues_read": len(issues),
         "initiatives_read": len(initiatives),
         "epics_read": len(epics),
-        "story_rows_used_for_completion": len(stories),
+        "story_rows_read": len(stories),
+        "story_rows_attached_to_epic": attached_story_count,
+        "story_rows_used_for_completion": used_story_count,
+        "story_rows_omitted_from_completion": len(stories) - used_story_count,
         "epics_included": len({epic.jira_key or epic.key for epic in planned_epics.values()}),
         "planned_epic_rows": len(planned_epics),
         "epics_excluded": excluded_count,
@@ -387,6 +444,23 @@ def build_run_plan(
             item.source_file = source.source_file
     validate_project_plan(plan, config)
     return plan
+
+
+def validate_aggregate_time_scope(stories: List[JiraIssue]) -> None:
+    """Aggregate exports must contain one nonoverlapping level of child work."""
+    by_key = {story.key: story for story in stories}
+    for story in stories:
+        if story.parent in by_key:
+            raise J2PError(
+                f"CSV {story.source_file}, row {story.source_row}, Jira key {story.key}: "
+                f"aggregate logged time overlaps exported parent {story.parent}. "
+                "Export direct logged time, or export only one child hierarchy level."
+            )
+        if story.issue_type.strip().lower() in {"sub-task", "subtask"} and not story.parent:
+            raise J2PError(
+                f"CSV {story.source_file}, row {story.source_row}, Jira key {story.key}: "
+                "aggregate logged time for a subtask requires its Parent key to verify nonoverlapping totals."
+            )
 
 
 def apply_completed_fixversion_suppression(

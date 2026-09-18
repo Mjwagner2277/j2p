@@ -6,10 +6,14 @@ import argparse
 import re
 import sys
 from datetime import datetime
+from uuid import uuid4
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from . import __version__
 from .config import ConfigError, load_config
+from .run_lifecycle import RunTransaction, file_identity
+from .operator_tools import expand_profile_args, run_doctor, run_init_profile, run_support_bundle
 from .core import build_run_plan
 from .models import J2PError
 from .project import (
@@ -25,15 +29,26 @@ from .state import run_plan_to_state, snapshots_from_state, write_json
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
     try:
+        profile_identity = {}
+        argv = expand_profile_args(list(sys.argv[1:] if argv is None else argv), profile_identity)
+        args = parser.parse_args(argv)
+        if profile_identity:
+            args._profile_identity = profile_identity
+            args.profile = Path(profile_identity["path"])
+        if args.command == "doctor":
+            return run_doctor(args)
+        if args.command == "init-profile":
+            return run_init_profile(args)
+        if args.command == "support-bundle":
+            return run_support_bundle(args)
         if args.command == "validate":
             return run_validate(args)
         if args.command == "update":
             return run_update(args)
         if args.command == "create":
             return run_create(args)
-    except (ConfigError, J2PError, ProjectAutomationError) as exc:
+    except (ConfigError, J2PError, ProjectAutomationError, OSError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
@@ -48,7 +63,28 @@ def build_parser() -> argparse.ArgumentParser:
         prog="j2p",
         description="Create Microsoft Project review sandboxes from project-wide Jira CSV exports.",
     )
+    parser.add_argument("--version", action="version", version=f"j2p {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    doctor = subparsers.add_parser("doctor", help="Read-only environment, configuration, and export checks.")
+    doctor.add_argument("--profile", type=Path)
+    doctor.add_argument("--config", type=Path)
+    doctor.add_argument("--jira-csv", type=Path, nargs="+", action="extend")
+    doctor.add_argument("--main-project", type=Path)
+    doctor.add_argument("--project-name")
+    doctor.add_argument("--output-dir", type=Path, default=Path("review-output"))
+    doctor.add_argument("--state-path", type=Path)
+    doctor.add_argument("--expected-issues", type=int)
+    doctor.add_argument("--json", action="store_true", help="Print machine-readable diagnostics.")
+    init = subparsers.add_parser("init-profile", help="Save reusable project arguments in a JSON profile.")
+    init.add_argument("--path", required=True, type=Path)
+    init.add_argument("--project-name", required=True)
+    init.add_argument("--config", type=Path)
+    init.add_argument("--main-project", type=Path)
+    init.add_argument("--output-dir", type=Path, default=Path("review-output"))
+    support = subparsers.add_parser("support-bundle", help="Package one run's diagnostics for support.")
+    support.add_argument("--run-dir", required=True, type=Path)
+    support.add_argument("--output", required=True, type=Path)
+    support.add_argument("--include-inputs", action="store_true", help="Also copy original CSV inputs into the ZIP.")
 
     validate = subparsers.add_parser(
         "validate",
@@ -138,6 +174,8 @@ def build_parser() -> argparse.ArgumentParser:
 def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = False) -> None:
     parser.add_argument("--jira-csv", required=True, type=Path, nargs="+", action="extend",
                         help="One or more Jira CSV export batches. May be repeated; combine only one snapshot.")
+    parser.add_argument("--profile", type=Path, help="Saved JSON project settings; explicit CLI options override them.")
+    parser.add_argument("--expected-issues", type=int, help="Expected unique issue count across all CSV batches.")
     parser.add_argument("--config", type=Path, help="YAML configuration file.")
     parser.add_argument(
         "--output-dir",
@@ -148,7 +186,7 @@ def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = Fal
     parser.add_argument(
         "--state-path",
         type=Path,
-        help="Persistent state JSON path. Default: <output-dir>/j2p-state.json",
+        help="Persistent state JSON path. Default: <output-dir>/<Project>/j2p-state.json",
     )
     parser.add_argument("--run-id", help="Override timestamped run id; useful for repeatable tests.")
     parser.add_argument(
@@ -176,83 +214,78 @@ def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = Fal
 
 
 def run_validate(args: argparse.Namespace) -> int:
-    context = make_context(args)
-    progress("Reading Jira CSV and building review plan")
-    baseline = snapshots_from_state(context["state_path"]) if args.compare_state else {}
-    plan = build_run_plan(args.jira_csv, context["config"], baseline)
-    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
-             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
-    state_after_path = context["state_dir"] / "j2p-state.after.json"
-    progress("Writing report state")
-    write_json(state_after_path, run_plan_to_state(plan))
-    if args.write_state or context["config"].get("behavior", {}).get("write_state_on_validate"):
-        write_json(context["state_path"], run_plan_to_state(plan))
-    progress("Writing manager report and audit CSV files")
-    paths = write_reports(
-        plan,
-        context["run_dir"],
-        context["config"],
-        sandbox_path=None,
-        state_path=context["state_path"] if context["state_path"].exists() else None,
-    )
-    print_run_result("Validation complete. No Microsoft Project file was opened.", context, paths)
-    return 0
+    return run_command(args)
 
 
 def run_update(args: argparse.Namespace) -> int:
-    context = make_context(args)
-    debug_visible = get_debug_visible(args)
-    progress("Copying source-of-truth MPP to a timestamped sandbox")
-    sandbox_path = prepare_sandbox_copy(args.main_project, context["project_dir"], context["run_id"])
-    progress(f"Loading comparison baseline from {args.comparison_source}")
-    baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
-    progress("Reading Jira CSV and building update plan")
-    plan = build_run_plan(args.jira_csv, context["config"], baseline)
-    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
-             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
-    progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
-    progress("Opening sandbox MPP and applying Jira updates")
-    apply_plan_to_sandbox(
-        sandbox_path,
-        plan,
-        context["config"],
-        visible=debug_visible,
-        dependency_write_mode=args.dependency_write_mode,
-    )
-    progress("Writing state files")
-    write_json(context["state_path"], run_plan_to_state(plan))
-    write_json(context["state_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
-    progress("Writing manager report and audit CSV files")
-    paths = write_reports(plan, context["run_dir"], context["config"], sandbox_path, context["state_path"])
-    print_run_result("Sandbox update complete.", context, paths, sandbox_path)
-    return 0
+    return run_command(args)
 
 
 def run_create(args: argparse.Namespace) -> int:
+    return run_command(args)
+
+
+def run_command(args: argparse.Namespace) -> int:
     context = make_context(args)
-    debug_visible = get_debug_visible(args)
-    progress("Reading Jira CSV and building initial Project plan")
-    baseline = snapshots_from_state(context["state_path"]) if context["state_path"].exists() else {}
-    plan = build_run_plan(args.jira_csv, context["config"], baseline)
-    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
-             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
-    progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
-    output_project = context["project_dir"] / args.output_project_name
-    progress("Creating initial sandbox MPP")
-    create_project_from_plan(
-        output_project,
-        plan,
-        context["config"],
-        visible=debug_visible,
-        dependency_write_mode=args.dependency_write_mode,
-    )
-    progress("Writing state files")
-    write_json(context["state_path"], run_plan_to_state(plan))
-    write_json(context["state_dir"] / "j2p-state.after.json", run_plan_to_state(plan))
-    progress("Writing manager report and audit CSV files")
-    paths = write_reports(plan, context["run_dir"], context["config"], output_project, context["state_path"])
-    print_run_result("Initial Project file created.", context, paths, output_project)
+    with RunTransaction(context, args) as transaction:
+        transaction.capture_inputs()
+        debug_visible = get_debug_visible(args)
+        sandbox_path = None
+        if args.command == "update":
+            # Parse before launching Project, so invalid inputs never need a COM session.
+            progress("Reading Jira CSV and checking input values")
+            preflight = build_run_plan(args.jira_csv, context["config"])
+            check_expected_issues(args, preflight)
+            progress("Copying source-of-truth MPP to a timestamped sandbox")
+            sandbox_path = prepare_sandbox_copy(args.main_project, context["project_dir"], context["run_id"])
+            progress(f"Loading comparison baseline from {args.comparison_source}")
+            baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
+        else:
+            compare = (args.command == "create" or getattr(args, "compare_state", False))
+            if getattr(args, "compare_state", False) and not context["state_path"].exists():
+                raise J2PError(f"Comparison state does not exist: {context['state_path']}. Create a baseline with --write-state first.")
+            baseline = snapshots_from_state(context["state_path"]) if compare else {}
+        progress("Reading Jira CSV and building review plan")
+        plan = build_run_plan(args.jira_csv, context["config"], baseline)
+        check_expected_issues(args, plan)
+        progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
+                 f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
+        transaction.record_plan(plan)
+        if args.command == "update":
+            progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
+            apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=debug_visible,
+                                  dependency_write_mode=args.dependency_write_mode)
+        elif args.command == "create":
+            sandbox_path = context["project_dir"] / args.output_project_name
+            create_project_from_plan(sandbox_path, plan, context["config"], visible=debug_visible,
+                                     dependency_write_mode=args.dependency_write_mode)
+        transaction.record_plan(plan)
+        state = run_plan_to_state(plan)
+        write_json(context["state_dir"] / "j2p-state.after.json", state)
+        publish_state = (args.command != "validate" or getattr(args, "write_state", False)
+                         or context["config"].get("behavior", {}).get("write_state_on_validate", False))
+        progress("Writing manager report and audit CSV files")
+        paths = write_reports(plan, context["run_dir"], context["config"], sandbox_path,
+                              context["state_path"] if publish_state or context["state_path"].exists() else None)
+        published_paths = dict(paths, state_snapshot=context["state_dir"] / "j2p-state.after.json")
+        if sandbox_path:
+            published_paths["sandbox"] = sandbox_path
+        transaction.complete(state, bool(publish_state), published_paths)
+        message = {"validate": "Validation complete. No Microsoft Project file was opened.",
+                   "update": "Sandbox update complete.", "create": "Initial Project file created."}[args.command]
+        print_run_result(message, context, paths, sandbox_path)
+        print(f"Run status: {transaction.manifest['status']}")
     return 0
+
+
+def check_expected_issues(args, plan):
+    expected = getattr(args, "expected_issues", None)
+    if expected is not None:
+        if expected < 0:
+            raise J2PError("--expected-issues must be zero or greater.")
+        actual = plan.stats.get("unique_issues_read", plan.stats.get("jira_issue_count"))
+        if actual != expected:
+            raise J2PError(f"Export coverage mismatch: expected {expected} unique issues, read {actual}. Check missing or overlapping batches.")
 
 
 def make_context(args: argparse.Namespace) -> Dict[str, Any]:
@@ -260,30 +293,42 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
     overrides: Dict[str, Any] = {}
     if getattr(args, "suppress_warnings_before", None):
         overrides["warning_suppression"] = {"before": args.suppress_warnings_before}
+    config_identity = file_identity(args.config) if args.config else None
+    if config_identity:
+        args.config = Path(config_identity["path"])
     config = load_config(args.config, overrides or None)
-    run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = args.output_dir
+    if config_identity and file_identity(args.config)["sha256"] != config_identity["sha256"]:
+        raise J2PError(f"Configuration changed while being read: {args.config}. Retry with stable input files.")
+    run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S-%f") + "-" + uuid4().hex[:6]
+    output_dir = args.output_dir.expanduser().resolve()
     project_name = getattr(args, "project_name", None)
     sprint = getattr(args, "sprint", None)
     workspace_dir = output_dir / slugify_path_part(project_name)
     sprint_dir = workspace_dir / "sprints" / slugify_path_part(sprint) if sprint else None
     if sprint_dir is not None:
-        check_sprint_folder(sprint_dir, bool(getattr(args, "allow_existing_sprint", False)))
         run_parent = sprint_dir / "runs"
     else:
         run_parent = workspace_dir / "runs"
     run_dir = run_parent / f"j2p-run-{run_id}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-    if sprint_dir is not None:
-        write_sprint_marker(sprint_dir, project_name, sprint)
-    state_path = args.state_path or workspace_dir / "j2p-state.json"
+    state_path = (args.state_path or workspace_dir / "j2p-state.json").expanduser().resolve()
     project_dir = run_dir / "project"
     state_dir = run_dir / "state"
-    if args.command in {"create", "update"}:
-        project_dir.mkdir(parents=True, exist_ok=True)
-    state_dir.mkdir(parents=True, exist_ok=True)
+    if state_path == run_dir or run_dir in state_path.parents:
+        raise J2PError("--state-path must be outside the run folder.")
+    reserved_state_names = {"run-manifest.json", "failure.json", "project-verification.json", "j2p-state.after.json"}
+    if (state_path.name.lower() in reserved_state_names
+            or state_path.name.lower().endswith(".pending.json")
+            or any(part.lower().startswith((".j2p", "j2p-run-")) for part in state_path.parts)):
+        raise J2PError("--state-path must not use a reserved lifecycle path or historical run folder.")
+    inputs = [Path(path).expanduser().resolve() for path in args.jira_csv]
+    inputs.extend(Path(getattr(args, name)).expanduser().resolve() for name in ("config", "profile", "main_project", "previous_sandbox") if getattr(args, name, None))
+    state_files = {state_path, state_path.with_name(state_path.name + ".pending.json"),
+                   state_path.with_name(state_path.name + ".lock")}
+    if state_files.intersection(inputs):
+        raise J2PError("--state-path must not overwrite an input file.")
     return {
         "config": config,
+        "config_identity": config_identity,
         "run_id": run_id,
         "output_dir": output_dir,
         "workspace_dir": workspace_dir,
@@ -296,6 +341,18 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
 
 
 def validate_output_scope(args: argparse.Namespace) -> None:
+    if not args.project_name.strip() or (getattr(args, "sprint", None) is not None and not args.sprint.strip()):
+        raise J2PError("Project and sprint names must not be blank.")
+    for name in ("run_id", "output_project_name"):
+        value = getattr(args, name, None)
+        if value is not None:
+            if (not value or value in {".", ".."} or re.search(r'[<>:"/\\|?*\x00-\x1f]', value)
+                    or value.endswith((".", " ")) or is_reserved_windows_name(value)):
+                raise J2PError(f"--{name.replace('_', '-')} must be a safe filename without path separators.")
+    if args.command == "create" and not args.output_project_name.lower().endswith(".mpp"):
+        raise J2PError("--output-project-name must end in .mpp.")
+    if getattr(args, "state_path", None) and args.state_path.suffix.lower() != ".json":
+        raise J2PError("--state-path must be a JSON file.")
     if args.command == "update":
         if not getattr(args, "sprint", None):
             raise J2PError("update requires --sprint so sandbox updates are grouped by project and sprint.")
@@ -303,10 +360,14 @@ def validate_output_scope(args: argparse.Namespace) -> None:
         raise J2PError("--sprint requires --project-name.")
 
 
+def is_reserved_windows_name(value: str) -> bool:
+    return value.split(".")[0].upper() in {"CON", "PRN", "AUX", "NUL", *(f"COM{x}" for x in range(1, 10)), *(f"LPT{x}" for x in range(1, 10))}
+
+
 def slugify_path_part(value: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
     cleaned = cleaned.strip(".-_")
-    return cleaned or "unnamed"
+    return "_" + cleaned if is_reserved_windows_name(cleaned) else cleaned or "unnamed"
 
 
 def check_sprint_folder(sprint_dir: Path, allow_existing: bool) -> None:
@@ -340,6 +401,8 @@ def load_update_baseline(
         if not args.previous_sandbox:
             raise J2PError("--previous-sandbox is required when --comparison-source previous-sandbox is used.")
         return snapshot_project_file(args.previous_sandbox, config, visible=get_debug_visible(args))
+    if not state_path.exists():
+        raise J2PError(f"Comparison state does not exist: {state_path}. Create a baseline first.")
     return snapshots_from_state(state_path)
 
 
@@ -351,6 +414,8 @@ def print_run_result(
 ) -> None:
     print(message)
     print(f"Run folder: {context['run_dir']}")
+    print(f"Open report: {context['run_dir'] / 'reports' / 'html' / 'index.html'}")
+    print(f"Run manifest: {context['run_dir'] / 'run-manifest.json'}")
     if sandbox_path:
         print(f"Sandbox Project file: {sandbox_path}")
     print(f"Manager report: {paths['manager_report']}")

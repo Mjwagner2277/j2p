@@ -12,6 +12,8 @@ For product users and schedule reviewers:
 
 - Large project walkthrough: `examples/large-scenario/README.md`
 - Product user guide: `docs/user-guide.md`
+- Saved profiles, diagnostics, and recovery: `docs/run-operations.md`
+- Input/configuration validation: `docs/input-validation.md`
 - Project/sprint workflow: `docs/project-sprint-workflow.md`
 - Large Jira CSV export guide: `docs/jira-large-csv-export.md`
 - YAML configuration reference: `docs/configuration-reference.md`
@@ -21,6 +23,8 @@ For contributors:
 - Developer Project field reference: `docs/project-fields.md`
 - Contributor guide: `docs/contributing.md`
 - Testing and pre-merge checks: `docs/testing.md`
+- Windows acceptance gate: `docs/windows-acceptance.md`
+- Large export benchmarks: `docs/performance.md`
 - Requirements and design decisions: `docs/requirements.md`
 
 ## Requirements
