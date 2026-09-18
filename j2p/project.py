@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import AuditItem, PlanEpic, ProjectTaskSnapshot, RunPlan
+from .project_values import epic_assignments, epic_context, value_metadata
 from .rollups import summary_id
 
 
@@ -430,12 +431,17 @@ class MicrosoftProjectSession:
                 project_progress(f"Epic row write progress: {index}/{total_epics} row(s)")
             parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
             task = task_by_key.get(epic.key)
-            if task is None:
-                task = self.add_epic_under_summary(epic, summary_tasks[parent_summary_id])
-                task_by_key[epic.key] = task
-            else:
-                task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
-                task_by_key[epic.key] = task
+            try:
+                if task is None:
+                    task = self.add_epic_under_summary(epic, summary_tasks[parent_summary_id])
+                else:
+                    task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
+            except Exception:
+                raise ProjectAutomationError(
+                    f"Microsoft Project rejected epic row creation/placement: {epic_context(epic)}. "
+                    "Check the sandbox outline and task restrictions."
+                ) from None
+            task_by_key[epic.key] = task
             self.update_epic_task(task, epic, config, plan)
         if total_epics:
             project_progress("Epic row writes complete")
@@ -599,28 +605,24 @@ class MicrosoftProjectSession:
             task.Manual = False
         except Exception:
             pass
-        task.Name = epic.summary
-        task.PercentComplete = epic.percent_complete
-        setattr(task, fields.get("jira_key", "Text1"), epic.jira_key or epic.key)
-        setattr(task, fields.get("jira_issue_id", "Text2"), epic.issue_id)
-        setattr(task, fields.get("jira_issue_type", "Text3"), "Epic")
-        setattr(task, fields.get("rollup_mode", "Text4"), epic.rollup_mode)
-        setattr(task, fields.get("rollup_key", "Text5"), epic.rollup_key)
-        self.set_native_resource_group(task, epic.resource_group)
-        setattr(task, fields.get("jira_key_prefix", "Text7"), epic.key_prefix)
-        setattr(task, fields.get("dependency_review", "Text8"), epic.dependency_review)
-        setattr(task, fields.get("jira_status", "Text9"), epic.status)
-        setattr(task, fields.get("j2p_key", "Text10"), epic.key)
-        setattr(task, fields.get("row_role", "Text11"), epic.row_role)
-        setattr(task, fields.get("fix_version", "Text12"), epic.fix_version)
-        setattr(task, fields.get("primary_schedule_key", "Text13"), epic.primary_schedule_key)
-        setattr(task, fields.get("total_story_points", "Number1"), epic.total_story_points)
-        setattr(task, fields.get("completed_story_points", "Number2"), epic.completed_story_points)
-        setattr(task, fields.get("logged_hours", "Number3"), epic.logged_hours)
-        setattr(task, story_point_ratio_project_field(config), epic.story_point_ratio)
-        setattr(task, fields.get("in_planning", "Flag1"), bool(epic.in_planning))
-        setattr(task, fields.get("dependency_review_needed", "Flag3"), bool(epic.dependency_review))
-        setattr(task, fields.get("drives_schedule", "Flag4"), bool(epic.drives_schedule))
+        for field, value in epic_assignments(epic, config):
+            try:
+                setattr(task, field, value)
+            except Exception:
+                # COM exception descriptions may contain sensitive field contents.
+                raise ProjectAutomationError(
+                    f"Microsoft Project rejected epic write: {epic_context(epic)}, "
+                    f"field={field}, {value_metadata(value)}. "
+                    "Check the field mapping and the sandbox field's formula/lookup restrictions."
+                ) from None
+        try:
+            self.set_native_resource_group(task, epic.resource_group)
+        except Exception:
+            raise ProjectAutomationError(
+                f"Microsoft Project rejected epic resource assignment: {epic_context(epic)}, "
+                f"field=ResourceGroup, {value_metadata(epic.resource_group)}. "
+                "Check the sandbox resources and assignment restrictions."
+            ) from None
         self.write_project_date(
             task,
             epic,

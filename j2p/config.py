@@ -9,6 +9,7 @@ and string lists.
 from __future__ import annotations
 
 import copy
+import math
 import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -191,6 +192,23 @@ def read_yaml_file(path: Path) -> Dict[str, Any]:
 
 
 def normalize_config(config: Dict[str, Any]) -> None:
+    fields = config.get("project_fields")
+    if not isinstance(fields, dict):
+        raise ConfigError("project_fields must be a mapping.")
+    used = set()
+    for logical, field in fields.items():
+        default = DEFAULT_CONFIG["project_fields"].get(logical)
+        if default is None:
+            raise ConfigError(f"Unknown project_fields entry: {logical}.")
+        family = re.match(r"[A-Za-z]+", default).group()
+        limit = {"Text": 30, "Number": 20, "Flag": 20, "Date": 10}[family]
+        match = re.fullmatch(rf"{family}([1-9][0-9]*)", str(field))
+        if not match or int(match.group(1)) > limit:
+            raise ConfigError(f"project_fields.{logical} must map to {family}1 through {family}{limit}.")
+        if field in used:
+            raise ConfigError(f"project_fields maps more than one value to {field}.")
+        used.add(field)
+
     if "rollup_mode" in config:
         raise ConfigError(
             "Top-level rollup_mode is no longer supported. "
@@ -273,7 +291,7 @@ def normalize_config(config: Dict[str, Any]) -> None:
         hours_per_story_point = float(hours_per_story_point)
     except (TypeError, ValueError) as exc:
         raise ConfigError("metrics.hours_per_story_point must be a positive number.") from exc
-    if hours_per_story_point <= 0:
+    if not math.isfinite(hours_per_story_point) or hours_per_story_point <= 0:
         raise ConfigError("metrics.hours_per_story_point must be greater than zero.")
     metrics["hours_per_story_point"] = hours_per_story_point
     config["metrics"] = metrics

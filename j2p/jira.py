@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from datetime import datetime
 from pathlib import Path
@@ -169,9 +170,12 @@ def parse_number(value: str) -> Optional[float]:
     if not cleaned:
         return None
     try:
-        return float(cleaned)
+        number = float(cleaned)
     except ValueError:
         return None
+    if not math.isfinite(number):
+        raise J2PError("CSV numeric value must be finite; NaN and infinity are not supported.")
+    return number
 
 
 def parse_logged_hours(

@@ -17,6 +17,7 @@ from .baseline import (
     compare_with_baseline,
     story_point_ratio_field_name,
 )
+from .project_values import validate_project_plan
 from .config import logical_columns, lowered
 from .dependencies import add_dependency_review, apply_dependencies, creates_cycle, primary_planned_key
 from .formatting import format_number, html_escape
@@ -324,7 +325,7 @@ def build_run_plan(
             }
         ),
     }
-    return RunPlan(
+    plan = RunPlan(
         generated_at=datetime.now().isoformat(timespec="seconds"),
         jira_csv=str(jira_csv),
         rollup_mode=describe_rollup_modes(planned_epics, config),
@@ -334,6 +335,9 @@ def build_run_plan(
         epics=planned_epics,
         audit_items=audit,
     )
+
+    validate_project_plan(plan, config)
+    return plan
 
 
 def apply_completed_fixversion_suppression(

@@ -704,3 +704,29 @@ It includes:
 - generated manager reports and per-project-key CSVs
 
 The authored training rows are documented in the walkthrough so the examples are stable and teachable.
+
+## Project Write Preflight and Troubleshooting
+
+All commands check planned Project values before writing task rows. `validate` now
+fails with exit code 2 if a task name, custom text value, or resource group exceeds
+255 characters, a planned number is not finite, or percent complete is outside
+0–100. This includes generated Dependency Review text, which can grow when an epic
+has many missing dependency targets. Values are not silently truncated. Shorten
+source text or correct the dependency links/export coverage, then rerun validation.
+An error stops at the first invalid value; rerun after correcting it. No successful
+validation report or state snapshot is written for a failed preflight.
+
+Custom-field mappings must use the correct family and range: Text1–30,
+Number1–20, Flag1–20, or Date1–10. Each field may have only one mapped value.
+NaN and infinity are rejected in CSV numeric inputs and metric configuration.
+
+A failure during epic writes now identifies the epic schedule key, CSV row,
+Project field, value type, and text length when applicable. Field contents and
+raw COM exception descriptions are omitted. You can share this diagnostic without
+sharing the CSV contents (redact the issue key if needed).
+
+Validation does not open Microsoft Project. Formula fields, lookup restrictions,
+resource assignment rules, and other constraints in an existing `.mpp` can still
+reject an otherwise valid value. Inspect the identified field in the sandbox.
+The progress counter is printed before selected rows are written, so use the error's
+CSV row and epic key rather than treating the progress counter as a CSV row number.
