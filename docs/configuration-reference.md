@@ -118,6 +118,12 @@ fixversion_completion_suppression:
   as_of_date: ""
   keep_audit_summary: true
 
+planning_horizon:
+  enabled: true
+  immediate_months: 6
+  bucket_months: 6
+  as_of_date: ""
+
 project_fields:
   jira_key: Text1
   jira_issue_id: Text2
@@ -156,6 +162,7 @@ project_fields:
 | `metrics` | No | Built-in defaults | Mapping | Controls conversion rates such as hours per story point. |
 | `warning_suppression` | No | Disabled | Mapping | Suppresses selected report/audit warnings for dated historical Jira issues before a cutoff. |
 | `fixversion_completion_suppression` | No | Enabled when `Resolved` is present | Mapping | Hides stale completed fixVersion rollups from HTML manager reports. |
+| `planning_horizon` | No | Enabled | Mapping | Bins review items into `Immediate` and future six-month planning windows. |
 | `review_table` | No | Built-in defaults | `all` or list of exposed columns | Controls which columns are shown in the Microsoft Project `j2p Review` table. |
 | `project_fields` | No | Built-in defaults | Microsoft Project custom field IDs | Controls which Project custom fields j2p writes. Resource Group is native and is not configured here. |
 | `project_field_names` | No | Built-in defaults | Mapping of j2p fields to display names | Controls custom column names in the sandbox. Usually omitted because defaults are user-friendly. |
@@ -473,6 +480,36 @@ If a fixVersion is complete by status but one or more issues are missing `Resolv
 | `stale_after_days` | `90` | Number of days after the latest issue `Resolved` date before a completed fixVersion is hidden. |
 | `as_of_date` | `""` | Optional run date override for repeatable audits and tests. Blank means today's date. |
 | `keep_audit_summary` | `true` | Adds a non-action audit detail row for each hidden completed fixVersion in CSV outputs. |
+
+## `planning_horizon`
+
+Bins review items by planning date so managers can separate immediate issues from future planning cleanup.
+
+Default:
+
+```yaml
+planning_horizon:
+  enabled: true
+  immediate_months: 6
+  bucket_months: 6
+  as_of_date: ""
+```
+
+How j2p assigns planning buckets:
+
+- `Immediate` means the item planning date is less than `immediate_months` from the run's planning horizon date.
+- After `Immediate`, j2p groups items into `bucket_months` windows such as `6-12 Months`, `12-18 Months`, and `18-24 Months`.
+- Undated review items are placed in `Unscheduled` because j2p cannot prove they are future work.
+- For initiative-mode epics, j2p uses the earliest target date from the epic and its child story/task rows.
+- For fixVersion-mode epics and fixVersion-level review items, j2p uses the earliest target date from Jira issues that declare that fixVersion.
+- In-planning epics beyond the immediate window are reported as `FutureInPlanning` informational items because task breakdown is not expected yet. In-planning epics inside the immediate window, or with no usable planning date, remain review items.
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `enabled` | `true` | Adds `planning_date` and `planning_bucket` to audit rows and groups manager-report review items by horizon. |
+| `immediate_months` | `6` | Size of the near-term window. |
+| `bucket_months` | `6` | Size of each future planning bucket. |
+| `as_of_date` | `""` | Optional run date override for repeatable audits and examples. Blank means today's date. |
 
 ## `review_table`
 

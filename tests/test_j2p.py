@@ -843,6 +843,48 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertIn("StoryMissingEpicLink", categories)
             self.assertIn("InPlanning", categories)
 
+    def test_in_planning_items_are_binned_by_planning_horizon(self) -> None:
+        csv_text = "\n".join(
+            [
+                "Issue key,Issue id,Issue Type,Summary,Epic Link,Parent,Fix versions,Story Points,Status,Resolution,Target start,Target end,Outward issue link (Blocks),Inward issue link (Blocks)",
+                "PROD-1,1,Initiative,Program Alpha,,,,,In Progress,,,,,",
+                "TEAM-1,2,Epic,Immediate planning gap,,PROD-1,,0,In Progress,,2026-03-01,2026-03-31,,",
+                "TEAM-2,3,Epic,Six to twelve month planning gap,,PROD-1,,0,In Progress,,2026-08-01,2026-08-31,,",
+                "TEAM-3,4,Epic,Twelve to eighteen month planning gap,,PROD-1,,0,In Progress,,2027-04-01,2027-04-30,,",
+                "PLAT-1,5,Epic,FixVersion planning gap uses earliest child date,,,Release A,0,In Progress,,2026-10-01,2026-10-31,,",
+                "PLAT-11,6,Story,Unpointed early child work,PLAT-1,,Release A,,To Do,,2026-02-01,2026-02-15,,",
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            csv_path = Path(temp) / "planning-horizon.csv"
+            csv_path.write_text(csv_text, encoding="utf-8")
+            config = load_config(FIXTURES / "mixed-config.yaml")
+            plan = build_run_plan(csv_path, config)
+            paths = write_reports(plan, Path(temp) / "reports", config)
+            manager_report = paths["manager_report"].read_text(encoding="utf-8")
+            audit_header = paths["audit_detail"].read_text(encoding="utf-8").splitlines()[0]
+
+        planning_items = {
+            item.jira_key: item
+            for item in plan.audit_items
+            if item.category in {"InPlanning", "FutureInPlanning"}
+        }
+        self.assertEqual(planning_items["TEAM-1"].category, "InPlanning")
+        self.assertEqual(planning_items["TEAM-1"].severity, "Review")
+        self.assertEqual(planning_items["TEAM-1"].planning_bucket, "Immediate")
+        self.assertEqual(planning_items["TEAM-2"].category, "FutureInPlanning")
+        self.assertEqual(planning_items["TEAM-2"].severity, "Info")
+        self.assertEqual(planning_items["TEAM-2"].planning_bucket, "6-12 Months")
+        self.assertEqual(planning_items["TEAM-3"].planning_bucket, "12-18 Months")
+        self.assertEqual(planning_items["PLAT-1"].category, "InPlanning")
+        self.assertEqual(planning_items["PLAT-1"].planning_date, "2026-02-01")
+        self.assertEqual(planning_items["PLAT-1"].planning_bucket, "Immediate")
+        self.assertIn("Reviewer Action Needed By Planning Horizon", manager_report)
+        self.assertIn("Immediate Review Items", manager_report)
+        self.assertIn("6-12 Months Review Items", manager_report)
+        self.assertIn("12-18 Months Review Items", manager_report)
+        self.assertIn("planning_bucket", audit_header)
+
     def test_manager_report_is_self_contained_and_field_mapping_includes_status(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
         plan = build_run_plan(FIXTURES / "project-wide-jira-update.csv", config)

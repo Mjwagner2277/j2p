@@ -15,12 +15,13 @@ Yellow/amber,Baseline-only unmatched item,CORE-1048,25,,UnmatchedProjectTask,Unm
 Blue,Missing dependency target,CORE-1006,23,23,MissingDependencyTarget,Dependency Review,Dependency targets must be included epics or they are skipped and reported.
 Blue,Self dependency,WEB-2008,27,27,SelfDependencySkipped,Dependency Review,An epic cannot block itself.
 Blue,Circular dependency,DATA-3009,30,30,CircularDependencySkipped,Dependency Review,Circular blocker links are skipped to prevent invalid Project scheduling.
-No color,Unparsed Jira target date,DATA-3034,31,31,UnparsedDate,Reviewer Action Needed,Unparseable Jira target dates are reported so the source export can be corrected.
+No color,Unparsed Jira target date,DATA-3034,31,31,UnparsedDate,Reviewer Action Needed By Planning Horizon,Unparseable Jira target dates are reported so the source export can be corrected.
 Report-only,Stale completed fixVersion hidden from manager HTML,PLAT-4026,34,34,SuppressedCompletedFixVersion,Audit detail / hidden from HTML,Completed fixVersion rollups older than the configured threshold are hidden from manager HTML but kept in detailed CSVs.
 Report-only,Stale completed fixVersion absent from manager HTML,PLAT-4026,34,34,ReportHidden,Manager HTML omission,The manager report omits old completed fixVersions while retaining an audit trail.
-Yellow/amber,Completed fixVersion missing Resolved date,PLAT-4027,35,35,CompletedFixVersionMissingResolvedDate,Reviewer Action Needed,A completed fixVersion stays visible when any issue lacks a usable Resolved date.
+Yellow/amber,Completed fixVersion missing Resolved date,PLAT-4027,35,35,CompletedFixVersionMissingResolvedDate,Reviewer Action Needed By Planning Horizon,A completed fixVersion stays visible when any issue lacks a usable Resolved date.
 Report-only,Recent completed fixVersion remains visible,OPS-5018,36,36,ReportPresence,Rollup Status,A completed fixVersion newer than the stale threshold remains visible in the manager report.
-Gray/green-gray,In planning epic,WEB-2010,28,28,InPlanning,In Planning,An included epic with no pointed child work is marked In Planning with 0 percent complete.
-No color,Blank Jira key row,,201,201,CsvRowMissingJiraKey,Reviewer Action Needed,A blank Jira-key row is skipped and reported as source CSV cleanup.
-No color,Orphan child story,CORE-899999,202,202,StoryMissingEpicLink,Reviewer Action Needed,A child story with no Epic Link is skipped from percent-complete math and reported.
+Gray/green-gray,Immediate in-planning epic,WEB-2011,43,43,InPlanning,Immediate Review Items,An included near-term epic with no pointed child work is marked In Planning and remains an immediate review item.
+Gray/green-gray,Future in-planning epic,WEB-2010,28,28,FutureInPlanning,6-12 Months Review Items,An included epic more than six months out is tracked as future planning work instead of an immediate task-breakdown action.
+No color,Blank Jira key row,,201,201,CsvRowMissingJiraKey,Reviewer Action Needed By Planning Horizon,A blank Jira-key row is skipped and reported as source CSV cleanup.
+No color,Orphan child story,CORE-899999,202,202,StoryMissingEpicLink,Reviewer Action Needed By Planning Horizon,A child story with no Epic Link is skipped from percent-complete math and reported.
 No color,Historical warning suppression summary,,39,39,SuppressedHistoricalWarnings,Review Type Summary,Old warnings before the configured cutoff are suppressed and summarized instead of cluttering the manager report.

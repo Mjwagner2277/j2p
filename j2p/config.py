@@ -80,6 +80,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "as_of_date": "",
         "keep_audit_summary": True,
     },
+    "planning_horizon": {
+        "enabled": True,
+        "immediate_months": 6,
+        "bucket_months": 6,
+        "as_of_date": "",
+    },
     "behavior": {
         "unknown_prefix": "exclude",
         "hide_completed_epics": True,
@@ -335,6 +341,27 @@ def normalize_config(config: Dict[str, Any]) -> None:
         fixversion_suppression.get("keep_audit_summary", True)
     )
     config["fixversion_completion_suppression"] = fixversion_suppression
+
+    planning_horizon = config.get("planning_horizon", {})
+    if planning_horizon is None:
+        planning_horizon = {}
+    if not isinstance(planning_horizon, dict):
+        raise ConfigError("planning_horizon must be a YAML mapping.")
+    planning_horizon["enabled"] = bool(planning_horizon.get("enabled", True))
+    try:
+        immediate_months = int(planning_horizon.get("immediate_months", 6))
+        bucket_months = int(planning_horizon.get("bucket_months", 6))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("planning_horizon immediate_months and bucket_months must be positive integers.") from exc
+    if immediate_months <= 0:
+        raise ConfigError("planning_horizon.immediate_months must be greater than zero.")
+    if bucket_months <= 0:
+        raise ConfigError("planning_horizon.bucket_months must be greater than zero.")
+    planning_horizon["immediate_months"] = immediate_months
+    planning_horizon["bucket_months"] = bucket_months
+    as_of_date = planning_horizon.get("as_of_date", "")
+    planning_horizon["as_of_date"] = "" if as_of_date is None else str(as_of_date).strip()
+    config["planning_horizon"] = planning_horizon
 
     review_table = config.get("review_table", {})
     if review_table is None:

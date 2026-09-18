@@ -127,6 +127,7 @@ BASELINE_CURATED_SUMMARIES = {
     "CORE-1049": "Client Walkthrough - Marketplace experiment missing rollup example",
     "WEB-2008": "Client Walkthrough - Web launch self dependency example",
     "WEB-2010": "Client Walkthrough - Design system discovery with no pointed child work",
+    "WEB-2011": "Client Walkthrough - Near-term planning gap comparison",
     "DATA-3008": "Client Walkthrough - Warehouse migration circular dependency A",
     "DATA-3009": "Client Walkthrough - Warehouse migration circular dependency B",
     "DATA-3034": "Client Walkthrough - Forecast refresh invalid date example",
@@ -408,6 +409,12 @@ def make_epic(
         successors = "WEB-2008"
     if key == "WEB-2010":
         status = "To Do"
+        start = date(2027, 4, 13)
+        finish = date(2027, 5, 24)
+    if key == "WEB-2011":
+        status = "To Do"
+        start = date(2026, 10, 5)
+        finish = date(2026, 11, 2)
     if key == "DATA-3008" and variant == "updated":
         successors = "DATA-3009"
     if key == "DATA-3009" and variant == "updated":
@@ -535,7 +542,7 @@ def story_rows(epics: Sequence[Dict[str, str]], variant: str) -> List[Dict[str, 
 
 def has_child_stories(epic: Dict[str, str], variant: str) -> bool:
     key = epic["Issue key"]
-    if key in {"WEB-2010"}:
+    if key in {"WEB-2010", "WEB-2011"}:
         return False
     if key.startswith("UNK-"):
         return False

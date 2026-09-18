@@ -6,6 +6,7 @@ public planning facade used by the CLI and tests.
 
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -100,6 +101,7 @@ def build_run_plan(
     ]
 
     story_rollup_by_epic: Dict[str, Dict[str, float]] = {}
+    stories_by_epic: Dict[str, List[JiraIssue]] = {}
     done_statuses = lowered(config.get("done_statuses", []))
     for story in stories:
         if not story.epic_link:
@@ -116,6 +118,7 @@ def build_run_plan(
                 )
             )
             continue
+        stories_by_epic.setdefault(story.epic_link.upper(), []).append(story)
         points = story.story_points or 0.0
         bucket = story_rollup_by_epic.setdefault(
             story.epic_link,
@@ -126,6 +129,7 @@ def build_run_plan(
         if story.status.strip().lower() in done_statuses:
             bucket["completed"] += points
             bucket["completed_logged_hours"] += story.logged_hours
+    fixversion_planning_dates = earliest_dates_by_fixversion(issues)
 
     planned_epics: Dict[str, PlanEpic] = {}
     excluded_count = 0
@@ -201,19 +205,38 @@ def build_run_plan(
         completed = epic.status.strip().lower() in done_statuses
 
         if in_planning:
+            planning_date = epic_planning_date(
+                epic,
+                stories_by_epic.get(epic.key.upper(), []),
+                rollup_mode,
+                assignments,
+                fixversion_planning_dates,
+            )
+            planning_bucket = planning_bucket_for_date(planning_date, config)
+            future_planning = planning_bucket not in {"", "Immediate", "Unscheduled"}
             audit.append(
                 AuditItem(
-                    "Review",
-                    "InPlanning",
+                    "Info" if future_planning else "Review",
+                    "FutureInPlanning" if future_planning else "InPlanning",
                     jira_key=epic.key,
                     issue_type=epic.issue_type,
                     summary=epic.summary,
                     field="In Planning",
                     new_value="Yes",
                     color="in_planning",
-                    message="Epic has no pointed child stories/tasks and is marked In Planning.",
-                    reviewer_action="Confirm this epic is intentionally unestimated or add pointed child work.",
+                    message=(
+                        "Epic has no pointed child stories/tasks and is marked In Planning. "
+                        f"Planning horizon: {planning_bucket}."
+                    ),
+                    reviewer_action=(
+                        "No immediate task-breakdown action is expected until this item enters the "
+                        "Immediate planning window."
+                        if future_planning
+                        else "Confirm this epic is intentionally unestimated or add pointed child work."
+                    ),
                     source_row=epic.source_row,
+                    planning_date=planning_date,
+                    planning_bucket=planning_bucket,
                 )
             )
 
@@ -264,6 +287,7 @@ def build_run_plan(
         planned_epics,
         config,
     )
+    assign_audit_planning_buckets(audit, issues, issues_by_key, planned_epics, config)
     driving_epics = [epic for epic in planned_epics.values() if epic.drives_schedule]
     driving_logged_hours = round(sum(epic.logged_hours for epic in driving_epics), 2)
     driving_completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
@@ -437,6 +461,169 @@ def fixversion_suppression_as_of(settings: Dict[str, Any]) -> date:
             "Use YYYY-MM-DD, for example 2026-09-17."
         )
     return date.fromisoformat(parsed)
+
+
+def assign_audit_planning_buckets(
+    audit: List[AuditItem],
+    issues: List[JiraIssue],
+    issues_by_key: Dict[str, JiraIssue],
+    planned_epics: Dict[str, PlanEpic],
+    config: Dict[str, Any],
+) -> None:
+    if not config.get("planning_horizon", {}).get("enabled", True):
+        return
+
+    stories_by_epic: Dict[str, List[JiraIssue]] = {}
+    for issue in issues:
+        if issue.epic_link:
+            stories_by_epic.setdefault(issue.epic_link.upper(), []).append(issue)
+    fixversion_dates = earliest_dates_by_fixversion(issues)
+    for item in audit:
+        planning_date = item.planning_date or audit_item_planning_date(
+            item,
+            issues_by_key,
+            planned_epics,
+            stories_by_epic,
+            fixversion_dates,
+        )
+        item.planning_date = planning_date
+        item.planning_bucket = item.planning_bucket or planning_bucket_for_date(planning_date, config)
+
+
+def audit_item_planning_date(
+    item: AuditItem,
+    issues_by_key: Dict[str, JiraIssue],
+    planned_epics: Dict[str, PlanEpic],
+    stories_by_epic: Dict[str, List[JiraIssue]],
+    fixversion_dates: Dict[str, str],
+) -> str:
+    schedule_key = (item.schedule_key or "").strip()
+    planned = planned_epics.get(schedule_key)
+    if planned:
+        return planned_epic_planning_date(planned, issues_by_key, stories_by_epic, fixversion_dates)
+
+    if schedule_key.startswith("fixVersion:"):
+        fix_version = schedule_key.split(":", 1)[1]
+        if fixversion_dates.get(fix_version):
+            return fixversion_dates[fix_version]
+
+    jira_key = (item.jira_key or schedule_key.split("::", 1)[0]).upper()
+    if jira_key:
+        issue = issues_by_key.get(jira_key)
+        if issue:
+            issue_date = issue_planning_date(issue)
+            child_dates = [issue_planning_date(child) for child in stories_by_epic.get(jira_key, [])]
+            return earliest_date([issue_date, *child_dates])
+        for epic in planned_epics.values():
+            if (epic.jira_key or epic.key).upper() == jira_key:
+                return planned_epic_planning_date(epic, issues_by_key, stories_by_epic, fixversion_dates)
+
+    return ""
+
+
+def planned_epic_planning_date(
+    epic: PlanEpic,
+    issues_by_key: Dict[str, JiraIssue],
+    stories_by_epic: Dict[str, List[JiraIssue]],
+    fixversion_dates: Dict[str, str],
+) -> str:
+    if epic.rollup_mode == "fixVersion":
+        fix_version = epic.fix_version or epic.rollup_key
+        if fixversion_dates.get(fix_version):
+            return fixversion_dates[fix_version]
+
+    jira_key = (epic.jira_key or epic.key).upper()
+    issue = issues_by_key.get(jira_key)
+    dates = [epic.target_start, epic.target_end]
+    if issue:
+        dates.append(issue_planning_date(issue))
+    dates.extend(issue_planning_date(child) for child in stories_by_epic.get(jira_key, []))
+    return earliest_date(dates)
+
+
+def epic_planning_date(
+    epic: JiraIssue,
+    children: List[JiraIssue],
+    rollup_mode: str,
+    assignments: List[RollupAssignment],
+    fixversion_dates: Dict[str, str],
+) -> str:
+    if rollup_mode == "fixVersion":
+        assignment_dates = [
+            fixversion_dates.get(assignment.fix_version or assignment.rollup_key, "")
+            for assignment in assignments
+        ]
+        assignment_date = earliest_date(assignment_dates)
+        if assignment_date:
+            return assignment_date
+
+    return earliest_date([issue_planning_date(epic), *[issue_planning_date(child) for child in children]])
+
+
+def earliest_dates_by_fixversion(issues: List[JiraIssue]) -> Dict[str, str]:
+    dates_by_fixversion: Dict[str, List[str]] = {}
+    for issue in issues:
+        issue_date = issue_planning_date(issue)
+        if not issue_date:
+            continue
+        for fix_version in issue.fix_versions:
+            dates_by_fixversion.setdefault(fix_version, []).append(issue_date)
+    return {
+        fix_version: earliest_date(dates)
+        for fix_version, dates in dates_by_fixversion.items()
+    }
+
+
+def issue_planning_date(issue: JiraIssue) -> str:
+    return earliest_date([issue.target_start, issue.target_end])
+
+
+def earliest_date(values: List[Any]) -> str:
+    dates = [normalized_iso_date(value) for value in values if normalized_iso_date(value)]
+    return min(dates) if dates else ""
+
+
+def planning_bucket_for_date(value: str, config: Dict[str, Any]) -> str:
+    settings = config.get("planning_horizon", {})
+    if not settings.get("enabled", True):
+        return ""
+    date_text = normalized_iso_date(value)
+    if not date_text:
+        return "Unscheduled"
+
+    item_date = date.fromisoformat(date_text)
+    as_of = planning_horizon_as_of(settings)
+    immediate_months = int(settings.get("immediate_months", 6))
+    bucket_months = int(settings.get("bucket_months", 6))
+    if item_date < add_months(as_of, immediate_months):
+        return "Immediate"
+
+    bucket_start = immediate_months
+    while item_date >= add_months(as_of, bucket_start + bucket_months):
+        bucket_start += bucket_months
+    return f"{bucket_start}-{bucket_start + bucket_months} Months"
+
+
+def planning_horizon_as_of(settings: Dict[str, Any]) -> date:
+    raw_as_of = str(settings.get("as_of_date", "") or "").strip()
+    if not raw_as_of:
+        return datetime.now().date()
+    audit: List[AuditItem] = []
+    parsed = parse_date(raw_as_of, audit, "CONFIG", 0)
+    if audit or not normalized_iso_date(parsed):
+        raise J2PError(
+            "planning_horizon.as_of_date must be a valid date. "
+            "Use YYYY-MM-DD, for example 2026-09-17."
+        )
+    return date.fromisoformat(parsed)
+
+
+def add_months(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 def suppress_historical_audit_items(

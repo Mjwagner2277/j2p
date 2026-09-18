@@ -25,6 +25,8 @@ class AuditItem:
     message: str = ""
     reviewer_action: str = ""
     source_row: Optional[int] = None
+    planning_date: str = ""
+    planning_bucket: str = ""
 
 
 @dataclass

@@ -81,6 +81,12 @@ fixversion_completion_suppression:
   enabled: true
   stale_after_days: 90
   as_of_date: "2026-09-17"
+
+planning_horizon:
+  enabled: true
+  immediate_months: 6
+  bucket_months: 6
+  as_of_date: "2026-09-17"
 ```
 
 That means:
@@ -294,7 +300,7 @@ Then read sections in this order:
 1. `Story Point Ratio`
 2. Expand `Story Point Ratio By Resource Group` for the active-work split by team/resource group.
 3. `Rollup Status`
-4. `Reviewer Action Needed`
+4. `Reviewer Action Needed By Planning Horizon`
 5. `Review Type Summary`
 6. `Project Key Rollup Mapping`
 7. Expand `Report Context` only when you want file paths, CSV row counts, and raw processing totals.
@@ -347,7 +353,7 @@ examples\large-scenario\expected-review-cases.csv
 | Blue | Self dependency | updated row 27, `WEB-2008` | An epic cannot block itself, so the dependency is skipped and reported |
 | Blue | Circular dependency | updated rows 29-30, `DATA-3008` and `DATA-3009` | One dependency is skipped to prevent a schedule cycle |
 | No color | Unparsed Jira target date | updated row 31, `DATA-3034` | Unparseable target dates are reported so the source export can be corrected |
-| Gray/green-gray | In planning | updated row 28, `WEB-2010` | The epic is included but has no pointed child stories/tasks |
+| Gray/green-gray | In planning | updated row 28, `WEB-2010` | The epic is included but has no pointed child stories/tasks; near-term items remain immediate review items, while items more than six months out are shown as future planning items |
 
 For `PLAT-4028`, the `planned-epics.csv` output has two rows with the same Jira key. The primary row has `Drives Schedule` set to `Yes`; the reference row has `Drives Schedule` set to `No` and points back to the primary schedule key. The multi-fixVersion audit item is informational; if the reference row is new relative to the baseline, its new Project cells are still colored green like any other added row.
 
@@ -357,7 +363,7 @@ Data-quality rows that do not produce Project cell colors:
 
 | Case | Example Row | What The Reviewer Should Learn |
 | --- | --- | --- |
-| Blank Jira key | updated row 201 | The CSV row is skipped and reported in `Reviewer Action Needed` |
+| Blank Jira key | updated row 201 | The CSV row is skipped and reported in `Reviewer Action Needed By Planning Horizon` |
 | Orphan child story | updated row 202, `CORE-899999` | The story is not counted toward any epic because `Epic Link` is blank |
 | Historical warning suppression | updated row 39, `UNK-9001` | The old unknown-prefix warning is suppressed by `warning_suppression.before` and summarized as `SuppressedHistoricalWarnings` |
 
@@ -409,8 +415,8 @@ Use the report to make these decisions:
 
 | Decision | Where To Look |
 | --- | --- |
-| Should missing rollups be fixed in Jira? | `Reviewer Action Needed`, `Excluded Items` |
-| Should unknown prefixes be added to config? | `Reviewer Action Needed`, `reports\csv\by-project-key\UNK\audit-detail.csv` |
+| Should missing rollups be fixed in Jira? | `Reviewer Action Needed By Planning Horizon`, `Excluded Items` |
+| Should unknown prefixes be added to config? | `Reviewer Action Needed By Planning Horizon`, `reports\csv\by-project-key\UNK\audit-detail.csv` |
 | Are changed names acceptable? | `Changed Names` |
 | Are moved epics under the right rollup? | `Parent Or Rollup Moves` |
 | Are completed epics safe to hide/inactivate in the sandbox? | `Completed Since Last Update` |

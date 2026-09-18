@@ -118,6 +118,7 @@ def run_smoke(output_dir: Path) -> int:
             "DependencyChange",
             "ExcludedMissingRollup",
             "ExcludedUnknownPrefix",
+            "FutureInPlanning",
             "InPlanning",
             "MissingDependencyTarget",
             "MultiFixVersionReference",
@@ -138,7 +139,9 @@ def run_smoke(output_dir: Path) -> int:
         [
             "Decision Briefing",
             "Rollup Status",
-            "Reviewer Action Needed",
+            "Reviewer Action Needed By Planning Horizon",
+            "Immediate Review Items",
+            "6-12 Months Review Items",
             "Review Type Summary",
             "Report Context",
             "Logged Hours",

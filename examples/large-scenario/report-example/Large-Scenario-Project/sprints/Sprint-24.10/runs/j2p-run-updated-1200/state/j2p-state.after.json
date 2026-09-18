@@ -4492,8 +4492,8 @@
       "jira_key": "WEB-2002",
       "key": "WEB-2002",
       "key_prefix": "WEB",
-      "logged_hours": 18.0,
-      "percent_complete": 32,
+      "logged_hours": 23.0,
+      "percent_complete": 26,
       "predecessors": [
         "WEB-2001"
       ],
@@ -4512,7 +4512,7 @@
       "summary": "Scale Rows - Web Experience - Homepage personalization wave 03",
       "target_end": "2026-09-21",
       "target_start": "2026-08-10",
-      "total_story_points": 22.0
+      "total_story_points": 27.0
     },
     "WEB-2003": {
       "completed": false,
@@ -4526,8 +4526,8 @@
       "jira_key": "WEB-2003",
       "key": "WEB-2003",
       "key_prefix": "WEB",
-      "logged_hours": 16.0,
-      "percent_complete": 20,
+      "logged_hours": 18.5,
+      "percent_complete": 18,
       "predecessors": [
         "WEB-2002"
       ],
@@ -4546,7 +4546,7 @@
       "summary": "Scale Rows - Web Experience - Accessibility remediation wave 04",
       "target_end": "2026-10-05",
       "target_start": "2026-08-17",
-      "total_story_points": 20.0
+      "total_story_points": 22.0
     },
     "WEB-2004": {
       "completed": false,
@@ -4774,24 +4774,24 @@
       "story_point_ratio": 0.0,
       "successors": [],
       "summary": "Client Walkthrough - Design system discovery with no pointed child work",
-      "target_end": "2026-05-11",
-      "target_start": "2026-04-13",
+      "target_end": "2027-05-24",
+      "target_start": "2027-04-13",
       "total_story_points": 0.0
     },
     "WEB-2011": {
       "completed": false,
-      "completed_logged_hours": 5.0,
-      "completed_story_points": 5.0,
+      "completed_logged_hours": 0.0,
+      "completed_story_points": 0.0,
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
-      "in_planning": false,
+      "in_planning": true,
       "issue_id": "200061",
       "jira_key": "WEB-2011",
       "key": "WEB-2011",
       "key_prefix": "WEB",
-      "logged_hours": 12.0,
-      "percent_complete": 26,
+      "logged_hours": 0.0,
+      "percent_complete": 0,
       "predecessors": [
         "WEB-2009"
       ],
@@ -4802,15 +4802,15 @@
       "rollup_name": "Search And Discovery",
       "row_role": "Scheduled",
       "source_row": 43,
-      "status": "In Progress",
-      "story_point_ratio": 8.0,
+      "status": "To Do",
+      "story_point_ratio": 0.0,
       "successors": [
         "WEB-2012"
       ],
-      "summary": "Scale Rows - Web Experience - Accessibility remediation wave 12",
-      "target_end": "2026-05-25",
-      "target_start": "2026-04-20",
-      "total_story_points": 19.0
+      "summary": "Client Walkthrough - Near-term planning gap comparison",
+      "target_end": "2026-11-02",
+      "target_start": "2026-10-05",
+      "total_story_points": 0.0
     },
     "WEB-2012": {
       "completed": false,
@@ -4824,8 +4824,8 @@
       "jira_key": "WEB-2012",
       "key": "WEB-2012",
       "key_prefix": "WEB",
-      "logged_hours": 19.0,
-      "percent_complete": 58,
+      "logged_hours": 19.5,
+      "percent_complete": 41,
       "predecessors": [
         "WEB-2011"
       ],
@@ -4844,7 +4844,7 @@
       "summary": "Scale Rows - Web Experience - Content publishing wave 13",
       "target_end": "2026-06-08",
       "target_start": "2026-04-27",
-      "total_story_points": 19.0
+      "total_story_points": 27.0
     },
     "WEB-2013": {
       "completed": false,
@@ -5130,8 +5130,8 @@
       "jira_key": "WEB-2021",
       "key": "WEB-2021",
       "key_prefix": "WEB",
-      "logged_hours": 16.5,
-      "percent_complete": 46,
+      "logged_hours": 18.0,
+      "percent_complete": 34,
       "predecessors": [
         "WEB-2020"
       ],
@@ -5150,7 +5150,7 @@
       "summary": "Scale Rows - Web Experience - Navigation refresh wave 22",
       "target_end": "2026-08-03",
       "target_start": "2026-06-29",
-      "total_story_points": 24.0
+      "total_story_points": 32.0
     },
     "WEB-2022": {
       "completed": false,
@@ -5412,8 +5412,8 @@
     },
     "WEB-2030": {
       "completed": false,
-      "completed_logged_hours": 1.5,
-      "completed_story_points": 8.0,
+      "completed_logged_hours": 7.5,
+      "completed_story_points": 11.0,
       "dependency_review": "",
       "drives_schedule": true,
       "fix_version": "",
@@ -5422,8 +5422,8 @@
       "jira_key": "WEB-2030",
       "key": "WEB-2030",
       "key_prefix": "WEB",
-      "logged_hours": 14.0,
-      "percent_complete": 42,
+      "logged_hours": 20.0,
+      "percent_complete": 50,
       "predecessors": [],
       "primary_schedule_key": "WEB-2030",
       "resource_group": "Web Experience",
@@ -5433,12 +5433,12 @@
       "row_role": "Scheduled",
       "source_row": 45,
       "status": "To Do",
-      "story_point_ratio": 42.67,
+      "story_point_ratio": 11.73,
       "successors": [],
       "summary": "Scale Rows - Web Experience - Localization pass wave 31",
       "target_end": "2026-09-28",
       "target_start": "2026-08-31",
-      "total_story_points": 19.0
+      "total_story_points": 22.0
     },
     "WEB-2031": {
       "completed": false,
@@ -5861,7 +5861,7 @@
       "total_story_points": 21.0
     }
   },
-  "generated_at": "2026-09-17T19:25:07",
+  "generated_at": "2026-09-18T13:08:40",
   "jira_csv": "examples/large-scenario/project-wide-jira-updated-1200.csv",
   "rollup_mode": "mixed",
   "summaries": {
@@ -6075,19 +6075,19 @@
     },
     "initiative:INIT-1200": {
       "child_epic_count": 15,
-      "completed_logged_hours": 92.5,
-      "completed_story_points": 101.0,
+      "completed_logged_hours": 87.5,
+      "completed_story_points": 96.0,
       "driving_epic_count": 15,
       "key": "INIT-1200",
-      "logged_hours": 256.0,
+      "logged_hours": 249.0,
       "name": "Search And Discovery",
       "percent_complete": 32,
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_point_ratio": 8.74,
+      "story_point_ratio": 8.78,
       "summary_id": "initiative:INIT-1200",
-      "total_story_points": 317.0
+      "total_story_points": 303.0
     },
     "initiative:INIT-1500": {
       "child_epic_count": 11,
@@ -6139,19 +6139,19 @@
     },
     "initiative:INIT-500": {
       "child_epic_count": 15,
-      "completed_logged_hours": 84.0,
-      "completed_story_points": 95.0,
+      "completed_logged_hours": 90.0,
+      "completed_story_points": 98.0,
       "driving_epic_count": 15,
       "key": "INIT-500",
-      "logged_hours": 257.0,
+      "logged_hours": 267.5,
       "name": "Web Experience Refresh",
-      "percent_complete": 30,
+      "percent_complete": 29,
       "project_key": "WEB",
       "reference_epic_count": 0,
       "rollup_mode": "initiative",
-      "story_point_ratio": 9.05,
+      "story_point_ratio": 8.71,
       "summary_id": "initiative:INIT-500",
-      "total_story_points": 315.0
+      "total_story_points": 336.0
     },
     "initiative:INIT-600": {
       "child_epic_count": 12,

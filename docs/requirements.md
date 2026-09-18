@@ -93,7 +93,7 @@ completed child story points / total child story points
 
 A child story/task counts as completed when its Jira status is in the configured `done_statuses` list.
 
-If an epic has no pointed child work, it is marked `In Planning`, excluded from percent-complete math, and reported for review.
+If an epic has no pointed child work, it is marked `In Planning` and excluded from percent-complete math. Inside the immediate planning horizon, it is reported for review. Outside the immediate horizon, it is reported as future planning work because detailed task breakdown is not expected yet.
 
 Summary task `% Complete` is manually calculated from child epics using weighted story points.
 

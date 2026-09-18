@@ -28,6 +28,8 @@ AUDIT_COLUMNS = [
     "message",
     "reviewer_action",
     "source_row",
+    "planning_date",
+    "planning_bucket",
 ]
 
 PLANNED_EPIC_COLUMNS = [
@@ -620,9 +622,6 @@ def write_manager_html(
 ) -> None:
     plan = completed_fixversion_report_plan(plan)
     cascade_display_plan = completed_fixversion_report_plan(cascade_plan or plan)
-    action_needed = [
-        item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}
-    ]
     detail_sections = [
         ("Changed Names", by_category(plan.audit_items, "ChangedName")),
         ("Added Epics", by_category(plan.audit_items, "AddedEpic")),
@@ -632,7 +631,14 @@ def write_manager_html(
         ),
         ("Parent Or Rollup Moves", by_category(plan.audit_items, "RollupMove")),
         ("Completed Since Last Update", by_category(plan.audit_items, "CompletedSinceLastUpdate")),
-        ("In Planning", by_category(plan.audit_items, "InPlanning")),
+        (
+            "In Planning",
+            [
+                item
+                for item in plan.audit_items
+                if item.category in {"InPlanning", "FutureInPlanning"}
+            ],
+        ),
         (
             "Dependency Review",
             [
@@ -965,7 +971,7 @@ def write_manager_html(
     {render_story_point_ratio_breakdown(plan)}
     {render_rollup_status(plan)}
     {cascade_section}
-    {render_sections([("Reviewer Action Needed", action_needed)])}
+    {render_planning_horizon_review(plan)}
     {render_review_type_summary(plan)}
     {render_prefix_rollup_map(plan, config)}
     {report_context_section}
@@ -1690,6 +1696,70 @@ def color_class(color_key_name: str) -> str:
     }.get(color_key_name, "")
 
 
+def render_planning_horizon_review(plan: RunPlan) -> str:
+    items = [
+        item
+        for item in plan.audit_items
+        if item.severity in {"Error", "Warning", "Review"} or item.category == "FutureInPlanning"
+    ]
+    if not items:
+        return render_table("Reviewer Action Needed By Planning Horizon", [], [])
+
+    buckets: Dict[str, List[AuditItem]] = {}
+    for item in items:
+        buckets.setdefault(item.planning_bucket or "Unbucketed", []).append(item)
+
+    sections = [
+        (
+            planning_bucket_title(bucket),
+            sorted(
+                bucket_items,
+                key=lambda item: (
+                    severity_rank(item.severity),
+                    item.planning_date or "9999-12-31",
+                    item.category,
+                    item.jira_key,
+                ),
+            ),
+        )
+        for bucket, bucket_items in sorted(
+            buckets.items(),
+            key=lambda entry: planning_bucket_sort_key(entry[0]),
+        )
+    ]
+    return (
+        "<section><h2>Reviewer Action Needed By Planning Horizon</h2>"
+        "<p class=\"muted\">Immediate means the planning date is less than six months from the configured "
+        "planning horizon date. Later items are grouped into six-month buckets. Future in-planning items are "
+        "tracked here but are not counted as immediate task-breakdown actions.</p></section>"
+        + render_sections(sections)
+    )
+
+
+def planning_bucket_title(bucket: str) -> str:
+    if bucket == "Immediate":
+        return "Immediate Review Items"
+    if bucket == "Unscheduled":
+        return "Unscheduled Review Items"
+    if bucket == "Unbucketed":
+        return "Review Items Without Horizon Buckets"
+    return f"{bucket} Review Items"
+
+
+def planning_bucket_sort_key(bucket: str) -> tuple[int, int, str]:
+    if bucket == "Immediate":
+        return (0, 0, bucket)
+    if bucket == "Unscheduled":
+        return (1, 0, bucket)
+    if bucket == "Unbucketed":
+        return (2, 0, bucket)
+    try:
+        start_text = bucket.split("-", 1)[0]
+        return (3, int(start_text), bucket)
+    except (TypeError, ValueError):
+        return (4, 0, bucket)
+
+
 def schedule_driver_candidate(plan: RunPlan) -> Optional[AuditItem]:
     date_changes = [
         item
@@ -1801,6 +1871,8 @@ def render_sections(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
                 item.field,
                 item.old_value,
                 item.new_value,
+                item.planning_date,
+                item.planning_bucket,
                 item.message,
                 item.reviewer_action,
             ]
@@ -1818,6 +1890,8 @@ def render_sections(sections: Sequence[tuple[str, Sequence[AuditItem]]]) -> str:
                     "Field",
                     "Old",
                     "New",
+                    "Planning Date",
+                    "Planning Bucket",
                     "Message",
                     "Reviewer Action",
                 ],

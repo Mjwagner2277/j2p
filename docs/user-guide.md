@@ -230,7 +230,7 @@ Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Repor
 3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
 4. Review `Rollup Status` for initiative/fixVersion progress.
 5. Review `Schedule Cascade Review` for date-change branches after Microsoft Project recalculates the sandbox.
-6. Review `Reviewer Action Needed`.
+6. Review `Reviewer Action Needed By Planning Horizon`; start with `Immediate`, then scan future six-month buckets.
 7. Review `Review Type Summary` to see counts by issue category.
 8. Review `Project Key Rollup Mapping`.
 9. Review `Color Key` and `Color Case Examples`.
@@ -389,7 +389,7 @@ Example:
 
 If `Done` and `Closed` are configured as done statuses, the epic is `7 / 10 = 70%` complete.
 
-If an epic has no pointed child work, j2p marks it `In Planning`, sets percent complete to `0`, and reports it for review.
+If an epic has no pointed child work, j2p marks it `In Planning` and sets percent complete to `0`. Items inside the immediate planning window are reported for review. Items more than six months out are reported as future planning items because detailed task breakdown is not expected yet.
 
 ## Logged Hours
 
@@ -615,6 +615,23 @@ Important behavior:
 - Detailed CSV outputs still include the hidden completed fixVersion rows.
 - If the CSV does not include a mapped `Resolved` column, this rule does not run.
 - If a completed fixVersion has missing `Resolved` dates, it stays visible and is reported for review.
+
+## Planning Horizon Review Buckets
+
+The manager report separates review items by planning horizon so future work does not drown out near-term decisions.
+
+Default YAML:
+
+```yaml
+planning_horizon:
+  enabled: true
+  immediate_months: 6
+  bucket_months: 6
+```
+
+`Immediate` means less than six months from the run date, or from `planning_horizon.as_of_date` when that override is supplied. Later items are grouped into six-month buckets such as `6-12 Months` and `12-18 Months`.
+
+For initiative teams, j2p uses the earliest target date on the epic or its child story/task rows. For fixVersion teams, j2p uses the earliest target date on any Jira issue that declares that fixVersion. If an in-planning item is outside the immediate window, it appears as `FutureInPlanning` instead of an immediate review action.
 
 ## Suppressing Historical Warning Noise
 

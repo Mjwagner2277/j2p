@@ -122,7 +122,7 @@ review-output\Customer-Portal-Program\runs\j2p-run-baseline-review\reports\html\
 
 Review these sections before creating or updating Project files:
 
-1. `Reviewer Action Needed`
+1. `Reviewer Action Needed By Planning Horizon`
 2. `Rollup Status`
 3. `Project Key Rollup Mapping`
 4. `Color Key`

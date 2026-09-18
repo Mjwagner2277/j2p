@@ -75,6 +75,12 @@ fixversion_completion_suppression:
   stale_after_days: 90
   keep_audit_summary: true
 
+planning_horizon:
+  enabled: true
+  immediate_months: 6
+  bucket_months: 6
+  as_of_date: "2026-01-01"
+
 project_fields:
   jira_key: Text1
   jira_issue_id: Text2
