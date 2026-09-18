@@ -19,6 +19,52 @@ FIXTURES = Path(__file__).parent / 'fixtures'
 
 
 class ProjectValueTests(unittest.TestCase):
+    def test_completed_epics_and_reference_progress_obey_project_activation_rules(self):
+        class ProjectTask:
+            def __init__(self):
+                self._active = True
+                self._percent = 0
+            @property
+            def Active(self):
+                return self._active
+            @Active.setter
+            def Active(self, value):
+                if not value and self._percent:
+                    raise RuntimeError('Cannot inactivate a task with progress')
+                self._active = value
+            @property
+            def PercentComplete(self):
+                return self._percent
+            @PercentComplete.setter
+            def PercentComplete(self, value):
+                if not self._active:
+                    raise RuntimeError('Cannot record progress on an inactive reference')
+                self._percent = value
+
+        for driving, completed, points_percent, native_percent in (
+            (True, True, 60, 100), (False, False, 60, 0), (False, True, 100, 0),
+        ):
+            with self.subTest(driving=driving, completed=completed):
+                epic = next(iter(self.plan.epics.values()))
+                epic.drives_schedule = driving
+                epic.completed = completed
+                epic.percent_complete = points_percent
+                task = ProjectTask()
+                session = object.__new__(MicrosoftProjectSession)
+                with patch.object(session, 'set_native_resource_group'), patch.object(session, 'write_project_date'):
+                    session.update_epic_task(task, epic, self.config, self.plan)
+                self.assertEqual(task.Active, driving)
+                self.assertEqual(task.PercentComplete, native_percent)
+                self.assertEqual(task.Number7, points_percent)
+
+        # Do not erase existing actual progress to force a reference inactive.
+        task = ProjectTask()
+        task.PercentComplete = 20
+        epic.drives_schedule = False
+        with self.assertRaisesRegex(ProjectAutomationError, 'Cannot inactivate a task with progress'):
+            session.update_epic_task(task, epic, self.config, self.plan)
+        self.assertEqual(task.PercentComplete, 20)
+
     def setUp(self):
         self.config = load_config(FIXTURES / 'mixed-config.yaml')
         self.plan = build_run_plan(FIXTURES / 'project-wide-jira-initial.csv', self.config)

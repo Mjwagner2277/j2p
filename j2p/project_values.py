@@ -9,6 +9,8 @@ def value_metadata(value):
     detail = f"type={type(value).__name__}"
     if isinstance(value, str):
         detail += f", text_length={len(value)}, attempted_text={value!r}"
+    elif isinstance(value, (bool, int, float)):
+        detail += f", attempted_value={value!r}"
     return detail
 
 
@@ -37,7 +39,8 @@ def project_dependency_review(text: str) -> str:
 def epic_assignments(epic, config):
     fields = config["project_fields"]
     yield "Name", epic.summary
-    yield "PercentComplete", epic.percent_complete
+    if epic.drives_schedule:
+        yield "PercentComplete", 100 if epic.completed else epic.percent_complete
     values = {
         "jira_key": epic.jira_key or epic.key,
         "jira_issue_id": epic.issue_id,

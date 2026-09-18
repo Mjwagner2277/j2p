@@ -31,7 +31,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
 | `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the task so Project's native `Resource Group` field is populated. |
-| `Active` | Best effort for completed epics | Yes | Completed-epic treatment. j2p marks completed epics inactive and hides Gantt bars when Project permits it. |
+| `Active` | Required | Yes | Driving rows remain active, including completed work. Reference rows are inactive and carry progress in custom fields only. |
 | `Summary` / outline parent | Yes, by creating/indenting rows | Yes | Initiative/fixVersion hierarchy. Used to place epics under the correct rollup and detect/move changed rollups. |
 
 ## Default Custom Fields

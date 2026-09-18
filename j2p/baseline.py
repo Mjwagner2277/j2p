@@ -101,7 +101,7 @@ def compare_with_baseline(
                     new_value=epic.status,
                     color="changed_cell",
                     message="Epic is now marked done in Jira.",
-                    reviewer_action="Confirm completed epic can remain inactive/hidden in the sandbox.",
+                    reviewer_action="Confirm completed epic remains complete in the sandbox; its Gantt bar may be hidden.",
                     source_row=epic.source_row,
                 )
             )

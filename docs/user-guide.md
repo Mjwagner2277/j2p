@@ -598,7 +598,7 @@ All three custom fields can be remapped through `project_fields` if occupied.
 | `ChangedField` | Percent, dates, resource group, or other tracked value changed. | Confirm the changed value is expected. |
 | `AddedEpic` | Epic is included now but was not in the baseline. | Decide whether the sandbox addition is valid. |
 | `RollupMove` | Epic moved to a different initiative or fixVersion rollup. | Confirm product ownership or release tagging. |
-| `CompletedSinceLastUpdate` | Epic newly became done. | Confirm inactive/hidden schedule treatment. |
+| `CompletedSinceLastUpdate` | Epic newly became done. | Confirm native 100% completion and configured Gantt-bar hiding; driving rows remain active. |
 | `InPlanning` | Epic has no pointed child work. | Confirm it is intentionally in planning or fix Jira child work. |
 | `MultiFixVersionReference` | Multi-fixVersion epic was handled with reference policy. | Confirm the first fixVersion should be primary. |
 | `MultiFixVersionSplit` | Multi-fixVersion epic was handled with split policy. | Confirm each fixVersion should drive schedule. |

@@ -373,7 +373,7 @@ behavior:
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `unknown_prefix` | `exclude` | Unknown Jira prefixes are excluded and reported. |
-| `hide_completed_epics` | `true` | Completed epics are marked inactive and Gantt bars are hidden when Microsoft Project permits it. |
+| `hide_completed_epics` | `true` | Hide completed epic Gantt bars when Project permits it; completed driving rows remain active at native 100% completion. |
 | `write_state_on_validate` | `false` | `validate` writes persistent state only when this is true or `--write-state` is passed. |
 
 Current guardrail:

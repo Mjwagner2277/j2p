@@ -165,7 +165,14 @@ When `warning_suppression.before` is set:
 
 ## Completed Epics
 
-Completed epics remain in the sandbox and are reported. Microsoft Project does not expose an Excel-style hidden-row task property through the automation model, so j2p marks completed epics inactive and hides their Gantt bars when possible.
+Completed scheduled epics remain active in the sandbox with native completion
+set to 100%; their story-point percentage remains in the custom completion
+field. Inactivation is not used to archive completed work. When configured,
+their Gantt bars are hidden where Project permits it. Reference rows are made
+inactive before progress writes and use only custom completion fields, avoiding
+native actuals on non-driving copies. Existing actuals are never erased to force
+inactivation. Summary progress is written only to custom fields, because writing
+native summary completion can change child-task actuals.
 
 ## Resource Groups
 

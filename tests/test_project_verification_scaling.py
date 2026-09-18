@@ -109,6 +109,21 @@ def verification_fixture(epic_count=120, summary_count=12, resource_count=40):
 
 
 class ProjectVerificationScalingTests(unittest.TestCase):
+    def test_snapshots_use_named_story_point_completion_but_preserve_legacy_native_values(self):
+        session, _, config, epics, _ = verification_fixture(epic_count=1, summary_count=1)
+        epics[0].Number7 = 0
+        session.app.FieldNameToFieldConstant = Mock(return_value=7)
+        session.app.CustomFieldGetName = Mock(return_value='Unrelated field')
+        self.assertEqual(session.snapshot_tasks(config)['TEAM-1'].percent_complete, 50)
+        session.app.CustomFieldGetName.return_value = 'Story Point Completion %'
+        self.assertEqual(session.snapshot_tasks(config)['TEAM-1'].percent_complete, 0)
+
+    def test_summary_writes_do_not_modify_native_progress_of_child_tasks(self):
+        _, plan, config, _, _ = verification_fixture(epic_count=1, summary_count=1)
+        fields = dict(summary_assignments(next(iter(plan.summaries.values())), config))
+        self.assertNotIn('PercentComplete', fields)
+        self.assertEqual(fields['Number7'], 50)
+
     def test_row_read_failure_retains_position_phase_and_original_error(self):
         session, _, _, _, _ = verification_fixture(epic_count=1, summary_count=1)
         failure = RuntimeError('COM call rejected')

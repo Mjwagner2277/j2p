@@ -497,7 +497,7 @@ class MicrosoftProjectSession:
                         raise ProjectAutomationError(f"Jira date readback failed: {context}, field={field}.")
                     count += 1
             verify_project_value(task, "Manual", False, context)
-            verify_project_value(task, "Active", not epic.completed and epic.drives_schedule, context)
+            verify_project_value(task, "Active", epic.drives_schedule, context)
             parent = summaries.get((epic.rollup_mode, epic.rollup_key.upper()))
             self.verify_outline_parent(task, parent, context)
             self.verify_managed_resource_assignment(task, epic.resource_group, resources)
@@ -549,6 +549,14 @@ class MicrosoftProjectSession:
     def snapshot_tasks(self, config: Dict[str, Any], progress_label: Optional[str] = None) -> Dict[str, ProjectTaskSnapshot]:
         snapshots: Dict[str, ProjectTaskSnapshot] = {}
         fields = config.get("project_fields", {})
+        completion_field = fields.get("completion_percent", "Number7")
+        completion_name = config.get("project_field_names", {}).get("completion_percent", "Story Point Completion %")
+        try:
+            has_completion_field = bool(completion_name) and self.app.CustomFieldGetName(
+                self.app.FieldNameToFieldConstant(completion_field)
+            ) == completion_name
+        except Exception:
+            has_completion_field = False  # Older schedules may have an unrelated Number7.
         task_list = self.iter_tasks(progress_label=f"{progress_label} task scan" if progress_label else None)
         self.index_tasks_by_key(config, task_list)
         tasks_by_id = {str(safe_get(task, "ID")): task for task in task_list}
@@ -580,7 +588,11 @@ class MicrosoftProjectSession:
                 ),
                 logged_hours=safe_float(safe_get(task, fields.get("logged_hours", "Number3"))),
                 story_point_ratio=safe_float(safe_get(task, story_point_ratio_project_field(config))),
-                percent_complete=safe_int(safe_get(task, "PercentComplete")),
+                percent_complete=safe_int(
+                    safe_get(task, completion_field)
+                    if has_completion_field
+                    else safe_get(task, "PercentComplete")
+                ),
                 status=str(safe_get(task, fields.get("jira_status", "Text9"))),
                 target_start=project_date_to_iso(safe_get(task, fields.get("jira_target_start", "Date1"))),
                 target_end=project_date_to_iso(safe_get(task, fields.get("jira_target_end", "Date2"))),
@@ -820,6 +832,9 @@ class MicrosoftProjectSession:
     def update_epic_task(self, task: Any, epic: PlanEpic, config: Dict[str, Any], plan: RunPlan) -> None:
         fields = config.get("project_fields", {})
         write_required_project_value(task, "Manual", False, epic_context(epic))
+        # Inactivate reference rows before any writes that could create actuals.
+        # Existing actuals are never cleared to force inactivation.
+        write_required_project_value(task, "Active", epic.drives_schedule, epic_context(epic))
         for field, value in epic_assignments(epic, config):
             write_required_project_value(task, field, value, epic_context(epic))
         try:
@@ -838,9 +853,9 @@ class MicrosoftProjectSession:
             )
         self.write_project_date(task, epic, plan, fields.get("jira_target_start", "Date1"), "Jira Target Start", "Start")
         self.write_project_date(task, epic, plan, fields.get("jira_target_end", "Date2"), "Jira Target End", "Finish")
-        write_required_project_value(task, "Active", not epic.completed and epic.drives_schedule, epic_context(epic))
+        verify_project_value(task, "Active", epic.drives_schedule, epic_context(epic))
         try:
-            task.HideBar = bool(epic.completed)
+            task.HideBar = bool(epic.completed and config.get("behavior", {}).get("hide_completed_epics", True))
         except Exception:
             pass  # Cosmetic only; Active and Manual are required above.
 
@@ -2778,12 +2793,28 @@ def verify_project_value(task: Any, field: str, expected: Any, context: str) -> 
 
 
 def write_required_project_value(task: Any, field: str, value: Any, context: str) -> None:
+    if field == "Active":
+        # Some Project installations reject even redundant activation writes.
+        # Skip only after strict readback establishes the required state.
+        try:
+            verify_project_value(task, field, value, context)
+        except ProjectAutomationError:
+            pass
+        else:
+            return
     try:
         setattr(task, field, value)
-    except Exception:
+    except Exception as exc:
+        guidance = (
+            "Active is Project's native task activation field, not a CSV mapping. "
+            "Task inactivation requires Project Professional. Check the task's editability "
+            "and Project's original error below."
+            if field == "Active" else
+            "Check field mapping, formula/lookup restrictions, and Project edition capabilities."
+        )
         raise ProjectAutomationError(
             f"Microsoft Project rejected write: {context}, field={field}, {value_metadata(value)}. "
-            "Check field mapping, formula/lookup restrictions, and Project edition capabilities."
+            + (f"{guidance} Original Project error: {exc}" if field == "Active" else guidance)
         ) from None
     verify_project_value(task, field, value, context)
 
@@ -2804,7 +2835,6 @@ def summary_assignments(summary: Any, config: Dict[str, Any]) -> List[Tuple[str,
         (fields.get("completion_total_story_points", "Number5"), summary.completion_total_story_points),
         (fields.get("completion_completed_story_points", "Number6"), summary.completion_completed_story_points),
         (fields.get("completion_percent", "Number7"), summary.percent_complete),
-        ("PercentComplete", summary.percent_complete),
     ])
     return values
 

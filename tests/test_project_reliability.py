@@ -61,6 +61,39 @@ class SaveApp:
 
 
 class ProjectReliabilityTests(unittest.TestCase):
+    def test_active_state_already_correct_does_not_write_readonly_property(self):
+        for expected in (True, False):
+            class ReadOnlyActive:
+                @property
+                def Active(self):
+                    return expected
+                @Active.setter
+                def Active(self, value):
+                    raise AssertionError('Redundant Active write')
+            write_required_project_value(ReadOnlyActive(), 'Active', expected, 'epic=TEAM-1')
+
+    def test_required_active_transition_preserves_original_failure_and_value(self):
+        failure = RuntimeError('Task cannot be inactivated')
+        class ReadOnlyActive:
+            @property
+            def Active(self):
+                return True
+            @Active.setter
+            def Active(self, value):
+                raise failure
+        with self.assertRaises(ProjectAutomationError) as raised:
+            write_required_project_value(ReadOnlyActive(), 'Active', False, 'epic=TEAM-1')
+        message = str(raised.exception)
+        self.assertIn('attempted_value=False', message)
+        self.assertIn('not a CSV mapping', message)
+        self.assertIn('Task cannot be inactivated', message)
+        self.assertIsNone(raised.exception.__cause__)
+
+    def test_required_active_transition_is_written_and_verified(self):
+        task = SimpleNamespace(Active=False)
+        write_required_project_value(task, 'Active', True, 'epic=TEAM-1')
+        self.assertIs(task.Active, True)
+
     def session(self, app=None):
         session = object.__new__(MicrosoftProjectSession)
         session.app = app

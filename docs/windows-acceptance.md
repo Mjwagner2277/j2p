@@ -31,7 +31,7 @@ Required adapter checks now include:
 - Dependencies retain the intended Project task identity, Finish-to-Start type, and zero lag. Object-model relationships are preferred so localized display strings do not determine identity.
 - Existing summary names are updated. Native summary percent complete remains Project's calculation from child durations; its custom story-point metrics are verified against the plan.
 
-The Project edition must support writing and reading the required `Active` task property. An installation that cannot keep reference/completed rows inactive fails clearly instead of producing a seemingly successful schedule with different behavior.
+The Project edition must support writing and reading the required `Active` task property. Reference rows must remain inactive and show progress through Story Point Completion %. Completed driving rows remain active with native completion at 100%. Test a shared epic with partial completion and a completed epic. Confirm summary updates do not change child actuals. Existing reference actuals must produce a clear failure without being cleared. A rejected Active transition includes its attempted boolean value and Project's original error.
 
 ## Fixture matrix and release evidence
 
