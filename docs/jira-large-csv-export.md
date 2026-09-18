@@ -198,43 +198,31 @@ Before each export:
 
 Do not mix export types. For example, do not export some batches as current fields and others as all fields.
 
-## Step 6: Combine Batch CSVs
+## Step 6: Keep The Batch CSVs Separate
 
-Use a spreadsheet tool such as Excel when the files are reasonably sized.
+j2p accepts multiple export files directly. Keep each file's header row. You no
+longer need to combine the files in Excel. Supply all batches from the same
+project snapshot together so child work, rollups, and dependencies can be resolved
+across files. Do not combine a baseline export with a later sprint export.
 
-Simple Excel method:
+Each batch is decoded separately, so supported encodings can differ. Columns are
+mapped by their headers and may appear in different orders. Each file must contain
+the required mapped columns; exporting the same current fields each time is still
+the simplest workflow.
 
-1. Open the first batch CSV.
-2. Save it as the combined file, such as `jira-project-wide-export.csv`.
-3. Open the second batch CSV.
-4. Copy all data rows except the header row.
-5. Paste those rows at the bottom of the combined file.
-6. Repeat for each batch.
-7. Save the combined file as CSV UTF-8 if Excel offers that option.
+## Step 7: Check Batch Coverage
 
-Important:
+Compare the files against your batch tracking table. Include all initiatives,
+epics, child story/task rows, and completed work needed for the project.
 
-- Keep only one header row.
-- Do not change column names.
-- Do not reorder columns after combining.
-- Do not remove child story/task rows.
-- Do not remove completed rows unless the j2p owner confirms they are not needed.
-
-If Excel struggles with the file size, ask a Jira admin or technical teammate to combine the files using Power Query, PowerShell, or another approved tool.
-
-## Step 7: Check The Combined CSV
-
-Open the combined CSV in Excel and check:
-
-| Check | How |
-| --- | --- |
-| Total row count | The row count excluding the header should equal the sum of all batch counts. |
-| Duplicate keys | Sort or filter by `Issue key` and look for duplicates. |
-| Missing header rows | Search for repeated `Issue key` values that appear as a row, which usually means a copied header was pasted into the middle. |
-| Issue type coverage | Filter `Issue Type` and confirm epics plus child story/task types are present. |
-| Rollup coverage | Filter epics with blank `Parent` and blank `Fix versions`; these may be excluded by j2p. |
-
-If duplicate keys exist, do not run j2p yet. Find the overlapping batches and fix the JQL split.
+- Repeated Jira keys with identical parsed issue values are counted once and
+  recorded as `DuplicateCsvIssueSkipped` in the audit CSV.
+- Conflicting parsed values for the same key stop the run and identify both source
+  files and row numbers. Re-export or correct the overlapping batches; file order
+  does not choose a winner.
+- j2p cannot detect issues missing from every supplied file. Check batch counts
+  against Jira and review missing-parent/dependency warnings.
+- Audit CSVs include `source_file` alongside `source_row`.
 
 ## Step 8: Run j2p Validate
 
@@ -242,7 +230,7 @@ For a normal sprint review:
 
 ```powershell
 py -3.14 -m j2p validate `
-  --jira-csv .\jira-project-wide-export.csv `
+  --jira-csv .\jira-batch-01.csv .\jira-batch-02.csv .\jira-batch-03.csv `
   --config .\config\j2p.yaml `
   --output-dir .\review-output `
   --project-name "Customer Portal Program" `
@@ -254,7 +242,7 @@ For the first accepted baseline export:
 
 ```powershell
 py -3.14 -m j2p validate `
-  --jira-csv .\jira-project-wide-export.csv `
+  --jira-csv .\jira-batch-01.csv .\jira-batch-02.csv .\jira-batch-03.csv `
   --config .\config\j2p.yaml `
   --output-dir .\review-output `
   --project-name "Customer Portal Program" `

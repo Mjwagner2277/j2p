@@ -736,3 +736,29 @@ resource assignment rules, and other constraints in an existing `.mpp` can still
 reject an otherwise valid value. Inspect the identified field in the sandbox.
 The progress counter is printed before selected rows are written, so use the error's
 CSV row and epic key rather than treating the progress counter as a CSV row number.
+
+## Multiple Jira CSV Exports
+
+Pass all export batches for one project snapshot to `--jira-csv`:
+
+```powershell
+py -3.14 -m j2p validate `
+  --jira-csv .\exports\batch-01.csv .\exports\batch-02.csv `
+  --config .\config\j2p.yaml `
+  --project-name "Customer Portal Program" `
+  --output-dir .\review-output
+```
+
+The same syntax works for `create` and `update`; their other required arguments
+remain unchanged. You can also repeat the flag:
+`--jira-csv .\batch-01.csv --jira-csv .\batch-02.csv`.
+Quote paths containing spaces. Supply explicit file paths; wildcard expansion is
+not performed by j2p.
+
+j2p checks each file and combines issues before calculating points, completion,
+rollups, and dependencies. Matching repeated issues are counted once and audited;
+conflicting values for one Jira key stop the run with both file/row locations.
+A single YAML mapping applies to every file. Keep headers in every CSV; column
+order and supported file encodings may differ. Single-file commands still work.
+Do not mix baseline and updated snapshots in one run. See
+[jira-large-csv-export.md](jira-large-csv-export.md) for browser export instructions.

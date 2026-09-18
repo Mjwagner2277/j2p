@@ -136,7 +136,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = False) -> None:
-    parser.add_argument("--jira-csv", required=True, type=Path, help="Project-wide Jira CSV export.")
+    parser.add_argument("--jira-csv", required=True, type=Path, nargs="+", action="extend",
+                        help="One or more Jira CSV export batches. May be repeated; combine only one snapshot.")
     parser.add_argument("--config", type=Path, help="YAML configuration file.")
     parser.add_argument(
         "--output-dir",
@@ -179,6 +180,8 @@ def run_validate(args: argparse.Namespace) -> int:
     progress("Reading Jira CSV and building review plan")
     baseline = snapshots_from_state(context["state_path"]) if args.compare_state else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
+    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
+             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
     state_after_path = context["state_dir"] / "j2p-state.after.json"
     progress("Writing report state")
     write_json(state_after_path, run_plan_to_state(plan))
@@ -205,6 +208,8 @@ def run_update(args: argparse.Namespace) -> int:
     baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
     progress("Reading Jira CSV and building update plan")
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
+    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
+             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
     progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     progress("Opening sandbox MPP and applying Jira updates")
     apply_plan_to_sandbox(
@@ -229,6 +234,8 @@ def run_create(args: argparse.Namespace) -> int:
     progress("Reading Jira CSV and building initial Project plan")
     baseline = snapshots_from_state(context["state_path"]) if context["state_path"].exists() else {}
     plan = build_run_plan(args.jira_csv, context["config"], baseline)
+    progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
+             f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
     progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
     output_project = context["project_dir"] / args.output_project_name
     progress("Creating initial sandbox MPP")

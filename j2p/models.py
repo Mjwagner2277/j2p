@@ -27,6 +27,7 @@ class AuditItem:
     source_row: Optional[int] = None
     planning_date: str = ""
     planning_bucket: str = ""
+    source_file: str = ""
 
 
 @dataclass
@@ -49,6 +50,7 @@ class JiraIssue:
     predecessors: Set[str]
     successors: Set[str]
     source_row: int
+    source_file: str = ""
 
 
 @dataclass
@@ -81,6 +83,7 @@ class PlanEpic:
     fix_version: str = ""
     drives_schedule: bool = True
     primary_schedule_key: str = ""
+    source_file: str = ""
 
 
 @dataclass

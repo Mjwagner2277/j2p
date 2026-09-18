@@ -20,10 +20,14 @@ SINGLE_BYTE_FALLBACK_ENCODINGS = ("cp1252", "latin-1")
 class CsvTable:
     def __init__(self, path: Path) -> None:
         self.path = path
-        rows, self.encoding = read_csv_rows(path)
+        try:
+            rows, self.encoding = read_csv_rows(path)
+        except OSError as exc:
+            raise J2PError(f"Could not read Jira CSV {path}: {exc.strerror}") from exc
         if not rows:
             raise J2PError(f"CSV is empty: {path}")
         self.headers = [header.strip() for header in rows[0]]
+        self.row_numbers = [index for index, row in enumerate(rows[1:], start=2) if any(cell.strip() for cell in row)]
         self.rows = [row for row in rows[1:] if any(cell.strip() for cell in row)]
         self.header_index: Dict[str, List[int]] = {}
         for index, header in enumerate(self.headers):
@@ -104,7 +108,7 @@ def decoded_text_looks_binary(text: str) -> bool:
 def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]) -> List[JiraIssue]:
     issues: List[JiraIssue] = []
     columns = config["columns"]
-    for row_index, row in enumerate(table.rows, start=2):
+    for row_index, row in zip(table.row_numbers, table.rows):
         key = table.get_first(row, columns["jira_key"]).upper()
         if not key:
             audit.append(
@@ -158,6 +162,7 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 predecessors=parse_issue_keys(table.get_all(row, columns.get("predecessors", []))),
                 successors=parse_issue_keys(table.get_all(row, columns.get("successors", []))),
                 source_row=row_index,
+                source_file=str(table.path),
             )
         )
     return issues

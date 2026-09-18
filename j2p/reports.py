@@ -28,6 +28,7 @@ AUDIT_COLUMNS = [
     "message",
     "reviewer_action",
     "source_row",
+    "source_file",
     "planning_date",
     "planning_bucket",
 ]

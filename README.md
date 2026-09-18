@@ -75,6 +75,11 @@ The main `.mpp` is never modified. The script copies it to a timestamped sandbox
 
 For fixVersion teams, epics with multiple fixVersions default to `reference`: one driving primary row plus non-driving reference rows. The only alternate policy is `split`, configured per Jira key prefix when every fixVersion should receive a driving schedule row.
 
+For exports split into batches, pass multiple files with
+`--jira-csv batch-01.csv batch-02.csv` on any command. j2p combines them before
+planning, counts matching repeated issues once, and rejects conflicting duplicates.
+See [the large export guide](docs/jira-large-csv-export.md).
+
 ## Pre-Merge Checks
 
 Run the local smoke test before merging or handing off changes:

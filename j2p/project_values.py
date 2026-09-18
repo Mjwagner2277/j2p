@@ -64,7 +64,7 @@ def epic_assignments(epic, config):
 
 
 def epic_context(epic):
-    return f"epic={epic.key}, CSV row={epic.source_row}"
+    return f"epic={epic.key}, CSV row={epic.source_row}, CSV file={epic.source_file}"
 
 
 def validate_project_plan(plan, config):

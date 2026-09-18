@@ -7,9 +7,10 @@ public planning facade used by the CLI and tests.
 from __future__ import annotations
 
 from calendar import monthrange
+from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from .baseline import (
     add_added_epic_audit,
@@ -58,11 +59,14 @@ from .state import audit_to_rows, run_plan_to_state, snapshots_from_state, write
 
 
 def build_run_plan(
-    jira_csv: Path,
+    jira_csv: Union[Path, Sequence[Path]],
     config: Dict[str, Any],
     baseline: Optional[Dict[str, ProjectTaskSnapshot]] = None,
 ) -> RunPlan:
-    table = CsvTable(jira_csv)
+    paths = [jira_csv] if isinstance(jira_csv, (str, Path)) else list(jira_csv)
+    if not paths:
+        raise J2PError("At least one Jira CSV is required.")
+    tables = [CsvTable(Path(path)) for path in paths]
     audit: List[AuditItem] = []
     baseline = baseline or {}
     required = ["jira_key", "issue_type", "summary", "epic_link", "story_points", "status"]
@@ -71,17 +75,52 @@ def build_run_plan(
         required.append("parent")
     if "fixVersion" in configured_rollup_modes:
         required.append("fix_versions")
-    missing = [name for name in required if not table.has_any(logical_columns(config, name))]
-    if missing:
-        details = ", ".join(f"{name}: {logical_columns(config, name)}" for name in missing)
-        raise J2PError(f"CSV is missing required mapped columns: {details}")
+    for table in tables:
+        missing = [name for name in required if not table.has_any(logical_columns(config, name))]
+        if missing:
+            details = ", ".join(f"{name}: {logical_columns(config, name)}" for name in missing)
+            raise J2PError(f"CSV {table.path} is missing required mapped columns: {details}")
 
     column_map = {
-        name: table.selected_header(logical_columns(config, name))
+        name: " | ".join(dict.fromkeys(
+            table.selected_header(logical_columns(config, name)) for table in tables
+            if table.selected_header(logical_columns(config, name))
+        ))
         for name in sorted(config.get("columns", {}).keys())
     }
-
-    issues = parse_issues(table, config, audit)
+    issues = []
+    seen = {}
+    duplicate_count = 0
+    for table in tables:
+        batch_audit = []
+        batch = parse_issues(table, config, batch_audit)
+        for item in batch_audit:
+            item.source_file = str(table.path)
+        audit.extend(batch_audit)
+        for issue in batch:
+            prior = seen.get(issue.key)
+            if prior is not None:
+                current_values = asdict(issue)
+                prior_values = asdict(prior)
+                for metadata in ("source_row", "source_file"):
+                    current_values.pop(metadata)
+                    prior_values.pop(metadata)
+                if current_values != prior_values:
+                    raise J2PError(
+                        f"Conflicting duplicate Jira key {issue.key}: "
+                        f"{prior.source_file} row {prior.source_row} and "
+                        f"{issue.source_file} row {issue.source_row}. "
+                        "Export consistent batches from the same snapshot; no version was selected."
+                    )
+                duplicate_count += 1
+                audit.append(AuditItem(
+                    "Info", "DuplicateCsvIssueSkipped", jira_key=issue.key,
+                    message=f"Repeated issue counted once; first seen in {prior.source_file} row {prior.source_row}.",
+                    source_row=issue.source_row, source_file=issue.source_file,
+                ))
+                continue
+            seen[issue.key] = issue
+            issues.append(issue)
     issues_by_key = {issue.key.upper(): issue for issue in issues if issue.key}
     issue_type_sets = {
         "initiative": lowered(config["issue_types"]["initiative"]),
@@ -295,7 +334,9 @@ def build_run_plan(
     driving_completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
 
     stats = {
-        "csv_rows_read": len(table.rows),
+        "csv_rows_read": sum(len(table.rows) for table in tables),
+        "csv_files_read": len(tables),
+        "duplicate_csv_issues_skipped": duplicate_count,
         "jira_issues_read": len(issues),
         "initiatives_read": len(initiatives),
         "epics_read": len(epics),
@@ -327,7 +368,7 @@ def build_run_plan(
     }
     plan = RunPlan(
         generated_at=datetime.now().isoformat(timespec="seconds"),
-        jira_csv=str(jira_csv),
+        jira_csv="; ".join(str(path) for path in paths),
         rollup_mode=describe_rollup_modes(planned_epics, config),
         column_map=column_map,
         stats=stats,
@@ -336,6 +377,14 @@ def build_run_plan(
         audit_items=audit,
     )
 
+    for epic in plan.epics.values():
+        source = issues_by_key.get(epic.jira_key or epic.key)
+        if source:
+            epic.source_file = source.source_file
+    for item in plan.audit_items:
+        source = issues_by_key.get(item.jira_key)
+        if source and not item.source_file:
+            item.source_file = source.source_file
     validate_project_plan(plan, config)
     return plan
 
