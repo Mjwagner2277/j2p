@@ -6,6 +6,8 @@ For contributor and testing information, use `docs/contributing.md` and `docs/te
 
 For the full project lifecycle from first setup through recurring sprint updates, use `docs/project-sprint-workflow.md`.
 
+For Jira Data Center or Server exports that exceed the browser CSV limit, use `docs/jira-large-csv-export.md`.
+
 ## What j2p Does
 
 j2p reads a project-wide Jira CSV export and prepares Microsoft Project review material.
