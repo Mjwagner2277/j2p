@@ -25,7 +25,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | Project Column | Written By j2p | Read By j2p | Enables |
 | --- | --- | --- | --- |
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
-| `% Complete` / `PercentComplete` | Yes | Yes | Epic and summary percent complete. Used for baseline comparison, active-work Story Point Ratio filtering, and manager rollup status. |
+| `% Complete` / `PercentComplete` | Driving epics only | Yes | Native duration-based progress. Incomplete driving rows are seeded after date/resource writes and may recalculate; differences are audited. Completed driving rows must retain 100%. Summary and reference native progress is not written. Story-point reporting uses custom completion fields. |
 | `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Used with `Date1` to show Jira target start and with Project scheduling for review. |
 | `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison, green changed finish dates, and red cascade branch driver finish dates. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
@@ -81,7 +81,7 @@ Rollups:
 Completion and metrics:
 
 - `total_story_points` and `completed_story_points` are calculated from child Jira rows, not from Project children.
-- `PercentComplete` is manually written from completed story points divided by total story points.
+- Story Point Completion % retains completed story points divided by total story points. Native `PercentComplete` is seeded only on driving rows and can diverge after duration recalculation; completed driving rows use native 100%.
 - `logged_hours` is separate from completion and includes all child logged hours.
 - `story_point_ratio` uses only completed child logged hours and completed child story points.
 - Manager-report aggregate Story Point Ratio uses only active scheduled epics: `drives_schedule == True` and `0 < percent_complete < 100`.

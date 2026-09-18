@@ -109,6 +109,39 @@ def verification_fixture(epic_count=120, summary_count=12, resource_count=40):
 
 
 class ProjectVerificationScalingTests(unittest.TestCase):
+    def test_recalculated_native_percent_is_audited_while_jira_percent_remains_exact(self):
+        session, plan, config, epics, _ = verification_fixture(epic_count=1, summary_count=1)
+        next(iter(plan.epics.values())).percent_complete = 6
+        epics[0].Number7 = 6
+        epics[0].PercentComplete = 0
+        self.verify_quietly(session, plan, config)
+        self.verify_quietly(session, plan, config)
+        audits = [a for a in plan.audit_items if a.category == 'ProjectNativeCompletionRecalculated']
+        self.assertEqual(len(audits), 1)
+        self.assertEqual((audits[0].old_value, audits[0].new_value), ('6', '0'))
+        epics[0].Number7 = 0
+        with self.assertRaisesRegex(ProjectAutomationError, 'field=Number7.*attempted_value=6.*actual_value=0'):
+            self.verify_quietly(session, plan, config)
+
+    def test_invalid_or_unreadable_native_percentage_still_fails(self):
+        for actual in (None, True, 'unknown', float('nan'), -1, 101):
+            with self.subTest(actual=actual):
+                session, plan, config, epics, _ = verification_fixture(epic_count=1, summary_count=1)
+                epics[0].PercentComplete = actual
+                with self.assertRaisesRegex(ProjectAutomationError, 'Invalid native Project completion'):
+                    self.verify_quietly(session, plan, config)
+        del epics[0].PercentComplete
+        with self.assertRaisesRegex(ProjectAutomationError, 'readback failed.*PercentComplete'):
+            self.verify_quietly(session, plan, config)
+
+    def test_completed_native_percentage_must_still_be_100(self):
+        session, plan, config, epics, _ = verification_fixture(epic_count=1, summary_count=1)
+        next(iter(plan.epics.values())).completed = True
+        with self.assertRaisesRegex(ProjectAutomationError, 'PercentComplete.*attempted_value=100'):
+            self.verify_quietly(session, plan, config)
+        epics[0].PercentComplete = 100
+        self.verify_quietly(session, plan, config)
+
     def test_snapshots_use_named_story_point_completion_but_preserve_legacy_native_values(self):
         session, _, config, epics, _ = verification_fixture(epic_count=1, summary_count=1)
         epics[0].Number7 = 0
@@ -187,7 +220,7 @@ class ProjectVerificationScalingTests(unittest.TestCase):
 
     def test_indexed_verification_still_rejects_corrupted_epic_fields(self):
         corruptions = (
-            ('percentage', lambda task: setattr(task, 'PercentComplete', 0), 'PercentComplete'),
+            ('percentage', lambda task: setattr(task, 'Number7', 0), 'Number7'),
             ('metric', lambda task: setattr(task, 'Number2', 0), 'Number2'),
             ('schedule mode', lambda task: setattr(task, 'Manual', True), 'Manual'),
             ('active state', lambda task: setattr(task, 'Active', False), 'Active'),

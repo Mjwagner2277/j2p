@@ -19,6 +19,19 @@ FIXTURES = Path(__file__).parent / 'fixtures'
 
 
 class ProjectValueTests(unittest.TestCase):
+    def test_native_completion_is_seeded_after_schedule_dates(self):
+        epic = next(iter(self.plan.epics.values()))
+        epic.percent_complete = 6
+        epic.completed = False
+        task = type('Task', (), {})()
+        session = object.__new__(MicrosoftProjectSession)
+        def schedule_changes(*args):
+            task.PercentComplete = 0
+        with patch.object(session, 'set_native_resource_group'), patch.object(session, 'write_project_date', side_effect=schedule_changes):
+            session.update_epic_task(task, epic, self.config, self.plan)
+        self.assertEqual(task.PercentComplete, 6)
+        self.assertEqual(task.Number7, 6)
+
     def test_completed_epics_and_reference_progress_obey_project_activation_rules(self):
         class ProjectTask:
             def __init__(self):

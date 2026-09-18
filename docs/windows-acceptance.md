@@ -30,6 +30,7 @@ Required adapter checks now include:
 - Managed epic fields, custom target dates, required auto-scheduling and active state, outline parent, and owned resource assignment survive save/reopen.
 - Dependencies retain the intended Project task identity, Finish-to-Start type, and zero lag. Object-model relationships are preferred so localized display strings do not determine identity.
 - Existing summary names are updated. Native summary percent complete remains Project's calculation from child durations; its custom story-point metrics are verified against the plan.
+- On an incomplete driving epic, native `% Complete` may recalculate after scheduling. Confirm a different valid native percentage produces `ProjectNativeCompletionRecalculated`, while Story Point Completion % retains the exact planned value. Missing/invalid native values and completed driving rows below native 100% still fail. Custom completion corruption must fail before and after reopening.
 
 The Project edition must support writing and reading the required `Active` task property. Reference rows must remain inactive and show progress through Story Point Completion %. Completed driving rows remain active with native completion at 100%. Test a shared epic with partial completion and a completed epic. Confirm summary updates do not change child actuals. Existing reference actuals must produce a clear failure without being cleared. A rejected Active transition includes its attempted boolean value and Project's original error.
 

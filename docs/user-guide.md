@@ -590,6 +590,13 @@ The supplied `yerp` configuration displays `completion_percent` in its review
 table. Other configurations can add that logical column to `exposed_columns`.
 All three custom fields can be remapped through `project_fields` if occupied.
 
+Native `% Complete` on incomplete epic rows can also change when Project
+recalculates duration. J2P seeds it after date/resource updates and reports a
+valid scheduling difference as `ProjectNativeCompletionRecalculated`. The
+custom Story Point Completion % must still match Jira exactly through save and
+reopen. Completed driving rows must retain native 100%; missing or invalid
+native percentages remain errors.
+
 ## Common Review Outcomes
 
 | Report Category | Meaning | Typical Action |

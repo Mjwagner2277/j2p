@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .models import AuditItem, PlanEpic, ProjectTaskSnapshot, RunPlan
+from .formatting import format_number
 from .project_values import epic_assignments, epic_context, value_metadata
 from .rollups import summary_id
 
@@ -478,6 +479,10 @@ class MicrosoftProjectSession:
         project_progress("Indexing Project resources for verification")
         resources = {int(resource.ID): resource for resource in self.iter_resources()} if plan.epics else {}
         count = 0
+        native_completion_audit = {
+            item.schedule_key: item for item in plan.audit_items
+            if item.category == "ProjectNativeCompletionRecalculated"
+        }
         total_epics = len(plan.epics)
         project_progress(f"Verifying {total_epics} epic row(s), including percent complete and dependencies")
         for index, epic in enumerate(plan.epics.values(), start=1):
@@ -488,6 +493,26 @@ class MicrosoftProjectSession:
                 raise ProjectAutomationError(f"Saved sandbox is missing epic {epic.key}.")
             context = epic_context(epic)
             for field, value in epic_assignments(epic, config):
+                if field == "PercentComplete" and not epic.completed:
+                    actual = read_native_completion(task, context)
+                    if actual != value:
+                        prior = native_completion_audit.get(epic.key)
+                        if prior is not None:
+                            prior.new_value = format_number(actual)
+                        else:
+                            item = AuditItem(
+                                "Warning", "ProjectNativeCompletionRecalculated",
+                                jira_key=epic.jira_key or epic.key, schedule_key=epic.key,
+                                issue_type="Epic", summary=epic.summary, field="% Complete",
+                                old_value=str(value), new_value=format_number(actual),
+                                message="Project's duration-based completion differs from Jira story-point completion after scheduling.",
+                                reviewer_action="Use Story Point Completion % for Jira progress; review native duration/actuals if needed.",
+                                source_row=epic.source_row, source_file=epic.source_file,
+                            )
+                            plan.audit_items.append(item)
+                            native_completion_audit[epic.key] = item
+                    count += 1
+                    continue
                 verify_project_value(task, field, value, context)
                 count += 1
             for logical, date_text in (("jira_target_start", epic.target_start), ("jira_target_end", epic.target_end)):
@@ -836,6 +861,8 @@ class MicrosoftProjectSession:
         # Existing actuals are never cleared to force inactivation.
         write_required_project_value(task, "Active", epic.drives_schedule, epic_context(epic))
         for field, value in epic_assignments(epic, config):
+            if field == "PercentComplete":
+                continue  # Seed native progress only after duration-changing date/resource writes.
             write_required_project_value(task, field, value, epic_context(epic))
         try:
             self.set_native_resource_group(task, epic.resource_group)
@@ -853,6 +880,10 @@ class MicrosoftProjectSession:
             )
         self.write_project_date(task, epic, plan, fields.get("jira_target_start", "Date1"), "Jira Target Start", "Start")
         self.write_project_date(task, epic, plan, fields.get("jira_target_end", "Date2"), "Jira Target End", "Finish")
+        if epic.drives_schedule:
+            write_required_project_value(
+                task, "PercentComplete", 100 if epic.completed else epic.percent_complete, epic_context(epic)
+            )
         verify_project_value(task, "Active", epic.drives_schedule, epic_context(epic))
         try:
             task.HideBar = bool(epic.completed and config.get("behavior", {}).get("hide_completed_epics", True))
@@ -2788,8 +2819,19 @@ def verify_project_value(task: Any, field: str, expected: Any, context: str) -> 
         matches = str(actual) == str(expected)
     if not matches:
         raise ProjectAutomationError(
-            f"Microsoft Project did not retain the requested value: {context}, field={field}, {value_metadata(expected)}."
+            f"Microsoft Project did not retain the requested value: {context}, field={field}, {value_metadata(expected)}, "
+            f"actual_value={actual!r}."
         )
+
+
+def read_native_completion(task: Any, context: str) -> float:
+    try:
+        actual = task.PercentComplete
+    except Exception:
+        raise ProjectAutomationError(f"Microsoft Project field readback failed: {context}, field=PercentComplete.") from None
+    if isinstance(actual, bool) or not isinstance(actual, (int, float)) or not math.isfinite(actual) or not 0 <= actual <= 100:
+        raise ProjectAutomationError(f"Invalid native Project completion: {context}, field=PercentComplete, actual_value={actual!r}.")
+    return float(actual)
 
 
 def write_required_project_value(task: Any, field: str, value: Any, context: str) -> None:
