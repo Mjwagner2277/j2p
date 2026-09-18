@@ -25,6 +25,9 @@ multi_fixversion_policy:
 
 metrics:
   hours_per_story_point: 8
+  logged_hours_units:
+    # Jira's numeric Time Spent export is seconds; custom hour fields stay hours.
+    Time Spent: seconds
 
 columns:
   jira_key:
@@ -47,7 +50,8 @@ columns:
     - Fix versions
     - Fix Version/s
   story_points:
-    - Custom field (Custom field (Story Points)
+    - Custom field (Story Points)
+    # Preserve the original-estimate fallback only when current points are blank.
     - Custom field (Original story points)
   logged_hours:
     - Custom field (Time Spent Total (hrs))
@@ -110,7 +114,7 @@ review_table:
     - jira_status
     - start
     - finish
-    - percent_complete
+    - completion_percent
     - predecessors
   include_audit_columns: false
 

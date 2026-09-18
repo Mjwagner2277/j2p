@@ -67,7 +67,13 @@ If a fixVersion-mode epic has multiple fixVersions, j2p uses `multi_fixversion_p
 | `reference` | Default. The first Jira fixVersion becomes the primary scheduled row. Each additional fixVersion gets a non-driving reference row. | The same work should be visible under qualification events, shop deliverables, or other commitments without double-counting work. |
 | `split` | Each fixVersion gets a driving Project row with its own stable schedule key. | The team intentionally wants the same Jira epic to drive schedule placement under every listed fixVersion. |
 
-Reference-only rollup summaries keep counted story points at zero to avoid double-counting, but show the referenced epic's percent complete for visibility.
+Rollup summaries keep counted story points limited to driving rows. Completion
+uses every epic assigned to that version, including references, even in groups
+that also contain driving rows. A completed 3-point item shared by two versions
+adds 3 completed points to each version's completion calculation, while adding
+only 3 to overall counted points under the reference policy. Separate completion
+point fields make this distinction visible. These per-version completion totals
+must not be summed as a portfolio total.
 
 For fixVersion rollups, j2p can hide stale completed releases from HTML manager reports without a release metadata file. A fixVersion is considered complete when every issue in the CSV that declares that fixVersion has a status in `done_statuses`. If every completed issue has a usable `Resolved` date and the latest `Resolved` date is older than the configured threshold, the rollup is hidden from HTML manager reports while remaining in detailed CSV outputs and the Project sandbox.
 

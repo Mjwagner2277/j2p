@@ -17,6 +17,12 @@ To exercise blank-project creation and Save As, run the same command with `--mod
 
 The harness creates a unique output folder and sandbox copy, applies the plan, saves, closes without saving again, reopens, and verifies retained data. It checks the source file's SHA-256 before and after, including on failure. `windows-acceptance.json` records Python, platform, pywin32 and Project versions; input hashes; verification counts; warnings; timestamps; and the result. Exit codes are 0 for passed, 1 for failed, and 2 when the host is not Windows and no live checks ran.
 
+Verification prints task/epic/summary progress and separate snapshot, close, hash,
+and reopen stages. Its recorded `elapsed_seconds` covers the full verification
+cycle. Include a large schedule in acceptance testing and retain these timings;
+portable collection-count tests check that task/resource enumeration stays linear,
+but do not measure Windows COM latency or rule out a blocked Project call.
+
 Required adapter checks now include:
 
 - The active file path matches the sandbox before mutations and saves. Failed open/save/recalculate Boolean results are errors.

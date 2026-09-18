@@ -11,6 +11,7 @@ import math
 import os
 import re
 import shutil
+import time
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -425,17 +426,32 @@ class MicrosoftProjectSession:
         """Require the persisted file to retain the verified plan before reporting success."""
         self.saved_successfully = False
         plan.stats.pop("project_verification", None)
+        started = time.monotonic()
+        project_progress("Starting saved sandbox verification before close/reopen")
         self.require_saved_file()
         self.verify_plan(plan, config)
-        before = {key: asdict(value) for key, value in self.snapshot_tasks(config).items()}
+        project_progress("Reading task snapshot before closing the saved sandbox")
+        before = {key: asdict(value) for key, value in self.snapshot_tasks(
+            config, progress_label="Before-close snapshot"
+        ).items()}
         path = self.project_path
-        project_progress("Closing and reopening the saved sandbox for verification")
+        project_progress("Closing the saved sandbox for verification")
         self.close_project(save_changes=False)
         self.project = None
-        persisted_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        project_progress("Hashing the closed sandbox file")
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        persisted_hash = digest.hexdigest()
+        project_progress("Reopening the saved sandbox for verification")
         self.open(path)
         fields_verified = self.verify_plan(plan, config)
-        after = {key: asdict(value) for key, value in self.snapshot_tasks(config).items()}
+        project_progress("Reading task snapshot after reopening the saved sandbox")
+        after = {key: asdict(value) for key, value in self.snapshot_tasks(
+            config, progress_label="After-reopen snapshot"
+        ).items()}
+        project_progress("Comparing saved sandbox snapshots")
         if before != after:
             changed = sorted(key for key in set(before) | set(after) if before.get(key) != after.get(key))
             raise ProjectAutomationError(
@@ -449,14 +465,24 @@ class MicrosoftProjectSession:
             "verified_epics": len(plan.epics),
             "verified_fields": fields_verified,
             "sha256": persisted_hash,
+            "elapsed_seconds": round(time.monotonic() - started, 3),
         }
-        project_progress("Saved sandbox verification passed")
+        project_progress(f"Saved sandbox verification passed in {time.monotonic() - started:.1f}s")
 
     def verify_plan(self, plan: RunPlan, config: Dict[str, Any]) -> int:
+        project_progress("Indexing Project tasks for verification")
         self.assert_project_identity()
-        tasks = self.index_tasks_by_key(config)
+        task_list = self.iter_tasks(progress_label="Verification task scan")
+        tasks = self.index_tasks_by_key(config, task_list)
+        summaries = self.index_rollup_summaries(config, task_list)
+        project_progress("Indexing Project resources for verification")
+        resources = {int(resource.ID): resource for resource in self.iter_resources()} if plan.epics else {}
         count = 0
-        for epic in plan.epics.values():
+        total_epics = len(plan.epics)
+        project_progress(f"Verifying {total_epics} epic row(s), including percent complete and dependencies")
+        for index, epic in enumerate(plan.epics.values(), start=1):
+            if index == 1 or index % 50 == 0 or index == total_epics:
+                project_progress(f"Epic verification progress: {index}/{total_epics} row(s), epic={epic.key}")
             task = tasks.get(epic.key.upper())
             if task is None:
                 raise ProjectAutomationError(f"Saved sandbox is missing epic {epic.key}.")
@@ -472,9 +498,9 @@ class MicrosoftProjectSession:
                     count += 1
             verify_project_value(task, "Manual", False, context)
             verify_project_value(task, "Active", not epic.completed and epic.drives_schedule, context)
-            parent = self.find_rollup_summary(epic.rollup_mode, epic.rollup_key, config)
+            parent = summaries.get((epic.rollup_mode, epic.rollup_key.upper()))
             self.verify_outline_parent(task, parent, context)
-            self.verify_managed_resource_assignment(task, epic.resource_group)
+            self.verify_managed_resource_assignment(task, epic.resource_group, resources)
             if epic.drives_schedule:
                 predecessors = [tasks.get(key.upper()) for key in epic.predecessors]
                 if any(item is None for item in predecessors):
@@ -484,8 +510,11 @@ class MicrosoftProjectSession:
                 )
                 if error:
                     raise ProjectAutomationError(f"Dependency verification failed for {epic.key}: {error}")
-        for summary in plan.summaries.values():
-            task = self.find_rollup_summary(summary.rollup_mode, summary.key, config)
+        total_summaries = len(plan.summaries)
+        for index, summary in enumerate(plan.summaries.values(), start=1):
+            if index == 1 or index % 50 == 0 or index == total_summaries:
+                project_progress(f"Summary verification progress: {index}/{total_summaries} row(s)")
+            task = summaries.get((summary.rollup_mode, summary.key.upper()))
             if task is None:
                 raise ProjectAutomationError(f"Saved sandbox is missing rollup {summary.key}.")
             for field, value in summary_assignments(summary, config):
@@ -493,6 +522,7 @@ class MicrosoftProjectSession:
                     continue  # Native summary completion is recalculated by Project from child durations.
                 verify_project_value(task, field, value, f"rollup={summary.key}")
                 count += 1
+        project_progress(f"Project data verification complete: {total_epics} epic(s), {total_summaries} summary row(s)")
         return count
 
     def configure_custom_fields(self, config: Dict[str, Any]) -> None:
@@ -516,13 +546,16 @@ class MicrosoftProjectSession:
         if configured:
             project_progress("Custom Project field configuration complete")
 
-    def snapshot_tasks(self, config: Dict[str, Any]) -> Dict[str, ProjectTaskSnapshot]:
+    def snapshot_tasks(self, config: Dict[str, Any], progress_label: Optional[str] = None) -> Dict[str, ProjectTaskSnapshot]:
         snapshots: Dict[str, ProjectTaskSnapshot] = {}
         fields = config.get("project_fields", {})
-        self.index_tasks_by_key(config)
-        task_list = self.iter_tasks()
+        task_list = self.iter_tasks(progress_label=f"{progress_label} task scan" if progress_label else None)
+        self.index_tasks_by_key(config, task_list)
         tasks_by_id = {str(safe_get(task, "ID")): task for task in task_list}
-        for task in task_list:
+        total = len(task_list)
+        for index, task in enumerate(task_list, start=1):
+            if progress_label and (index == 1 or index % 50 == 0 or index == total):
+                project_progress(f"{progress_label} progress: {index}/{total} row(s)")
             jira_key = safe_get(task, fields.get("jira_key", "Text1"))
             j2p_key = safe_get(task, fields.get("j2p_key", "Text10"))
             rollup_key = safe_get(task, fields.get("rollup_key", "Text5"))
@@ -632,24 +665,33 @@ class MicrosoftProjectSession:
         for task in self.iter_tasks():
             write_required_project_value(task, "Manual", False, project_task_context(task))
 
-    def iter_tasks(self) -> List[Any]:
+    def iter_tasks(self, progress_label: Optional[str] = None) -> List[Any]:
         tasks = []
         if self.project is None:
             return tasks
-        for index in range(1, int(self.project.Tasks.Count) + 1):
+        try:
+            total = int(self.project.Tasks.Count)
+        except Exception as exc:
+            raise ProjectAutomationError(f"Could not read Project task collection count: {exc}") from exc
+        for index in range(1, total + 1):
+            if progress_label and (index == 1 or index % 100 == 0 or index == total):
+                project_progress(f"{progress_label}: {index}/{total} row(s)")
             try:
                 task = self.project.Tasks(index)
             except Exception as exc:
-                raise ProjectAutomationError(f"Could not read Project task row {index}.") from exc
+                raise ProjectAutomationError(
+                    f"Could not read Project task row {index} of {total}"
+                    f" during {progress_label or 'task scan'}: {exc}"
+                ) from exc
             if task is not None:
                 tasks.append(task)
         return tasks
 
-    def index_tasks_by_key(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def index_tasks_by_key(self, config: Dict[str, Any], task_list: Optional[List[Any]] = None) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
         key_field = config.get("project_fields", {}).get("jira_key", "Text1")
         j2p_key_field = config.get("project_fields", {}).get("j2p_key", "Text10")
-        for task in self.iter_tasks():
+        for task in self.iter_tasks() if task_list is None else task_list:
             key = safe_get(task, j2p_key_field) or safe_get(task, key_field)
             if key:
                 normalized = str(key).strip().upper()
@@ -659,6 +701,28 @@ class MicrosoftProjectSession:
                         f"{project_task_context(task)}. Resolve duplicate matching keys in the source schedule."
                     )
                 result[normalized] = task
+        return result
+
+    def index_rollup_summaries(self, config: Dict[str, Any], task_list: List[Any]) -> Dict[Tuple[str, str], Any]:
+        """Cache summary lookup for one readback pass; discard before reopening COM."""
+        fields = config.get("project_fields", {})
+        result: Dict[Tuple[str, str], Any] = {}
+        for task in task_list:
+            issue_type = str(safe_get(task, fields.get("jira_issue_type", "Text3")))
+            if issue_type not in {"Initiative", "FixVersion"} and not safe_bool(safe_get(task, "Summary")):
+                continue
+            mode = str(safe_get(task, fields.get("rollup_mode", "Text4")))
+            key = str(safe_get(task, fields.get("rollup_key", "Text5"))).upper()
+            if not mode or not key:
+                continue
+            identity = (mode, key)
+            if identity in result:
+                raise ProjectAutomationError(
+                    f"Duplicate Project rollup {mode}:{key}: "
+                    f"{project_task_context(result[identity])}; {project_task_context(task)}. "
+                    "Resolve duplicate rollup rows in the source schedule."
+                )
+            result[identity] = task
         return result
 
     def ensure_summaries(
@@ -882,10 +946,11 @@ class MicrosoftProjectSession:
                 )
         self.verify_managed_resource_assignment(task, resource_group)
 
-    def resource_assignments(self, task: Any) -> List[Tuple[Any, Any]]:
+    def resource_assignments(self, task: Any, resources_by_id: Optional[Dict[int, Any]] = None) -> List[Tuple[Any, Any]]:
         result = []
         try:
-            resources = {int(resource.ID): resource for resource in self.iter_resources()}
+            resources = ({int(resource.ID): resource for resource in self.iter_resources()}
+                         if resources_by_id is None else resources_by_id)
             for index in range(1, int(task.Assignments.Count) + 1):
                 assignment = task.Assignments(index)
                 resource = resources.get(int(assignment.ResourceID))
@@ -903,8 +968,9 @@ class MicrosoftProjectSession:
         except Exception as exc:
             raise ProjectAutomationError("Could not read the Project resource collection.") from exc
 
-    def verify_managed_resource_assignment(self, task: Any, resource_group: str) -> None:
-        owned = [resource for _assignment, resource in self.resource_assignments(task)
+    def verify_managed_resource_assignment(self, task: Any, resource_group: str,
+                                         resources_by_id: Optional[Dict[int, Any]] = None) -> None:
+        owned = [resource for _assignment, resource in self.resource_assignments(task, resources_by_id)
                  if is_managed_group_resource(resource)]
         expected = 1 if resource_group else 0
         if len(owned) != expected or (owned and (
@@ -2235,6 +2301,9 @@ def review_table_standard_columns(config: Dict[str, Any]) -> List[Tuple[str, str
         ("jira_target_start", fields.get("jira_target_start", "Date1")),
         ("jira_target_end", fields.get("jira_target_end", "Date2")),
         ("percent_complete", "% Complete"),
+        ("completion_percent", fields.get("completion_percent", "Number7")),
+        ("completion_total_story_points", fields.get("completion_total_story_points", "Number5")),
+        ("completion_completed_story_points", fields.get("completion_completed_story_points", "Number6")),
         ("total_story_points", fields.get("total_story_points", "Number1")),
         ("completed_story_points", fields.get("completed_story_points", "Number2")),
         ("logged_hours", fields.get("logged_hours", "Number3")),
@@ -2732,6 +2801,9 @@ def summary_assignments(summary: Any, config: Dict[str, Any]) -> List[Tuple[str,
         (fields.get("completed_story_points", "Number2"), summary.completed_story_points),
         (fields.get("logged_hours", "Number3"), summary.logged_hours),
         (story_point_ratio_project_field(config), summary.story_point_ratio),
+        (fields.get("completion_total_story_points", "Number5"), summary.completion_total_story_points),
+        (fields.get("completion_completed_story_points", "Number6"), summary.completion_completed_story_points),
+        (fields.get("completion_percent", "Number7"), summary.percent_complete),
         ("PercentComplete", summary.percent_complete),
     ])
     return values

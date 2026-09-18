@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from .formatting import format_number, html_escape
 from .cascade import CascadeGraph, CascadeProjection
-from .metrics import calculate_percent, calculate_story_point_ratio
+from .metrics import calculate_story_point_ratio
 from .models import AuditItem, RunPlan
 from .rollups import build_summaries, multi_fixversion_policy_for_prefix, summary_id
 
@@ -75,6 +75,8 @@ SUMMARY_ROLLUP_COLUMNS = [
     "reference_epic_count",
     "total_story_points",
     "completed_story_points",
+    "completion_total_story_points",
+    "completion_completed_story_points",
     "logged_hours",
     "completed_logged_hours",
     "story_point_ratio",
@@ -516,53 +518,15 @@ def summary_rollup_rows(plan: RunPlan) -> List[Dict[str, Any]]:
 
 
 def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List[Dict[str, Any]]:
-    buckets: Dict[str, List[Any]] = {}
-    for epic in plan.epics.values():
-        if epic.key_prefix != project_key:
-            continue
-        buckets.setdefault(summary_id(epic.rollup_mode, epic.rollup_key), []).append(epic)
-
+    epics = {key: epic for key, epic in plan.epics.items() if epic.key_prefix == project_key}
+    summaries = build_summaries(epics, {"metrics": {
+        "hours_per_story_point": float(plan.stats.get("hours_per_story_point", 8.0)),
+    }})
     rows = []
-    for _bucket_id, epics in sorted(buckets.items()):
-        driving_epics = [epic for epic in epics if epic.drives_schedule]
-        reference_epics = [epic for epic in epics if not epic.drives_schedule]
-        total = round(sum(epic.total_story_points for epic in driving_epics), 2)
-        completed = round(sum(epic.completed_story_points for epic in driving_epics), 2)
-        logged_hours = round(sum(epic.logged_hours for epic in driving_epics), 2)
-        completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
-        ratio_completed = completed
-        if driving_epics:
-            percent_complete = calculate_percent(completed, total)
-        else:
-            reference_total = round(sum(epic.total_story_points for epic in reference_epics), 2)
-            reference_completed = round(sum(epic.completed_story_points for epic in reference_epics), 2)
-            logged_hours = round(sum(epic.logged_hours for epic in reference_epics), 2)
-            completed_logged_hours = round(sum(epic.completed_logged_hours for epic in reference_epics), 2)
-            percent_complete = calculate_percent(reference_completed, reference_total)
-            ratio_completed = reference_completed
-        story_point_ratio = calculate_story_point_ratio(
-            completed_logged_hours,
-            ratio_completed,
-            float(plan.stats.get("hours_per_story_point", 8.0)),
-        )
-        first = epics[0]
-        rows.append(
-            {
-                "rollup_key": first.rollup_key,
-                "project_key": project_key,
-                "name": first.rollup_name,
-                "rollup_mode": first.rollup_mode,
-                "child_epic_count": len(epics),
-                "driving_epic_count": len(driving_epics),
-                "reference_epic_count": len(reference_epics),
-                "total_story_points": total,
-                "completed_story_points": completed,
-                "logged_hours": logged_hours,
-                "completed_logged_hours": completed_logged_hours,
-                "story_point_ratio": story_point_ratio,
-                "percent_complete": percent_complete,
-            }
-        )
+    for summary in summaries.values():
+        row = asdict(summary)
+        row['rollup_key'] = row.pop('key')
+        rows.append({key: row.get(key, '') for key in SUMMARY_ROLLUP_COLUMNS})
     return rows
 
 
@@ -1550,6 +1514,7 @@ def render_rollup_status(plan: RunPlan) -> str:
                 summary.rollup_mode,
                 rollup_status(summary),
                 f"{summary.percent_complete}%",
+                f"{format_number(summary.completion_completed_story_points)} / {format_number(summary.completion_total_story_points)}",
                 f"{format_number(summary.completed_story_points)} / {format_number(summary.total_story_points)}",
                 format_number(summary.logged_hours),
                 format_number(summary.story_point_ratio),
@@ -1567,7 +1532,8 @@ def render_rollup_status(plan: RunPlan) -> str:
             "Mode",
             "Status",
             "% Complete",
-            "Completed / Total Points",
+            "Completion Points (Done / Total)",
+            "Counted Points (Done / Total)",
             "Logged Hours",
             story_point_ratio_label(plan),
             "Driving Rows",
@@ -1581,8 +1547,8 @@ def render_rollup_status(plan: RunPlan) -> str:
 def rollup_status(summary: Any) -> str:
     if summary.driving_epic_count == 0 and summary.reference_epic_count > 0:
         return "Reference only"
-    if summary.total_story_points <= 0:
-        return "In planning / no counted points"
+    if summary.completion_total_story_points <= 0:
+        return "In planning / no completion points"
     if summary.percent_complete >= 100:
         return "Complete"
     if summary.percent_complete <= 0:

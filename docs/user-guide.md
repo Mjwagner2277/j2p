@@ -184,6 +184,16 @@ During normal runs, j2p prints timestamped progress messages in the terminal so 
 
 During Project automation, the slowest phases are usually Project recalculation, review cell coloring, and saving the `.mpp`. `--debug-visible` makes these phases easier to observe but can also make them slower because Microsoft Project is actively repainting its window while COM commands run.
 
+`Project save complete` means Project returned from saving; the run still needs
+to verify the saved sandbox. j2p checks the epic fields (including percent complete),
+dependencies and rollups, takes a snapshot, then closes/reopens the file and repeats
+the checks. The terminal prints each stage and row counters during verification.
+Task and resource indexes are reused within each verification pass so a large
+schedule is not rescanned for every epic. Wait for `Saved sandbox verification
+passed` and the final run completion/status before treating the run as complete.
+If progress stops, retain the last stage and row/key shown for troubleshooting;
+one blocked Project COM call can still prevent the next progress message.
+
 For `create` and `update`, the terminal also prints the number of Project predecessor links planned from Jira. If that count is greater than zero but the sandbox `Predecessors` column is blank, open `audit-detail.csv` and search for `ProjectDependencyWriteFailed`. Rerun with `--dependency-write-mode diagnostic` only when you need the full Project API fallback trace.
 
 j2p accepts common Jira CSV encodings, including UTF-8 with BOM, UTF-16, Windows-1252, and Latin-1. If CSV parsing still fails with an encoding error, re-export the Jira issue list as UTF-8 CSV from Jira or resave the file as UTF-8 CSV in Excel before rerunning.
@@ -565,10 +575,20 @@ Each `reports\csv\by-project-key\<KEY>` folder contains the same CSV types filte
 | `reference_epic_count` | Number of non-driving reference rows. |
 | `total_story_points` | Counted story points from driving rows only. |
 | `completed_story_points` | Counted completed story points from driving rows only. |
+| `completion_total_story_points` | Points assigned to this rollup, including references. Used as the completion denominator; do not sum across versions for portfolio totals. |
+| `completion_completed_story_points` | Completed points assigned to this rollup, including references. Used as the completion numerator. |
 | `logged_hours` | Logged hours from driving rows. Reference-only rollups show referenced hours for visibility. |
 | `completed_logged_hours` | Logged hours from completed driving rows. Reference-only rollups show referenced completed hours for visibility. |
 | `story_point_ratio` | Completed story points delivered per configured 8-hour logged-time block. |
-| `percent_complete` | Weighted percent complete. Reference-only rollups show visible referenced progress but keep counted points at zero. |
+| `percent_complete` | Completed completion points / total completion points, including references in mixed and reference-only rollups. |
+
+In Microsoft Project, use **Story Point Completion %** (`Number7` by default)
+for this calculation. Native `% Complete` on summary rows is recalculated by
+Project from schedule durations. **Completion Total Points** (`Number5`) and
+**Completion Completed Points** (`Number6`) show the denominator and numerator.
+The supplied `yerp` configuration displays `completion_percent` in its review
+table. Other configurations can add that logical column to `exposed_columns`.
+All three custom fields can be remapped through `project_fields` if occupied.
 
 ## Common Review Outcomes
 

@@ -635,6 +635,9 @@ Supported fields:
 | `completed_story_points` | `Number2` | Completed child story/task points. |
 | `logged_hours` | `Number3` | Logged hours summed from child story/task rows. |
 | `story_point_ratio` | `Number4` | Completed story points delivered per configured 8-hour logged-time block. |
+| `completion_total_story_points` | `Number5` | Rollup completion denominator including reference rows. |
+| `completion_completed_story_points` | `Number6` | Rollup completion numerator including reference rows. |
+| `completion_percent` | `Number7` | Story-point completion including references, preserved independently of native Project summary `% Complete`. Also available as a review-table column. |
 | `in_planning` | `Flag1` | Marks included epics with no pointed child work. |
 | `unmatched_project_task` | `Flag2` | Marks Project tasks not matched to the current Jira plan. |
 | `dependency_review_needed` | `Flag3` | Marks rows needing dependency review. |

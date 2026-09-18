@@ -55,6 +55,9 @@ def epic_assignments(epic, config):
         "completed_story_points": epic.completed_story_points,
         "logged_hours": epic.logged_hours,
         "story_point_ratio": epic.story_point_ratio,
+        "completion_total_story_points": epic.total_story_points,
+        "completion_completed_story_points": epic.completed_story_points,
+        "completion_percent": epic.percent_complete,
         "in_planning": bool(epic.in_planning),
         "dependency_review_needed": bool(epic.dependency_review),
         "drives_schedule": bool(epic.drives_schedule),
@@ -80,3 +83,6 @@ def validate_project_plan(plan, config):
         check_project_value("PercentComplete", summary.percent_complete, context)
         for logical in ("total_story_points", "completed_story_points", "logged_hours", "story_point_ratio"):
             check_project_value(fields[logical], getattr(summary, logical), context)
+        for logical in ("completion_total_story_points", "completion_completed_story_points"):
+            check_project_value(fields[logical], getattr(summary, logical), context)
+        check_project_value(fields["completion_percent"], summary.percent_complete, context)

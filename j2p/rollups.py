@@ -132,14 +132,13 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
         logged_hours = round(sum(child.logged_hours for child in driving_children), 2)
         completed_logged_hours = round(sum(child.completed_logged_hours for child in driving_children), 2)
         ratio_completed = completed
-        if driving_children:
-            percent_complete = calculate_percent(completed, total)
-        else:
-            reference_total = round(sum(child.total_story_points for child in reference_children), 2)
+        completion_total = round(sum(child.total_story_points for child in children), 2)
+        completion_completed = round(sum(child.completed_story_points for child in children), 2)
+        percent_complete = calculate_percent(completion_completed, completion_total)
+        if not driving_children:
             reference_completed = round(sum(child.completed_story_points for child in reference_children), 2)
             logged_hours = round(sum(child.logged_hours for child in reference_children), 2)
             completed_logged_hours = round(sum(child.completed_logged_hours for child in reference_children), 2)
-            percent_complete = calculate_percent(reference_completed, reference_total)
             ratio_completed = reference_completed
         story_point_ratio = calculate_story_point_ratio(
             completed_logged_hours,
@@ -162,6 +161,8 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
             child_epic_count=len(children),
             driving_epic_count=len(driving_children),
             reference_epic_count=len(reference_children),
+            completion_total_story_points=completion_total,
+            completion_completed_story_points=completion_completed,
         )
     return summaries
 

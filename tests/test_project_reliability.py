@@ -369,6 +369,7 @@ class ProjectReliabilityTests(unittest.TestCase):
         session = self.session()
         summary = SimpleNamespace(key='INIT-1', name='Renamed initiative', rollup_mode='initiative',
                                   summary_id='initiative:INIT-1', total_story_points=8, completed_story_points=3,
+                                  completion_total_story_points=8, completion_completed_story_points=3,
                                   logged_hours=4, story_point_ratio=2, percent_complete=38)
         task = SimpleNamespace(Name='Old name')
         plan = SimpleNamespace(summaries={'INIT-1': summary})
