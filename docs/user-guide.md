@@ -710,9 +710,14 @@ The authored training rows are documented in the walkthrough so the examples are
 All commands check planned Project values before writing task rows. `validate` now
 fails with exit code 2 if a task name, custom text value, or resource group exceeds
 255 characters, a planned number is not finite, or percent complete is outside
-0–100. This includes generated Dependency Review text, which can grow when an epic
-has many missing dependency targets. Values are not silently truncated. Shorten
-source text or correct the dependency links/export coverage, then rerun validation.
+0–100. Dependency Review is a special case: when its generated warning text exceeds
+255 characters, the Project field shows a shortened preview with an explicit
+`Full details: reports/csv/dependency-review.csv` reference. The dependency-review
+flag remains set. The full text remains in `planned-epics.csv`, and every dependency
+warning remains in `dependency-review.csv` and `audit-detail.csv`; missing links
+still require review. This applies to the configured Dependency Review field, even
+if it is mapped to a field other than Text8. Other oversized values still fail
+validation; shorten their source text and rerun.
 An error stops at the first invalid value; rerun after correcting it. No successful
 validation report or state snapshot is written for a failed preflight.
 
@@ -722,8 +727,8 @@ NaN and infinity are rejected in CSV numeric inputs and metric configuration.
 
 A failure during epic writes now identifies the epic schedule key, CSV row,
 Project field, value type, and text length when applicable. For text values,
-`attempted_text` prints the full string being assigned, including concatenated
-Dependency Review messages. Quotes and escapes make newlines and tabs visible.
+`attempted_text` prints the exact string being assigned (the shortened preview
+for oversized Dependency Review text). Quotes and escapes make newlines and tabs visible.
 Raw COM exception descriptions remain omitted.
 
 Validation does not open Microsoft Project. Formula fields, lookup restrictions,

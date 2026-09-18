@@ -26,6 +26,14 @@ def check_project_value(field, value, context):
         raise J2PError(f"Project preflight failed: {context}, field={field}, {value_metadata(value)}: {reason}.")
 
 
+def project_dependency_review(text: str) -> str:
+    """Bound only the Project display value; the plan retains every warning."""
+    if len(text) <= 255:
+        return text
+    suffix = " ... [Full details: reports/csv/dependency-review.csv]"
+    return text[:255 - len(suffix)].rstrip() + suffix
+
+
 def epic_assignments(epic, config):
     fields = config["project_fields"]
     yield "Name", epic.summary
@@ -37,7 +45,7 @@ def epic_assignments(epic, config):
         "rollup_mode": epic.rollup_mode,
         "rollup_key": epic.rollup_key,
         "jira_key_prefix": epic.key_prefix,
-        "dependency_review": epic.dependency_review,
+        "dependency_review": project_dependency_review(epic.dependency_review),
         "jira_status": epic.status,
         "j2p_key": epic.key,
         "row_role": epic.row_role,
