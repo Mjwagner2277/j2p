@@ -8,7 +8,7 @@ from .models import J2PError
 def value_metadata(value):
     detail = f"type={type(value).__name__}"
     if isinstance(value, str):
-        detail += f", text_length={len(value)}"
+        detail += f", text_length={len(value)}, attempted_text={value!r}"
     return detail
 
 

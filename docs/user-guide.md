@@ -721,9 +721,10 @@ Number1–20, Flag1–20, or Date1–10. Each field may have only one mapped val
 NaN and infinity are rejected in CSV numeric inputs and metric configuration.
 
 A failure during epic writes now identifies the epic schedule key, CSV row,
-Project field, value type, and text length when applicable. Field contents and
-raw COM exception descriptions are omitted. You can share this diagnostic without
-sharing the CSV contents (redact the issue key if needed).
+Project field, value type, and text length when applicable. For text values,
+`attempted_text` prints the full string being assigned, including concatenated
+Dependency Review messages. Quotes and escapes make newlines and tabs visible.
+Raw COM exception descriptions remain omitted.
 
 Validation does not open Microsoft Project. Formula fields, lookup restrictions,
 resource assignment rules, and other constraints in an existing `.mpp` can still

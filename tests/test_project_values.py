@@ -44,9 +44,16 @@ class ProjectValueTests(unittest.TestCase):
             self.assertIn('epic=TEAM-101', error.getvalue())
             self.assertIn('field=Text8', error.getvalue())
             self.assertIn('text_length=379', error.getvalue())
-            self.assertNotIn('ABSENT-100', error.getvalue())
+            self.assertIn('ABSENT-100', error.getvalue())
+            self.assertIn('ABSENT-109', error.getvalue())
             self.assertNotIn('Validation complete', output.getvalue())
             self.assertFalse(list(Path(tmp).rglob('j2p-state*.json')))
+
+    def test_attempted_text_preserves_full_value_and_escapes_controls(self):
+        from j2p.project_values import value_metadata
+        value = "warning\nnext\titem" + "x" * 300
+        self.assertIn(f"attempted_text={value!r}", value_metadata(value))
+        self.assertNotIn("\n", value_metadata(value))
 
     def test_text_boundary_and_summary_checks(self):
         check_project_value('Text8', 'x' * 255, 'test')
@@ -73,7 +80,7 @@ class ProjectValueTests(unittest.TestCase):
             with self.assertRaises(ConfigError):
                 load_config(FIXTURES / 'mixed-config.yaml', {'metrics': {'hours_per_story_point': value}})
 
-    def test_com_rejection_identifies_field_without_disclosing_value(self):
+    def test_com_rejection_identifies_field_and_attempted_text(self):
         class RejectingTask:
             def __setattr__(self, field, value):
                 if field == 'Text8':
@@ -89,6 +96,6 @@ class ProjectValueTests(unittest.TestCase):
         self.assertIn('field=Text8', message)
         self.assertIn('CSV row=', message)
         self.assertIn('type=str, text_length=19', message)
-        self.assertNotIn('private-review-text', message)
+        self.assertIn("attempted_text='private-review-text'", message)
         self.assertNotIn('secret-content', message)
         self.assertTrue(raised.exception.__suppress_context__)
