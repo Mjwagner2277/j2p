@@ -70,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
         "update",
         help="Copy the main MPP to a timestamped sandbox and apply Jira updates to the sandbox.",
     )
-    add_common_args(update)
+    add_common_args(update, sprint_required=True)
     update.add_argument("--main-project", required=True, type=Path, help="Source-of-truth MPP file.")
     update.add_argument(
         "--comparison-source",
@@ -135,7 +135,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def add_common_args(parser: argparse.ArgumentParser) -> None:
+def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = False) -> None:
     parser.add_argument("--jira-csv", required=True, type=Path, help="Project-wide Jira CSV export.")
     parser.add_argument("--config", type=Path, help="YAML configuration file.")
     parser.add_argument(
@@ -157,7 +157,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--sprint",
-        help="Sprint or planning increment value to encode into the output folder structure. Required for update.",
+        required=sprint_required,
+        help="Sprint or planning increment value to encode into the output folder structure.",
     )
     parser.add_argument(
         "--allow-existing-sprint",
@@ -271,7 +272,8 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
     state_path = args.state_path or workspace_dir / "j2p-state.json"
     project_dir = run_dir / "project"
     state_dir = run_dir / "state"
-    project_dir.mkdir(parents=True, exist_ok=True)
+    if args.command in {"create", "update"}:
+        project_dir.mkdir(parents=True, exist_ok=True)
     state_dir.mkdir(parents=True, exist_ok=True)
     return {
         "config": config,

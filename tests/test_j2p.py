@@ -596,6 +596,7 @@ class J2PPlanningTests(unittest.TestCase):
             html_dir = run_dir / "reports" / "html"
             csv_dir = run_dir / "reports" / "csv"
             manager_report = html_dir / "Manager-Review-Report.html"
+            self.assertFalse((run_dir / "project").exists())
             self.assertTrue(manager_report.exists())
             self.assertTrue((html_dir / "index.html").exists())
             self.assertTrue(
@@ -662,6 +663,7 @@ class J2PPlanningTests(unittest.TestCase):
             )
             csv_dir = run_dir / "reports" / "csv"
             html_dir = run_dir / "reports" / "html"
+            self.assertFalse((run_dir / "project").exists())
             self.assertTrue((html_dir / "Manager-Review-Report.html").exists())
             self.assertTrue((csv_dir / "audit-detail.csv").exists())
             self.assertTrue((csv_dir / "by-project-key" / "TEAM" / "planned-epics.csv").exists())
@@ -727,8 +729,9 @@ class J2PPlanningTests(unittest.TestCase):
                     main(validate_args)
             buffer = StringIO()
             with redirect_stderr(buffer):
-                self.assertEqual(main(update_args), 2)
-            self.assertIn("update requires --sprint", buffer.getvalue())
+                with self.assertRaises(SystemExit):
+                    main(update_args)
+            self.assertIn("--sprint", buffer.getvalue())
 
     def test_validate_cli_can_override_warning_suppression_cutoff(self) -> None:
         csv_text = "\n".join(

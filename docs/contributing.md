@@ -61,7 +61,7 @@ Contributor documentation should answer:
 - How is the code organized?
 - What tests must pass?
 - How are fixtures regenerated?
-- What behavior must stay backward compatible?
+- What migrations or breaking behavior changes must be called out clearly?
 - How should Microsoft Project automation changes be manually smoke tested?
 - What does each Microsoft Project custom field enable?
 

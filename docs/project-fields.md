@@ -123,7 +123,7 @@ When adding a Project field, update all relevant locations:
 | Examples | `examples/large-scenario/README.md` and generated report examples | Keep the large walkthrough teachable and regenerated. |
 | Tests | `tests/test_j2p.py`, `scripts/smoke_tests.py` | Add unit coverage and smoke assertions. |
 
-Field changes are risky when they affect identity, rollup movement, dependency writes, or color selection. Keep backward compatibility in mind: existing `.mpp` files may already contain j2p data using the previous default field IDs.
+Field changes are risky when they affect identity, rollup movement, dependency writes, or color selection. If a change intentionally breaks an older field layout, call out the migration impact in the release notes and update the walkthrough examples.
 
 ## Collision Guidance
 

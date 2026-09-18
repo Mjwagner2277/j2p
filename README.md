@@ -12,6 +12,8 @@ For product users and schedule reviewers:
 
 - Large project walkthrough: `examples/large-scenario/README.md`
 - Product user guide: `docs/user-guide.md`
+- Project/sprint workflow: `docs/project-sprint-workflow.md`
+- Large Jira CSV export guide: `docs/jira-large-csv-export.md`
 - YAML configuration reference: `docs/configuration-reference.md`
 
 For contributors:
@@ -52,7 +54,9 @@ The supported end-user walkthrough uses the large project-wide example:
 py -3.14 -m j2p validate `
   --jira-csv .\examples\large-scenario\project-wide-jira-updated-1200.csv `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10"
 ```
 
 Create a timestamped sandbox from a source-of-truth Project file and apply Jira updates:
@@ -62,7 +66,9 @@ py -3.14 -m j2p update `
   --jira-csv .\path\to\jira-export.csv `
   --main-project .\path\to\Program-Source-Of-Truth.mpp `
   --config .\examples\large-scenario\config.large-example.yaml `
-  --output-dir .\review-output
+  --output-dir .\review-output `
+  --project-name "Large Scenario Project" `
+  --sprint "Sprint 24.10"
 ```
 
 The main `.mpp` is never modified. The script copies it to a timestamped sandbox run folder, updates the sandbox, colors review cells, and writes a manager report plus audit CSVs.
