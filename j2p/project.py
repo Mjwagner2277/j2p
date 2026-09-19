@@ -98,7 +98,19 @@ def project_phase(plan: RunPlan, name: str):
         elapsed = time.monotonic() - started
         timings = plan.stats.setdefault("project_update_seconds", {})
         timings[name] = round(timings.get(name, 0.0) + elapsed, 3)
-        project_progress(f"Update phase {name}: {elapsed:.2f}s")
+        operation = "Creation" if plan.stats.get("project_run_mode") == "create" else "Update"
+        project_progress(f"{operation} phase {name}: {elapsed:.2f}s")
+
+
+@contextmanager
+def project_row_phase(plan: RunPlan, name: str):
+    """Accumulate COM row costs; resource time is a subset of value-write time."""
+    started = time.monotonic()
+    try:
+        yield
+    finally:
+        seconds = plan.stats.setdefault("project_row_seconds", {})
+        seconds[name] = seconds.get(name, 0.0) + time.monotonic() - started
 
 
 def apply_plan_to_sandbox(
@@ -158,29 +170,42 @@ def create_project_from_plan(
     visible: bool = False,
     dependency_write_mode: str = "fast",
 ) -> List[AuditItem]:
+    started = time.monotonic()
+    plan.stats["project_run_mode"] = "create"
     with MicrosoftProjectSession(visible=visible) as session:
         project_progress("Creating blank Microsoft Project file")
-        session.new()
-        with session.defer_automatic_calculation():
+        with project_phase(plan, "new"):
+            session.new()
+        with session.defer_automatic_calculation(), session.cache_resources():
             project_progress("Configuring Project custom fields")
-            session.configure_custom_fields(config)
+            with project_phase(plan, "configure_fields"):
+                session.configure_custom_fields(config)
             project_progress("Creating initial Project rows from Jira")
-            session.apply_plan(plan, config, write_dependencies=False)
+            with project_phase(plan, "apply_changes"):
+                session.apply_plan(plan, config, write_dependencies=False, append_only=True)
             if not plan.epics:
                 project_progress("Recalculating initial Project schedule")
-                session.recalculate()
+                with project_phase(plan, "initial_recalculate"):
+                    session.recalculate()
             project_progress(f"Saving initial sandbox MPP: {output_project}")
-            session.save_as(output_project)
+            with project_phase(plan, "initial_save"):
+                session.save_as(output_project)
             project_progress("Writing Project predecessor links")
-            session.apply_plan_dependencies(plan, config, dependency_write_mode)
+            with project_phase(plan, "dependencies"):
+                session.apply_plan_dependencies(plan, config, dependency_write_mode)
             project_progress("Recalculating Project after predecessor links")
-            session.recalculate()
+            with project_phase(plan, "recalculate"):
+                session.recalculate()
         project_progress("Applying Project review table and cell colors")
-        session.apply_review_formatting(plan, config)
+        with project_phase(plan, "format_review"):
+            session.apply_review_formatting(plan, config)
         project_progress("Saving initial sandbox MPP")
-        session.save()
-        session.verify_saved_plan(plan, config)
+        with project_phase(plan, "save"):
+            session.save()
+        with project_phase(plan, "verify_save_reopen"):
+            session.verify_saved_plan(plan, config)
         project_progress("Finished initial Project file creation")
+    plan.stats["project_update_seconds"]["total"] = round(time.monotonic() - started, 3)
     return plan.audit_items
 
 
@@ -832,23 +857,30 @@ class MicrosoftProjectSession:
         config: Dict[str, Any],
         write_dependencies: bool = True,
         dependency_write_mode: str = "fast",
+        append_only: bool = False,
     ) -> None:
         self.assert_project_identity()
         task_list = getattr(self, "_update_task_list", None)
         if task_list is None:
             task_list = self.iter_tasks()
+        if append_only and task_list:
+            raise ProjectAutomationError("Append-only creation requires an empty Project file.")
         task_by_key = self.index_tasks_by_key(config, task_list)
         rollup_tasks = self.index_rollup_summaries(config, task_list)
         project_progress("Setting existing Project tasks to auto scheduled")
         self.set_auto_scheduled(task_list)
         project_progress("Ensuring rollup summary rows")
-        summary_tasks = self.ensure_summaries(plan, config, task_by_key, rollup_tasks)
+        # A new file is built in final outline order. Inserting every epic right
+        # after its summary repeatedly shifts rows already written to Project.
+        summary_tasks = {} if append_only else self.ensure_summaries(plan, config, task_by_key, rollup_tasks)
 
-        epics = sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.key))
+        epics = sorted(plan.epics.values(), key=lambda item: (item.rollup_key, item.rollup_mode, item.key))
         total_epics = len(epics)
         # Round each quarter upward and coalesce checkpoints for plans <4 rows.
         checkpoints = {(total_epics * quarter + 3) // 4 for quarter in range(1, 5)} if total_epics else set()
         plan.stats["project_row_calculation_checkpoints"] = []
+        plan.stats["project_row_seconds"] = {}
+        row_started = time.monotonic()
         if total_epics:
             project_progress(f"Writing {total_epics} epic row(s)")
         for index, epic in enumerate(epics, start=1):
@@ -858,26 +890,53 @@ class MicrosoftProjectSession:
             parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
             task = task_by_key.get(epic.key)
             try:
-                if task is None:
-                    task = self.add_epic_under_summary(epic, summary_tasks[parent_summary_id])
-                else:
-                    task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
+                with project_row_phase(plan, "placement"):
+                    if append_only:
+                        if parent_summary_id not in summary_tasks:
+                            summary = plan.summaries[parent_summary_id]
+                            parent = self.append_project_task(summary.name, 1, f"rollup={summary.key}")
+                            self.write_summary_values(parent, summary, config)
+                            summary_tasks[parent_summary_id] = parent
+                        task = self.append_project_task(epic.summary, 2, epic_context(epic))
+                        self.verify_outline_parent(task, summary_tasks[parent_summary_id], epic_context(epic))
+                    elif task is None:
+                        task = self.add_epic_under_summary(epic, summary_tasks[parent_summary_id])
+                    else:
+                        task = self.ensure_epic_under_summary(task, epic, summary_tasks[parent_summary_id], config, plan)
             except Exception:
                 raise ProjectAutomationError(
                     f"Microsoft Project rejected epic row creation/placement: {epic_context(epic)}. "
                     "Check the sandbox outline and task restrictions."
                 ) from None
             task_by_key[epic.key] = task
-            self.update_epic_task(task, epic, config, plan)
+            with project_row_phase(plan, "values_and_resources"):
+                self.update_epic_task(task, epic, config, plan)
             if index in checkpoints:
                 project_progress(
                     f"Recalculating after {index}/{total_epics} epic rows "
                     f"({index / total_epics:.0%}); dependencies may still be incomplete"
                 )
-                self.recalculate()
+                with project_row_phase(plan, "checkpoint_calculation"):
+                    self.recalculate()
                 plan.stats["project_row_calculation_checkpoints"].append(index)
+        if append_only:
+            for key, summary in sorted(plan.summaries.items()):
+                if key not in summary_tasks:
+                    with project_row_phase(plan, "placement"):
+                        task = self.append_project_task(summary.name, 1, f"rollup={summary.key}")
+                        self.write_summary_values(task, summary, config)
+                        summary_tasks[key] = task
+        timings = plan.stats["project_row_seconds"]
+        timings["total"] = time.monotonic() - row_started
         if total_epics:
             project_progress("Epic row writes complete")
+            project_progress(
+                f"Row timing: placement={timings.get('placement', 0):.2f}s, "
+                f"values/resources={timings.get('values_and_resources', 0):.2f}s "
+                f"(resources={timings.get('resources_within_values', 0):.2f}s), "
+                f"checkpoint calculation={timings.get('checkpoint_calculation', 0):.2f}s, "
+                f"total={timings['total']:.2f}s"
+            )
 
         if not write_dependencies:
             task_by_key = self.index_tasks_by_key(config)
@@ -989,12 +1048,26 @@ class MicrosoftProjectSession:
                         f"Microsoft Project rejected summary creation: rollup={summary.key}, "
                         f"field=Name, {value_metadata(summary.name)}."
                     ) from None
-            context = f"rollup={summary.key}"
-            self.write_task_value(task, "Manual", False, context)
-            for field, value in summary_assignments(summary, config):
-                self.write_task_value(task, field, value, context)
+            self.write_summary_values(task, summary, config)
             summary_tasks[summary.summary_id] = task
         return summary_tasks
+
+    def write_summary_values(self, task: Any, summary: Any, config: Dict[str, Any]) -> None:
+        context = f"rollup={summary.key}"
+        self.write_task_value(task, "Manual", False, context)
+        for field, value in summary_assignments(summary, config):
+            self.write_task_value(task, field, value, context)
+
+    def append_project_task(self, name: str, outline_level: int, context: str) -> Any:
+        """Append into a new file without shifting previously written row IDs."""
+        position = int(self.project.Tasks.Count) + 1
+        task = self.project.Tasks.Add(name, position)
+        if int(task.ID) != position:
+            raise ProjectAutomationError(f"Project did not append the requested row: {context}.")
+        # Project can inherit the previous row's outline level. Set and verify
+        # it explicitly rather than relying on an extra indent from that level.
+        self.write_task_value(task, "OutlineLevel", outline_level, context)
+        return task
 
     def find_rollup_summary(self, rollup_mode: str, rollup_key: str, config: Dict[str, Any]) -> Optional[Any]:
         mode_field = config.get("project_fields", {}).get("rollup_mode", "Text4")
@@ -1093,7 +1166,8 @@ class MicrosoftProjectSession:
                 continue  # Seed native progress only after duration-changing date/resource writes.
             self.write_task_value(task, field, value, epic_context(epic))
         try:
-            resource_changed = self.set_native_resource_group(task, epic.resource_group)
+            with project_row_phase(plan, "resources_within_values"):
+                resource_changed = self.set_native_resource_group(task, epic.resource_group)
             seed_completion = seed_completion or resource_changed is True
         except Exception as exc:
             raise ProjectAutomationError(
@@ -1213,6 +1287,29 @@ class MicrosoftProjectSession:
         except Exception:
             return ""
 
+    @contextmanager
+    def cache_resources(self):
+        """Cache managed resources for one write pass without enabling field skipping."""
+        attributes = ("_resource_cache_active", "_update_resources", "_update_resources_by_id",
+                      "_update_group_resources")
+        missing = object()
+        previous = {name: getattr(self, name, missing) for name in attributes}
+        self._resource_cache_active = True
+        self._update_resources = None
+        self._update_resources_by_id = None
+        self._update_group_resources = {}
+        try:
+            yield
+        finally:
+            for name, value in previous.items():
+                if value is missing:
+                    delattr(self, name)
+                else:
+                    setattr(self, name, value)
+
+    def resource_cache_enabled(self) -> bool:
+        return bool(getattr(self, "_resource_cache_active", False)) or getattr(self, "_update_values", None) is not None
+
     def set_native_resource_group(self, task: Any, resource_group: str) -> bool:
         self.resource_assignment_warnings = []
         changed = False
@@ -1254,7 +1351,7 @@ class MicrosoftProjectSession:
                 resources = self._update_resources_by_id
             else:
                 resources = {int(resource.ID): resource for resource in self.iter_resources()}
-                if getattr(self, "_update_values", None) is not None:
+                if self.resource_cache_enabled():
                     self._update_resources_by_id = resources
             for index in range(1, int(task.Assignments.Count) + 1):
                 assignment = task.Assignments(index)
@@ -1275,7 +1372,7 @@ class MicrosoftProjectSession:
                          for resource in [self.project.Resources(index)] if resource is not None]
         except Exception as exc:
             raise ProjectAutomationError("Could not read the Project resource collection.") from exc
-        if getattr(self, "_update_values", None) is not None:
+        if self.resource_cache_enabled():
             self._update_resources = resources
         return resources
 
@@ -1319,7 +1416,7 @@ class MicrosoftProjectSession:
                 self._update_resources_by_id[int(resource.ID)] = resource
             self.write_resource_value(resource, "Notes", marker, f"resource_group={resource_group}")
         self.write_resource_value(resource, "Group", resource_group, f"resource_group={resource_group}")
-        if getattr(self, "_update_values", None) is not None:
+        if self.resource_cache_enabled():
             self._update_group_resources[resource_group] = resource
         return resource
 

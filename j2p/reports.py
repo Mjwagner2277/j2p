@@ -1564,11 +1564,12 @@ def render_report_context(
 def render_project_update_metrics(plan: RunPlan) -> str:
     writes = plan.stats.get("project_update_writes", {})
     seconds = plan.stats.get("project_update_seconds", {})
-    if not writes and not seconds:
+    row_seconds = plan.stats.get("project_row_seconds", {})
+    if not writes and not seconds and not row_seconds:
         return ""
 
     parts = [
-        '<p class="muted">Project update measurements cover the entire run, '
+        '<p class="muted">Project measurements cover the entire run, '
         "including in filtered resource-group reports. Counts are write decisions "
         "and operations, not unique fields or tasks. Skipped operations already "
         "matched the requested state or required no new scheduling seed. Full "
@@ -1593,30 +1594,54 @@ def render_project_update_metrics(plan: RunPlan) -> str:
             ["Operation", "Written", "Skipped", "Failed"], rows,
         ))
     if seconds:
+        creating = plan.stats.get("project_run_mode") == "create"
         labels = {
+            "new": "Create blank Project",
+            "initial_recalculate": "Initial Project recalculation",
+            "initial_save": "Initial Save As",
+            "dependencies": "Write and verify predecessor links",
             "open": "Open sandbox",
             "read_before": "Read existing Project values",
             "build_comparison": "Build complete comparison",
             "configure_fields": "Configure custom fields",
-            "apply_changes": "Apply changes and prepare dependencies",
+            "apply_changes": "Create Project rows" if creating else "Apply changes and prepare dependencies",
             "recalculate": "Final Project recalculation",
             "schedule_review": "Review schedule changes",
             "format_review": "Format review",
             "save": "Save Project",
             "verify_save_reopen": "Verify, close, reopen, and verify",
-            "total": "Total Project update",
+            "total": "Total Project creation" if creating else "Total Project update",
         }
         rows = [[labels.get(phase, phase), f"{elapsed:.3f}"] for phase, elapsed in seconds.items()]
         parts.append(render_table(
-            "Project Update Timing (Entire Run)", ["Phase", "Seconds"], rows,
+            "Project Creation Timing (Entire Run)" if creating else "Project Update Timing (Entire Run)",
+            ["Phase", "Seconds"], rows,
         ))
         parts.append(
+            '<p class="muted">Create Project rows includes the quarter-point calculation checkpoints. '
+            'Predecessor links, saving, formatting, and saved-file verification are measured separately. '
+            'Total Project creation includes session startup and shutdown; CSV analysis and report generation '
+            'are excluded.</p>' if creating else
             '<p class="muted">Apply changes includes the required recalculation '
             "before dependency writes. Final Project recalculation measures the "
             "postwrite pass. Total Project update includes session startup and "
             "shutdown; it excludes initial CSV preflight, sandbox copying, and "
             "HTML/CSV report generation.</p>"
         )
+    if row_seconds:
+        labels = {
+            "placement": ("Row creation/placement and summary fields"
+                          if plan.stats.get("project_run_mode") == "create" else "Epic row placement"),
+            "values_and_resources": "Epic fields, dates, and resources",
+            "resources_within_values": "Resource assignment (included in epic values above)",
+            "checkpoint_calculation": "Quarter-point calculations",
+            "total": "Total epic row phase",
+        }
+        parts.append(render_table("Project Row Timing (Entire Run)", ["Operation", "Seconds"], [
+            [labels.get(name, name), f"{value:.3f}"] for name, value in row_seconds.items()
+        ]))
+        parts.append('<p class="muted">Resource time is part of epic-value time; do not add it again. '
+                     'These timings describe the entire run, including in filtered resource-group reports.</p>')
     return "".join(parts)
 
 

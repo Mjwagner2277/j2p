@@ -837,6 +837,10 @@ Do not mix baseline and updated snapshots in one run. See
 ### Scheduling during a Project write
 
 J2P keeps tasks Auto Scheduled and batches Project calculation while it writes.
+New-project creation appends each rollup and its epic rows in final outline order, avoiding repeated insertion above rows already written. Explicit outline levels and parent readback validate the hierarchy. Creation also caches the shared team resources while continuing to verify each task's actual resource assignments. Existing-project updates retain their current placement behavior.
+
+The report includes Project Creation Timing and Project Row Timing. The row breakdown separates placement/summary fields, epic values and resources, and quarter-point calculation time. Resource-assignment time is also shown as a subset of epic-value time; do not sum it twice. Saving, dependency writes, formatting, and close/reopen verification have separate phase timings. These measurements help distinguish slow Project automation calls from calculation time on the actual Windows machine.
+
 It recalculates after about 25%, 50%, 75%, and 100% of planned epic rows, counting
 reference rows and unchanged rows visited during updates. Progress logs show the
 actual row counts. These are partial schedules until dependency writes finish;

@@ -149,6 +149,11 @@ class CalculationCheckpointTests(unittest.TestCase):
                     else:
                         apply_plan_to_sandbox(Path('sandbox.mpp'), plan, {})
                 session.verify_saved_plan.assert_called_once_with(plan, {})
+                if create:
+                    session.cache_resources.assert_called_once_with()
+                    session.apply_plan.assert_called_once_with(plan, {}, write_dependencies=False, append_only=True)
+                    self.assertIn("apply_changes", plan.stats["project_update_seconds"])
+                    self.assertEqual(plan.stats["project_run_mode"], "create")
                 self.assertEqual(session.app.writes, [0, -1])
 
     def test_failed_checkpoint_stops_writes_and_restores_calculation_mode(self):

@@ -62,3 +62,21 @@ class ProjectUpdateReportTests(unittest.TestCase):
         self.assertNotIn("Project Update Operations", html)
         self.assertNotIn("Project Update Timing", html)
         self.assertIn("not created in validate mode", html)
+
+
+    def test_creation_timings_distinguish_rows_resources_and_checkpoints(self):
+        plan = self.make_plan()
+        plan.stats.update({
+            "project_run_mode": "create",
+            "project_update_seconds": {"new": 0.1, "apply_changes": 24.0, "dependencies": 4.0, "total": 30.0},
+            "project_row_seconds": {"placement": 4.0, "values_and_resources": 15.0,
+                                   "resources_within_values": 3.0, "checkpoint_calculation": 5.0, "total": 24.0},
+        })
+        html = render_report_context(plan, Path("new.mpp"), None, Path("reports"))
+        self.assertIn("Project Creation Timing (Entire Run)", html)
+        self.assertIn("Project Row Timing (Entire Run)", html)
+        self.assertIn("Write and verify predecessor links", html)
+        self.assertIn("Quarter-point calculations", html)
+        self.assertIn("Resource time is part of epic-value time; do not add it again", html)
+        self.assertNotIn("Project Update Timing", html)
+        self.assertIn("<td>24.000</td>", html)
