@@ -42,7 +42,11 @@ Run the harness on each supported Project version/edition with these fixture var
 | --- | --- |
 | Normal create-produced source and update export | Passed, source hash unchanged, review fields retained |
 | Existing SS/FF/SF dependency or nonzero lag | Link changed to FS with zero lag and verified after reopening |
-| Identical dependency set on a second update | No dependency-change audit noise; same relationships |
+| Identical dependency set on a second update | Dependency set skipped; no dependency-change audit noise; same relationships |
+| Settled source with identical complete export | Unchanged managed writes skipped; no new native date/completion seeds; full comparisons and verification retained |
+| One Jira target date changes | Target window reapplied; any resulting downstream schedule changes appear in full cascade review |
+| One task changes points, name, rollup, or owned resource group | Only differing managed values/relationships written; complete rollups and report detail retained |
+| Incomplete native completion differs from unchanged Jira completion | No repeated native percentage seed; exact custom completion and valid native completion verified |
 | Reordered Project row IDs, generated multi-fixVersion keys | Relationships resolve to the same schedule keys/UniqueIDs |
 | Duplicate matching keys in the MPP | Failed before task mutation; useful duplicate-key error |
 | A managed resource group changed between runs | Previous owned assignment removed; new owned assignment retained |
@@ -52,6 +56,26 @@ Run the harness on each supported Project version/edition with these fixture var
 
 Also inspect the sandbox's review table and colors visually; the automated JSON checks do not certify visual formatting. Check its warning list for formatting/date issues and preserved unmanaged resources.
 
+## Selective update measurements
+
+Run the identical-export and small-change sequence in [performance.md](performance.md).
+Retain `run-manifest.json` and the manager HTML alongside the acceptance result.
+In **Report Context**, inspect written/skipped/failed operations and phase seconds;
+these measurements cover the entire run even inside a resource-group report.
+Counts describe operation decisions, not unique fields. Confirm the default
+`main` baseline still reports the complete before/after comparison and that
+save/reopen verification covers unchanged rows as well as changed rows. Check
+post-recalculation cascade dates, including tasks receiving no direct edit.
+
+Also verify the unchanged target date window preserves Project's native dates;
+changing either source target date reapplies the window. A completed driving row
+must still retain native 100%, and custom story-point completion must match
+exactly. The transient write cache must not allow incorrect values to escape
+verification after Project recalculates.
+
+Portable test results do not constitute completion of these live Windows checks
+or a measured reduction in runtime.
+
 ## Resource ownership and earlier files
 
 New group placeholders carry a `j2p-managed-resource-v1:<hash>` marker in Resource Notes. Only assignments to marked resources are replaced or removed. Existing human assignments and old placeholders without a marker remain untouched; the audit warns when these may leave multiple native resource groups. Review and remove obsolete legacy assignments manually after confirming their ownership. Do not add ownership markers to human resources.
@@ -59,3 +83,18 @@ New group placeholders carry a `j2p-managed-resource-v1:<hash>` marker in Resour
 ## Microsoft object-model references
 
 The adapter checks documented Boolean results from [FileSave](https://learn.microsoft.com/en-us/office/vba/api/project.application.filesave), [FileSaveAs](https://learn.microsoft.com/en-us/office/vba/api/project.application.filesaveas), and [CalculateProject](https://learn.microsoft.com/en-us/office/vba/api/project.application.calculateproject). Dependency verification reads [TaskDependency.Type](https://learn.microsoft.com/en-us/office/vba/api/project.taskdependency.type) and [TaskDependency.Lag](https://learn.microsoft.com/en-us/office/vba/api/project.taskdependency.lag); numeric lag is minutes and `pjFinishToStart` is 1 in [PjTaskLinkType](https://learn.microsoft.com/en-us/office/vba/api/project.pjtasklinktype). Resource ownership uses the persisted [Resource.Notes](https://learn.microsoft.com/en-us/office/vba/api/project.resource.notes) property.
+
+## Row-quarter calculation acceptance
+
+Run both creation and update with a representative plan. Check progress logs for
+rounded-up 25%, 50%, 75%, and 100% epic-row checkpoints (504, 1008, 1512, 2016 for
+the current yerp plan), then the final calculation after dependencies. Creation
+also calculates before dependency writes following its initial save. Check that
+full cascade reports and saved/reopened values reflect the final linked schedule.
+
+Repeat with Project initially set to automatic calculation and then manual
+calculation; each run must restore its original application setting while tasks
+remain Auto Scheduled. On a disposable sandbox, interrupt with a controlled
+write/calculation exception and check that the calculation setting is restored.
+Measure identical-input and changed-input runs and retain their manifests; do
+not infer runtime improvement from portable checkpoint tests alone.

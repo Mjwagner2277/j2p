@@ -238,23 +238,40 @@ def run_command(args: argparse.Namespace) -> int:
             check_expected_issues(args, preflight)
             progress("Copying source-of-truth MPP to a timestamped sandbox")
             sandbox_path = prepare_sandbox_copy(args.main_project, context["project_dir"], context["run_id"])
-            progress(f"Loading comparison baseline from {args.comparison_source}")
-            baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
+            if args.comparison_source == "main":
+                # Reuse the update session's prewrite snapshot for the full
+                # comparison, without opening Project a separate time.
+                plan = preflight
+            else:
+                progress(f"Loading comparison baseline from {args.comparison_source}")
+                baseline = load_update_baseline(args, sandbox_path, context["config"], context["state_path"])
+                progress("Reading Jira CSV and building review plan")
+                plan = build_run_plan(args.jira_csv, context["config"], baseline)
         else:
             compare = (args.command == "create" or getattr(args, "compare_state", False))
             if getattr(args, "compare_state", False) and not context["state_path"].exists():
                 raise J2PError(f"Comparison state does not exist: {context['state_path']}. Create a baseline with --write-state first.")
             baseline = snapshots_from_state(context["state_path"]) if compare else {}
-        progress("Reading Jira CSV and building review plan")
-        plan = build_run_plan(args.jira_csv, context["config"], baseline)
+            progress("Reading Jira CSV and building review plan")
+            plan = build_run_plan(args.jira_csv, context["config"], baseline)
         check_expected_issues(args, plan)
         progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
                  f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
         transaction.record_plan(plan)
         if args.command == "update":
             progress(f"Planned {planned_dependency_count(plan)} Project predecessor link(s)")
-            apply_plan_to_sandbox(sandbox_path, plan, context["config"], visible=debug_visible,
-                                  dependency_write_mode=args.dependency_write_mode)
+            update_options = {"visible": debug_visible, "dependency_write_mode": args.dependency_write_mode}
+            if args.comparison_source == "main":
+                def prepare_update_plan(baseline):
+                    nonlocal plan
+                    progress("Building full comparison from the existing Project task snapshot")
+                    plan = build_run_plan(args.jira_csv, context["config"], baseline)
+                    check_expected_issues(args, plan)
+                    transaction.record_plan(plan)
+                    return plan
+
+                update_options["prepare_plan"] = prepare_update_plan
+            apply_plan_to_sandbox(sandbox_path, plan, context["config"], **update_options)
         elif args.command == "create":
             sandbox_path = context["project_dir"] / args.output_project_name
             create_project_from_plan(sandbox_path, plan, context["config"], visible=debug_visible,

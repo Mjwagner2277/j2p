@@ -73,6 +73,13 @@ atomic state recovery, Project saves/dependencies/resources, strict input/config
 validation, profiles/support bundles, and bounded cascade rendering. These are
 included in the normal smoke command.
 
+Selective-update tests check unchanged setters are avoided, changed values are
+written, date/completion seeds preserve Project-calculated values when Jira input
+is unchanged, and full verification remains active. Report tests check update
+operation counts/timings remain run-wide in resource-group reports and audit
+rows are retained. See [Windows acceptance](windows-acceptance.md) for live
+identical-export and small-change runs; portable tests do not measure COM speed.
+
 Run the deterministic 5k/10k benchmark separately using
 `scripts/benchmark_large_exports.py`; see [performance.md](performance.md).
 
@@ -113,3 +120,18 @@ Review the generated sandbox `.mpp` and confirm:
 - completed driving epics remain active at native 100%, with configured Gantt-bar hiding; reference rows remain inactive and show progress in Story Point Completion %
 - `reports\html\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
 - `reports\csv\by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
+
+## Actual project exports
+
+[Project-specific verification](yerp-verification.md) documents the additional
+12 tests that read all nine `yerp` exports with `ssn-812-config.yaml`. These check
+independent source aggregation, overlapping inputs, a real child-task change,
+and selective Project writes/report retention across the full plan using a
+portable Project fake. They fingerprint the CSVs and never edit source exports.
+
+```bash
+python3 -m unittest discover -s tests -p 'test_yerp*.py'
+```
+
+These tests explicitly skip when project exports are absent. Passing them does
+not replace live Windows/Project scheduling and save/reopen acceptance.

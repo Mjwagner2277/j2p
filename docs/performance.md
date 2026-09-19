@@ -73,3 +73,79 @@ CSV retention, and optional relative manifest links. Run them with:
 ```bash
 python3 -m unittest discover -s tests -p test_report_scaling.py
 ```
+
+## Measure selective Project updates
+
+Project updates use a transient cache of live managed values to avoid assigning
+values that already match. The default `main` report baseline reuses the same
+prewrite snapshot, avoiding a separate baseline Project session. The complete
+plan, comparison reports, schedule cascade review, recalculation, and save/reopen
+verification still run. This is independent of persistent JSON state and still
+requires complete current Jira exports.
+
+The manager report's **Report Context** and `run-manifest.json` expose:
+
+- `project_update_writes`: written, skipped, and failed operation counts for
+  task fields, resource fields, custom field names, dependency sets, and resource
+  assignments. These are decisions/operations, not counts of unique tasks or
+  fields; a field may be checked in more than one pass. Resource assignments
+  count additions/removals, and dependencies count sets.
+- `project_update_seconds`: session open, prewrite read, complete comparison,
+  custom field configuration, applying changes, final recalculation, schedule
+  review, review formatting, saving, save/reopen verification, and total Project
+  update time. Applying changes includes the row-quarter calculation checkpoints
+  before dependency writes. The final recalculation has its own timing. Total includes
+  session startup/shutdown but excludes CSV preflight, sandbox copying, and
+  HTML/CSV report generation.
+
+Metrics remain run-wide when displayed in filtered resource-group reports.
+Skipped date/completion seeds also count as skipped operations when unchanged
+Jira inputs mean Project's calculated schedule/progress should be preserved.
+
+To measure on Windows:
+
+1. Create a representative sanitized Project file and retain its complete Jira
+   export and configuration.
+2. Update that file with the identical export. Use the successfully saved sandbox
+   as the source of another identical update to measure a settled schedule.
+3. Prepare a separate synthetic export with a small known change. Update a copy
+   of the settled sandbox and compare the operation counts and phase timings.
+4. Confirm unchanged fields/dependency sets are skipped, the intended values
+   survive save/reopen, and full audit, rollup, and cascade details remain present.
+   Check a dependency-driven date change on a row with no direct Jira edit.
+
+Retain each report and manifest with the exact inputs. Do not change production
+CSV exports just to benchmark. Existing review formatting and Project scheduling
+may still dominate elapsed time; fewer writes do not imply a particular speedup.
+Portable tests validate decisions and report retention, not Windows COM latency.
+Live Windows measurements are required before claiming a runtime improvement.
+
+## Calculate at row-quarter checkpoints
+
+Create and update keep tasks Auto Scheduled but temporarily set Project's
+application calculation mode to manual while writing. They explicitly calculate
+after approximately 25%, 50%, 75%, and 100% of planned epic rows have been
+processed, rounding each threshold upward. Reference rows and unchanged rows
+visited by selective updates count toward the denominator; summary rows and
+individual field assignments do not. Small plans coalesce repeated thresholds,
+and empty plans have no row checkpoints.
+
+For the 2,016-row yerp plan, the checkpoints are rows 504, 1,008, 1,512, and 2,016.
+Progress logs identify each checkpoint, and plan statistics record the completed
+row numbers as `project_row_calculation_checkpoints`. The 100% row checkpoint
+supplies the pre-dependency calculation on updates; creation also retains its
+pre-dependency calculation after the initial save. Both paths calculate after
+all dependency writes before schedule review, formatting, and saved verification.
+
+The original application calculation setting is restored before final review
+and saving, including on write or calculation failure. Reading/setting/restoring
+the setting must succeed; failures are reported rather than silently proceeding
+with unknown calculation behavior. The calculation setting is distinct from a
+task's Auto Scheduled mode, which remains enabled. Native date/progress values
+remain live during writes so checkpoint recalculations cannot be hidden by the
+selective-update cache. Full reports and save/reopen verification remain enabled.
+
+Checkpoint calculations see a partial schedule. The final calculation after
+links are written is the basis for reviewing dependency-driven changes. Windows
+acceptance must measure actual scheduling behavior and runtime; portable fakes
+do not establish a speed improvement.

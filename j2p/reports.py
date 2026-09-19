@@ -1498,9 +1498,69 @@ def render_report_context(
     ]
     return render_collapsible(
         "Report Context",
-        render_table("Run Inputs And Counts", ["Item", "Value"], rows),
-        "Open for file paths, CSV row counts, and raw processing totals.",
+        render_table("Run Inputs And Counts", ["Item", "Value"], rows)
+        + render_project_update_metrics(plan),
+        "Open for file paths, CSV row counts, processing totals, and available Project update measurements.",
     )
+
+
+def render_project_update_metrics(plan: RunPlan) -> str:
+    writes = plan.stats.get("project_update_writes", {})
+    seconds = plan.stats.get("project_update_seconds", {})
+    if not writes and not seconds:
+        return ""
+
+    parts = [
+        '<p class="muted">Project update measurements cover the entire run, '
+        "including in filtered resource-group reports. Counts are write decisions "
+        "and operations, not unique fields or tasks. Skipped operations already "
+        "matched the requested state or required no new scheduling seed. Full "
+        "comparisons and save/reopen verification still run; these counts do not "
+        "limit the audit detail.</p>"
+    ]
+    if writes:
+        labels = {
+            "task_fields": "Task field assignments",
+            "resource_fields": "Resource field assignments",
+            "custom_field_names": "Custom field names",
+            "dependency_sets": "Dependency sets",
+            "resource_assignments": "Resource assignment additions/removals",
+        }
+        rows = [
+            [labels.get(category, category), counts.get("written", 0),
+             counts.get("skipped", 0), counts.get("failed", 0)]
+            for category, counts in writes.items()
+        ]
+        parts.append(render_table(
+            "Project Update Operations (Entire Run)",
+            ["Operation", "Written", "Skipped", "Failed"], rows,
+        ))
+    if seconds:
+        labels = {
+            "open": "Open sandbox",
+            "read_before": "Read existing Project values",
+            "build_comparison": "Build complete comparison",
+            "configure_fields": "Configure custom fields",
+            "apply_changes": "Apply changes and prepare dependencies",
+            "recalculate": "Final Project recalculation",
+            "schedule_review": "Review schedule changes",
+            "format_review": "Format review",
+            "save": "Save Project",
+            "verify_save_reopen": "Verify, close, reopen, and verify",
+            "total": "Total Project update",
+        }
+        rows = [[labels.get(phase, phase), f"{elapsed:.3f}"] for phase, elapsed in seconds.items()]
+        parts.append(render_table(
+            "Project Update Timing (Entire Run)", ["Phase", "Seconds"], rows,
+        ))
+        parts.append(
+            '<p class="muted">Apply changes includes the required recalculation '
+            "before dependency writes. Final Project recalculation measures the "
+            "postwrite pass. Total Project update includes session startup and "
+            "shutdown; it excludes initial CSV preflight, sandbox copying, and "
+            "HTML/CSV report generation.</p>"
+        )
+    return "".join(parts)
 
 
 def render_rollup_status(plan: RunPlan) -> str:

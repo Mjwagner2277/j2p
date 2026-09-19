@@ -5,6 +5,9 @@ rollup_modes:
   SSWSW: fixVersion
   SSWHW: initiative
   SSWGUI: fixVersion
+  SSWIF: fixVersion
+  SSWNET: fixVersion
+  SSWTEST: fixVersion
 
 done_statuses:
   - Done
@@ -18,6 +21,9 @@ resource_groups:
   SSWSW: Software
   SSWHW: Hardware
   SSWGUI: Software and Systems
+  SSWIF: Interfaces
+  SSWNET: Network Architecture
+  SSWTEST: Test
 
 multi_fixversion_policy:
   default: reference

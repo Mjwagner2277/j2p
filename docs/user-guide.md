@@ -198,6 +198,40 @@ For `create` and `update`, the terminal also prints the number of Project predec
 
 j2p accepts common Jira CSV encodings, including UTF-8 with BOM, UTF-16, Windows-1252, and Latin-1. If CSV parsing still fails with an encoding error, re-export the Jira issue list as UTF-8 CSV from Jira or resave the file as UTF-8 CSV in Excel before rerunning.
 
+## Selective Project updates
+
+Updates still calculate the complete plan and compare every included epic and
+rollup. With the default `--comparison-source main`, j2p reuses the live sandbox
+snapshot taken before changes for its report baseline. Other comparison sources
+continue to control report comparisons; writes are always checked against the
+actual sandbox.
+
+Within the update, j2p keeps managed Project values in memory and skips field
+assignments that already match. It also skips unchanged dependency sets and
+resource assignments. If the Jira target date window has not changed, it leaves
+Project's scheduled dates alone. If either target date changes, it reapplies the
+target window so Project can reschedule. Unchanged Jira completion does not
+reseed Project's duration-based percentage; completed driving rows still require
+native 100%, and custom story-point completion is verified exactly.
+
+The report retains the complete comparisons, audit details, point rollups, and
+schedule cascade review. Recalculation, formatting, saving, and verification
+before and after reopening still run, including checks for schedule effects on
+rows that received no direct edit.
+
+Open **Report Context** in the manager HTML report to see Project update
+operations written/skipped/failed and timings by phase. The same measurements
+appear in resource-group reports, where they still describe the entire run.
+Counts measure operations, not unique tasks or fields. Detailed statistics are
+also retained in `run-manifest.json`. See [performance.md](performance.md) for
+how to compare repeated updates; runtime savings depend on the Project file and
+Windows installation.
+
+This optimization does not turn `j2p-state.json` into an issue cache. Continue
+providing complete current exports for the planning scope. Overlapping rows with
+identical parsed values are counted once; conflicting versions of the same Jira
+key stop the run rather than choosing the newest file.
+
 ## Output Folder
 
 Each run writes a timestamped run folder:
@@ -797,3 +831,13 @@ A single YAML mapping applies to every file. Keep headers in every CSV; column
 order and supported file encodings may differ. Single-file commands still work.
 Do not mix baseline and updated snapshots in one run. See
 [jira-large-csv-export.md](jira-large-csv-export.md) for browser export instructions.
+
+### Scheduling during a Project write
+
+J2P keeps tasks Auto Scheduled and batches Project calculation while it writes.
+It recalculates after about 25%, 50%, 75%, and 100% of planned epic rows, counting
+reference rows and unchanged rows visited during updates. Progress logs show the
+actual row counts. These are partial schedules until dependency writes finish;
+a final calculation then feeds the schedule review and full saved verification.
+The original Project application calculation setting is restored on success or
+failure. This does not change the requirement to review the generated sandbox.

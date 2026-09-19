@@ -496,7 +496,10 @@ def apply_completed_fixversion_suppression(
     for summary in sorted(summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
         if summary.rollup_mode != "fixVersion":
             continue
-        fix_version_issues = issues_by_fixversion.get(summary.key, [])
+        # Choose audit provenance by issue identity, independent of CSV order.
+        fix_version_issues = sorted(
+            issues_by_fixversion.get(summary.key, []), key=lambda issue: issue.key
+        )
         if not fix_version_issues:
             continue
         if not all(issue.status.strip().lower() in done_statuses for issue in fix_version_issues):
