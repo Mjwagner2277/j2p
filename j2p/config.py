@@ -87,6 +87,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "as_of_date": "",
         "keep_audit_summary": True,
     },
+    "report_review": {
+        "focus_days": 90,
+        "max_focus_items": 25,
+    },
     "planning_horizon": {
         "enabled": True,
         "immediate_months": 6,
@@ -230,6 +234,7 @@ def validate_config_shape(config: Dict[str, Any]) -> None:
     }
     integer_keys = {
         "input": {"csv_max_field_chars"},
+        "report_review": {"max_focus_items"},
         "fixversion_completion_suppression": {"stale_after_days"},
         "planning_horizon": {"immediate_months", "bucket_months"},
     }
@@ -257,6 +262,9 @@ def validate_config_shape(config: Dict[str, Any]) -> None:
             elif key in boolean_keys.get(section, set()):
                 if type(item) is not bool:
                     raise ConfigError(f"{path} must be true or false, without quotes.")
+            elif section == "report_review" and key == "focus_days":
+                if type(item) is not int or item < 0:
+                    raise ConfigError(f"{path} must be a nonnegative integer (0 includes all unfinished work).")
             elif key in integer_keys.get(section, set()):
                 if type(item) is not int or item <= 0:
                     raise ConfigError(f"{path} must be a positive integer.")

@@ -280,16 +280,18 @@ Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Repor
 1. Review `Decision Briefing`.
 2. Review `Story Point Ratio`.
 3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
-4. Review `Rollup Status` for initiative/fixVersion progress.
+4. Review `Rollup Status` for initiative/fixVersion progress. Rollups with no completion points (In Planning) are omitted from this HTML section, including resource-group reports. The complete plan, Project rows, state, and CSV audit retain them. All rollups with completion points show their actual progress status and percentage, including versions whose epic rows are all references. Completion includes every member; reference rows affect scheduling placement and do not reduce version completion credit. Rollups sort by Target End, earliest first, with missing dates last. Initiatives use their own Jira target end; fixVersions use the latest target end among their member epic tasks, including references. Resource-group views retain the whole rollup’s target date. Due Status marks dates before the report generation date as Past due (independently of completion), the same date as Due today, and later dates as Upcoming. Missing dates show Not set. Summary CSV and state outputs also retain the target end.
 5. Review `Schedule Cascade Review` for date-change branches after Microsoft Project recalculates the sandbox.
-6. Review `Reviewer Action Needed By Planning Horizon`; start with `Immediate`, then scan future six-month buckets.
-7. Review `Review Type Summary` to see counts by issue category.
+6. Start remediation with `Focus Now` and its first 25 grouped fixes. Warnings from reference rows and missing/excluded parents are consolidated so the same underlying fix appears once. Each action explains its priority, affected issues, unfinished downstream issues, target end, and next action. Expand `More Current Fixes`, `Later Work`, or `Historical Cleanup` as needed.
+7. Expand `Full Review Audit` for `Review Type Summary` and `Reviewer Action Needed By Planning Horizon`. These retain every underlying review entry; the focus view does not remove data from the CSV audit or alter Project calculations.
 8. Review `Project Key Rollup Mapping`.
 9. Review `Color Key` and `Color Case Examples`.
 10. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
 11. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
 12. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
 13. Open the sandbox `.mpp` and compare colored cells with the report.
+
+`report_review.focus_days` defaults to 90 days from report generation; set it to `0` for all unfinished work. `report_review.max_focus_items` defaults to 25. Overdue unfinished work, unknown dates, and serious dependency errors remain visible. Completed work is moved to Historical Cleanup only when no known open parent/child scope or downstream dependency is affected. Completion follows configured `done_statuses`; Cancelled is not silently reclassified. These are report priorities, not a calculated Microsoft Project critical path. The older planning-horizon buckets remain available for audit and do not decide the focus ranking.
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 

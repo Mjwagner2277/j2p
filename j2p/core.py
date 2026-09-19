@@ -363,7 +363,10 @@ def build_run_plan(
             ))
 
     apply_dependencies(planned_epics, epics, audit)
-    summaries = build_summaries(planned_epics, config)
+    summaries = build_summaries(
+        planned_epics, config,
+        target_ends={summary_id("initiative", key): issue.target_end for key, issue in initiatives.items()},
+    )
     compare_with_baseline(planned_epics, summaries, baseline, config, audit)
     fixversion_suppression_stats = apply_completed_fixversion_suppression(
         issues,
@@ -385,7 +388,35 @@ def build_run_plan(
     driving_completed_logged_hours = round(sum(epic.completed_logged_hours for epic in driving_epics), 2)
     driving_completed_points = round(sum(epic.completed_story_points for epic in driving_epics), 2)
 
+    # Keep source context for report prioritization, including excluded parent
+    # epics. Date age alone must never make unfinished work historical.
+    review_keys = {item.jira_key for item in audit if item.jira_key}
+    review_keys.update(issues_by_key[key].epic_link for key in list(review_keys)
+                       if key in issues_by_key and issues_by_key[key].epic_link)
+    review_context = {}
+    for key in sorted(review_keys):
+        source = issues_by_key.get(key)
+        if source is None:
+            continue
+        completed = source.status.strip().lower() in done_statuses
+        if any(child.status.strip().lower() not in done_statuses
+               for child in stories_by_epic.get(key, [])):
+            completed = False
+        review_context[key] = {
+            "summary": source.summary,
+            "completed": completed,
+            "target_start": source.target_start,
+            "target_end": source.target_end,
+            "parent_epic": source.epic_link,
+            "missing_rollup_parent": (
+                source.parent if source.issue_type.strip().lower() in issue_type_sets["epic"]
+                and config["rollup_modes"].get(jira_key_prefix(key)) == "initiative"
+                and source.parent and source.parent not in initiatives else ""
+            ),
+            "resource_group": resource_groups.get(jira_key_prefix(key), ""),
+        }
     stats = {
+        "review_issue_context": review_context,
         "csv_rows_read": sum(batch["rows_read"] for batch in csv_batches),
         "csv_files_read": len(csv_batches),
         "csv_batches": csv_batches,

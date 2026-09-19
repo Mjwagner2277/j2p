@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .metrics import calculate_percent, calculate_story_point_ratio
 from .models import AuditItem, J2PError, JiraIssue, PlanEpic, PlanSummary, RollupAssignment
@@ -118,7 +118,11 @@ def add_multi_fixversion_audit(
         )
 
 
-def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[str, PlanSummary]:
+def build_summaries(
+    epics: Dict[str, PlanEpic],
+    config: Dict[str, Any],
+    target_ends: Optional[Dict[str, str]] = None,
+) -> Dict[str, PlanSummary]:
     hours_per_story_point = float(config.get("metrics", {}).get("hours_per_story_point", 8.0))
     buckets: Dict[str, List[PlanEpic]] = {}
     for epic in epics.values():
@@ -146,6 +150,13 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
             hours_per_story_point,
         )
         project_keys = sorted({child.key_prefix for child in children})
+        # References belong to a fixVersion's date span too. Supplied dates
+        # retain the whole-rollup deadline in filtered reports.
+        target_end = ""
+        if target_ends is not None and bucket_id in target_ends:
+            target_end = target_ends[bucket_id]
+        elif children[0].rollup_mode == "fixVersion":
+            target_end = max((child.target_end for child in children if child.target_end), default="")
         summaries[bucket_id] = PlanSummary(
             summary_id=bucket_id,
             key=children[0].rollup_key,
@@ -163,6 +174,7 @@ def build_summaries(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> Dict[
             reference_epic_count=len(reference_children),
             completion_total_story_points=completion_total,
             completion_completed_story_points=completion_completed,
+            target_end=target_end,
         )
     return summaries
 

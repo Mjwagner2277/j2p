@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import os
 from dataclasses import asdict
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
@@ -12,6 +13,7 @@ from .formatting import format_number, html_escape
 from .cascade import CascadeGraph, CascadeProjection
 from .metrics import calculate_story_point_ratio
 from .models import AuditItem, RunPlan
+from .review_focus import build_review_focus
 from .rollups import build_summaries, multi_fixversion_policy_for_prefix, summary_id
 
 
@@ -81,6 +83,7 @@ SUMMARY_ROLLUP_COLUMNS = [
     "completed_logged_hours",
     "story_point_ratio",
     "percent_complete",
+    "target_end",
 ]
 
 
@@ -351,7 +354,9 @@ def resource_group_run_plan(plan: RunPlan, config: Dict[str, Any], resource_grou
         for key, epic in plan.epics.items()
         if epic.resource_group == resource_group
     }
-    summaries = build_summaries(epics, config)
+    summaries = build_summaries(
+        epics, config, target_ends={key: summary.target_end for key, summary in plan.summaries.items()}
+    )
     audit_items = [
         item for item in plan.audit_items if audit_item_resource_group(plan, item) == resource_group
     ]
@@ -474,7 +479,8 @@ def audit_item_resource_group(plan: RunPlan, item: AuditItem) -> str:
         epic = epic_for_key(plan, key)
         if epic:
             return epic.resource_group
-    return ""
+    context = plan.stats.get("review_issue_context", {}).get(item.jira_key, {})
+    return context.get("resource_group", "")
 
 
 def epic_for_key(plan: RunPlan, key: str) -> Any:
@@ -521,7 +527,7 @@ def summary_rollup_rows_for_project_key(plan: RunPlan, project_key: str) -> List
     epics = {key: epic for key, epic in plan.epics.items() if epic.key_prefix == project_key}
     summaries = build_summaries(epics, {"metrics": {
         "hours_per_story_point": float(plan.stats.get("hours_per_story_point", 8.0)),
-    }})
+    }}, target_ends={key: summary.target_end for key, summary in plan.summaries.items()})
     rows = []
     for summary in summaries.values():
         row = asdict(summary)
@@ -604,6 +610,10 @@ def write_manager_html(
 ) -> None:
     plan = completed_fixversion_report_plan(plan)
     cascade_display_plan = completed_fixversion_report_plan(cascade_plan or plan)
+    review_settings = config.get("report_review", {})
+    focus_days = int(review_settings.get("focus_days", 90))
+    focus = build_review_focus(plan, days=focus_days, dependency_plan=cascade_plan or plan)
+
     detail_sections = [
         ("Changed Names", by_category(plan.audit_items, "ChangedName")),
         ("Added Epics", by_category(plan.audit_items, "AddedEpic")),
@@ -955,12 +965,14 @@ def write_manager_html(
   </header>
   <main>
     {render_manifest_link(path)}
-    {decision_briefing(plan)}
+    {decision_briefing(plan, focus)}
+    {render_review_focus(focus, focus_days, int(review_settings.get("max_focus_items", 25)))}
     {render_story_point_ratio_breakdown(plan)}
     {render_rollup_status(plan)}
     {cascade_section}
-    {render_planning_horizon_review(plan)}
-    {render_review_type_summary(plan)}
+    <div id="review-audit">
+    {render_collapsible("Full Review Audit", render_review_type_summary(plan) + render_planning_horizon_review(plan), "All review entries, including later work and historical cleanup.")}
+    </div>
     {render_prefix_rollup_map(plan, config)}
     {report_context_section}
     {color_key()}
@@ -981,21 +993,17 @@ def report_title(report_scope: str) -> str:
     return f"Schedule Review Report - {report_scope}"
 
 
-def decision_briefing(plan: RunPlan) -> str:
-    action_items = [item for item in plan.audit_items if item.severity in {"Error", "Warning", "Review"}]
-    dependency_items = [
-        item
-        for item in plan.audit_items
-        if "Dependency" in item.category or item.field in {"Predecessors", "Successors", "Dependency Review"}
-    ]
+def decision_briefing(plan: RunPlan, focus: Optional[Dict[str, Any]] = None) -> str:
+    focus = focus if focus is not None else build_review_focus(plan)
     completed_items = by_category(plan.audit_items, "CompletedSinceLastUpdate")
     in_progress_rollups = sum(1 for summary in plan.summaries.values() if 0 < summary.percent_complete < 100)
     completed_rollups = sum(1 for summary in plan.summaries.values() if summary.percent_complete >= 100)
     ratio_summary = project_wide_story_point_ratio_summary(plan)
     metrics = [
-        ("Needs Review", len(action_items), "Warnings and review decisions"),
+        ("Focus Now", focus["focus_count"], "Grouped fixes, ordered by impact"),
+        ("Review Entries", focus["total_audit_count"], f"{focus['grouped_count']} grouped actions, including future planning"),
         ("Rollups In Progress", in_progress_rollups, f"{completed_rollups} complete"),
-        ("Dependency Items", len(dependency_items), "Changed, missing, skipped, or circular"),
+        ("Later / Historical", f"{focus['later_count']} / {focus['historical_count']}", "Grouped actions available below"),
         ("Completed Epics", len(completed_items), "Completed since comparison baseline"),
         ("Logged Hours", format_number(plan.stats.get("logged_hours", 0)), "Rolled up from child work"),
         (
@@ -1024,6 +1032,55 @@ def decision_briefing(plan: RunPlan) -> str:
         )
     return f"<section><h2>Decision Briefing</h2><div class=\"briefing-grid\">{render_metric_cards(metrics)}</div></section>"
 
+
+
+def render_review_focus(focus: Dict[str, Any], days: int, limit: int) -> str:
+    groups = focus["groups"]
+    current = [group for group in groups if group["tier"] in {"Fix first", "Focus now"}]
+    later = [group for group in groups if group["tier"] == "Later"]
+    historical = [group for group in groups if group["tier"] == "Historical"]
+    window = f"the next {days} days" if days else "all unfinished work"
+    intro = (
+        '<section><h2>Focus Now</h2><p>Start with these grouped fixes. '
+        f'This view covers {html_escape(window)}, overdue unfinished work, unknown dates, '
+        'and serious dependency or data errors. Repeated reference rows and child warnings '
+        'with the same missing or excluded parent are grouped into one action.</p>'
+        '<p class="muted">Ranking uses error severity, dependency reach, dates, and affected issues; '
+        'it is not a calculated Project critical path. Completed work is historical only when '
+        'there is no known unfinished scope or downstream impact. '
+        '<a href="#review-audit">Open the full review audit</a> for every underlying entry.</p></section>'
+    )
+    parts = [intro, render_focus_group_table("Highest Priority Fixes", current[:limit])]
+    if len(current) > limit:
+        parts.append(render_collapsible(
+            "More Current Fixes", render_focus_group_table("Remaining Current Fixes", current[limit:]),
+            f"{len(current) - limit} more grouped actions, in priority order.",
+        ))
+    if later:
+        parts.append(render_collapsible(
+            "Later Work", render_focus_group_table("Future Fixes", later),
+            f"{len(later)} grouped actions beyond the focus window.",
+        ))
+    if historical:
+        parts.append(render_collapsible(
+            "Historical Cleanup", render_focus_group_table("Completed Work Review", historical),
+            f"{len(historical)} grouped actions on completed work, retained for review.",
+        ))
+    return "".join(parts)
+
+
+def render_focus_group_table(title: str, groups: Sequence[Dict[str, Any]]) -> str:
+    rows = [[
+        index, group["tier"], group["key"], group["summary"],
+        group["resource_group"] or "Unassigned", "; ".join(group["reasons"]),
+        group["target_end"] or "Not set", group["downstream_count"],
+        group["issue_count"], group["audit_count"], "; ".join(group["categories"]),
+        " ".join(group["actions"]),
+    ] for index, group in enumerate(groups, start=1)]
+    return render_table(title, [
+        "Order", "Priority", "Fix At", "Summary", "Team", "Why It Matters", "Target End",
+        "Unfinished Downstream", "Affected Issues", "Audit Entries", "Categories", "Next Action",
+    ], rows)
 
 def render_metric_cards(metrics: Sequence[Sequence[Any]]) -> str:
     cards = "\n".join(
@@ -1565,7 +1622,17 @@ def render_project_update_metrics(plan: RunPlan) -> str:
 
 def render_rollup_status(plan: RunPlan) -> str:
     rows = []
-    for summary in sorted(plan.summaries.values(), key=lambda item: (item.rollup_mode, item.key)):
+    # Tie the assessment to the report run, so reopening an HTML report does
+    # not silently change its due-date interpretation.
+    as_of = date.fromisoformat(plan.generated_at[:10]).isoformat()
+    for summary in sorted(plan.summaries.values(), key=lambda item: (
+        not bool(item.target_end), item.target_end, item.rollup_mode, item.key
+    )):
+        # This is a presentation filter: unpointed rollups remain in the full
+        # plan, Project, state, and CSV audit. Use completion points so a
+        # reference-only version with estimated work stays visible.
+        if summary.completion_total_story_points <= 0:
+            continue
         rows.append(
             [
                 summary.name,
@@ -1573,6 +1640,10 @@ def render_rollup_status(plan: RunPlan) -> str:
                 summary.project_key,
                 summary.rollup_mode,
                 rollup_status(summary),
+                summary.target_end or "Not set",
+                "Past due" if summary.target_end and summary.target_end < as_of else (
+                    "Due today" if summary.target_end == as_of else "Upcoming" if summary.target_end else "Not set"
+                ),
                 f"{summary.percent_complete}%",
                 f"{format_number(summary.completion_completed_story_points)} / {format_number(summary.completion_total_story_points)}",
                 f"{format_number(summary.completed_story_points)} / {format_number(summary.total_story_points)}",
@@ -1591,6 +1662,8 @@ def render_rollup_status(plan: RunPlan) -> str:
             "Project Key",
             "Mode",
             "Status",
+            "Target End",
+            "Due Status",
             "% Complete",
             "Completion Points (Done / Total)",
             "Counted Points (Done / Total)",
@@ -1605,8 +1678,8 @@ def render_rollup_status(plan: RunPlan) -> str:
 
 
 def rollup_status(summary: Any) -> str:
-    if summary.driving_epic_count == 0 and summary.reference_epic_count > 0:
-        return "Reference only"
+    # Scheduling placement does not determine a version's completion status.
+    # Completion totals include all members, including reference rows.
     if summary.completion_total_story_points <= 0:
         return "In planning / no completion points"
     if summary.percent_complete >= 100:

@@ -104,6 +104,7 @@ class PlanSummary:
     reference_epic_count: int = 0
     completion_total_story_points: float = 0.0
     completion_completed_story_points: float = 0.0
+    target_end: str = ""
 
 
 @dataclass
