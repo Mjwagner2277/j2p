@@ -84,15 +84,15 @@ def add_multi_fixversion_audit(
     for assignment in assignments:
         if policy == "reference" and assignment.row_role == "Reference":
             message = (
-                f"Reference row created under fixVersion '{assignment.fix_version}'. "
+                f"Active reference copy created under fixVersion '{assignment.fix_version}'. "
                 f"Schedule is driven by primary row '{primary.schedule_key}' under "
                 f"fixVersion '{primary.fix_version}'."
             )
-            reviewer_action = "Confirm this secondary fixVersion is for visibility only."
+            reviewer_action = "This copy contributes dates and completion to this fixVersion; its primary owns dependencies and resource demand."
         elif policy == "reference":
             message = (
                 f"Primary scheduled row selected from the first Jira fixVersion '{assignment.fix_version}'. "
-                "Secondary fixVersions are added as non-driving reference rows."
+                "Secondary fixVersions receive active copies of its final schedule, without duplicate resource demand."
             )
             reviewer_action = "Confirm the first Jira fixVersion should drive the schedule."
         else:

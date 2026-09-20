@@ -1,4 +1,4 @@
-"""Point Gantt summary bars at verified display dates without scheduling writes."""
+"""Restore Gantt summary bars to native dates, including older display-field files."""
 
 from __future__ import annotations
 
@@ -33,12 +33,8 @@ def configure_schedule_display(session, plan, config) -> bool:
     """
     if not plan.summaries:
         return True
-    fields = config.get("project_fields", {})
-    names = config.get("project_field_names", {})
-    starts = _aliases(session, fields.get("schedule_start", "Date3"), config,
-                      (names.get("schedule_start", "Schedule Start"),))
-    finishes = _aliases(session, fields.get("schedule_finish", "Date4"), config,
-                        (names.get("schedule_finish", "Schedule Finish"),))
+    starts = _aliases(session, "Start", config)
+    finishes = _aliases(session, "Finish", config)
     styles = _aliases(session, "Summary", config)
     errors = []
     attempts = 0
@@ -59,9 +55,9 @@ def configure_schedule_display(session, plan, config) -> bool:
     plan.stats["project_schedule_display"] = {"configured": False, "attempts": attempts}
     plan.audit_items.append(AuditItem(
         "Warning", "ProjectScheduleDisplayFormattingFailed", field="Schedule display",
-        message=("Project could not configure the Gantt summary bar to use the verified schedule display dates. "
+        message=("Project could not configure the Gantt summary bar to use native Start/Finish. "
                  "This is a display-only failure; it does not change task scheduling. " + " | ".join(errors[:3])),
-        reviewer_action=("Use Schedule Start and Schedule Finish columns. Confirm that the Gantt Summary bar "
-                         "uses the configured schedule date fields in Microsoft Project."),
+        reviewer_action=("Use Start and Finish columns. Confirm that the Gantt Summary bar "
+                         "uses native Start and Finish in Microsoft Project."),
     ))
     return False

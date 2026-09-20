@@ -26,13 +26,13 @@ These are not configured in `project_fields`, but j2p depends on them.
 | --- | --- | --- | --- |
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
 | `% Complete` / `PercentComplete` | Driving epics only | Yes | Native duration-based progress. Incomplete driving rows are seeded after date/resource writes and may recalculate; differences are audited. Completed driving rows must retain 100%. Summary and reference native progress is not written. Story-point reporting uses custom completion fields. |
-| `Start` | On epic rows, from Jira target start when present | Yes | Scheduled start date. Native changes color the corresponding visible schedule-date cells green. Linked changes affecting unfinished dated work appear in `Cascading Schedule Drivers`; the complete date audit retains differences from `Date1`. |
-| `Finish` | On epic rows, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison and green changed schedule-date cells; red cascade branch driver cards appear only in the report diagram. |
+| `Start` | Primary Jira seeds; copies receive final primary dates | Yes | Scheduled start date. Native changes color the corresponding visible schedule-date cells green. Linked changes affecting unfinished dated work appear in `Cascading Schedule Drivers`; the complete date audit retains differences from `Date1`. |
+| `Finish` | Primary Jira seeds; copies receive final primary dates | Yes | Scheduled finish date. Used for Project auto-schedule comparison and green changed schedule-date cells; red cascade branch driver cards appear only in the report diagram. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
-| `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the task so Project's native `Resource Group` field is populated. |
-| `Active` | Required | Yes | Driving rows remain active, including completed work. Reference rows are inactive and carry progress in custom fields only; removing their strike-through does not reactivate them. |
-| `Manual` | Required | Yes | All epic and summary rows remain Auto Scheduled. Displayed rollup dates are stored in custom fields after scheduling, so a header cannot push its children's dates. |
+| `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the primary task so Project's native `Resource Group` field is populated. |
+| `Active` | Required | Yes | Primaries and planned copies are active, including completed work. Removed reference memberships are retained as flagged inactive rows. |
+| `Manual` | Required | Yes | False on primaries and summaries; True on active copies, which follow primary dates without independent scheduling. |
 | `Summary` / outline parent | Yes, by creating/indenting rows | Yes | Initiative/fixVersion hierarchy. Used to place epics under the correct rollup and detect/move changed rollups. |
 
 ## Default Custom Fields
@@ -61,8 +61,8 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `drives_schedule` | `Flag4` | `Drives Schedule` | Epics, generated secondary rows | Distinguishes rows that should participate in schedule dependencies and counted rollup math. Reference rows set this to `No`; scheduled, primary, and split rows set this to `Yes`. |
 | `jira_target_start` | `Date1` | `Jira Target Start` | Epics | Stores the Jira target start date separately from Project's native `Start`. Enables baseline comparison and review of Jira-driven date changes. |
 | `jira_target_end` | `Date2` | `Jira Target End` | Epics | Stores the Jira target end date separately from Project's native `Finish`. Enables baseline comparison, changed-date coloring, and reporting when Project auto-scheduled finish differs from Jira target end. |
-| `schedule_start` | `Date3` | `Schedule Start` | Epics and summaries | Final primary Start on each member row; earliest member Start on summary rows, including referenced primaries. Display-only; does not constrain scheduling. |
-| `schedule_finish` | `Date4` | `Schedule Finish` | Epics and summaries | Final primary Finish on each member row; latest member Finish on summary rows, including referenced primaries. Display-only; does not constrain scheduling. |
+| `schedule_start` | `Date3` | Legacy | None | Accepted for configuration compatibility; not renamed, written, or verified. Review-table logical name now aliases native Start. |
+| `schedule_finish` | `Date4` | Legacy | None | Accepted for configuration compatibility; not renamed, written, or verified. Review-table logical name now aliases native Finish. |
 
 ## Field Interactions
 
@@ -97,8 +97,8 @@ Dependencies:
 - `dependency_review` stores notes for skipped or concerning dependencies.
 - `dependency_review_needed` is a filterable flag for those notes.
 - Reference rows should not receive schedule-driving dependencies because `drives_schedule` is `False`.
-- After scheduling, inactive reference Start/Finish mirror their primary's final native dates. Every epic's `Schedule Start`/`Schedule Finish` stores its final primary schedule. Summary display dates take the earliest member Start and latest member Finish, including references. Native summary dates remain calculated by Project; all summaries stay Auto Scheduled. The display pass verifies that primary dates did not move, and rejects the run if they did. Jira target fields and completion math stay unchanged.
-- Gantt summary bars use the configured schedule display fields through [GanttBarStyleEdit](https://learn.microsoft.com/en-us/office/vba/api/project.application.ganttbarstyleedit), which edits an existing Summary style by name with `Create=False`. The adapter tries bounded field-name aliases but never guesses a style row or creates a replacement after an ambiguous failure. A rejected bar-style update is a cosmetic audit warning; custom date readback and primary-date protection remain required. Successful command acceptance does not verify rendered bar appearance or that omitted style options preserved the prior formatting; these require a Windows visual check.
+- After scheduling, active copies receive their primary's native Start/Finish. Project calculates native summary dates from all active children. j2p verifies exact copy and header dates plus unchanged primaries after calculation, before closing, and after reopening. Copies have no assignments, actual work/duration, or incoming/outgoing dependencies. No summary or primary date is written in the synchronization pass.
+- Gantt summary bars are reset to native Start/Finish using [GanttBarStyleEdit](https://learn.microsoft.com/en-us/office/vba/api/project.application.ganttbarstyleedit), including files from the previous Date3/Date4 implementation. A rejected style command is a cosmetic warning. Rendered appearance still requires a Windows check.
 
 Review coloring:
 
@@ -106,12 +106,12 @@ Review coloring:
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
 - `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and retained in CSV outputs, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
 - Red `cascade_root` coloring identifies report diagram cards when a changed finish has changed downstream successors; it does not override green schedule-date cells.
-- Green changed-cell coloring for autoscheduled Start/Finish shifts follows the visible `Schedule Start`/`Schedule Finish` columns. Native Start/Finish columns remain available when explicitly configured.
+- Green changed-cell coloring for autoscheduled Start/Finish shifts uses native Start/Finish columns.
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields. A native date can be amber because it differs from the Jira target or a write was rejected, without any new date movement. The date audit compares native dates against the input Project file (or initial scheduling dates for new rows) and records differences from Jira separately. Only qualifying linked movement appears in `Cascading Schedule Drivers`. Confirmed native date changes stay green even when they also differ from Jira.
 - Light-gray dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
 - Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property.
-- Reference appearance uses [FontStrikethrough(False)](https://learn.microsoft.com/en-us/office/vba/api/project.application.fontstrikethrough) on selected rows only after checking their stable task identity. It checks that references remain inactive, leaves background colors unchanged, and aggregates cosmetic failures into `ProjectReferenceFormattingFailed`. A successful command is not verification of the rendered font; Project's Cell object has no documented strike-through readback.
+- Reference appearance uses [FontStrikethrough(False)](https://learn.microsoft.com/en-us/office/vba/api/project.application.fontstrikethrough) on selected rows only after checking their stable task identity. It checks that copies remain active, leaves background colors unchanged, and aggregates cosmetic failures into `ProjectReferenceFormattingFailed`. A successful command is not verification of the rendered font; Project's Cell object has no documented strike-through readback.
 
 ## Adding Or Changing A Field
 
@@ -160,7 +160,7 @@ Confirm:
 - `j2p Unique Key` remains stable across update runs
 - multi-fixVersion reference rows do not overwrite primary rows
 - reference dates mirror final primary dates, including times, before and after save/reopen
-- all-reference and mixed fixVersion `Schedule Start`/`Schedule Finish` and Gantt summary bars span every member's final schedule; all native summaries remain Auto Scheduled
+- all-reference and mixed fixVersion `Start`/`Finish` and Gantt summary bars span every member's final schedule; all native summaries remain Auto Scheduled
 - the display pass leaves every primary Start/Finish unchanged, including when migrating an older sandbox with manual summary headers
 - Reference row labels are visible and strike-through is removed while Active remains No
 - resource group appears in native `Resource Group`

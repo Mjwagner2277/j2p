@@ -62,15 +62,9 @@ def date_changes(plan):
     return [item for item in plan.audit_items if item.category in SCHEDULE_CHANGES]
 
 
-def prepare_display_fixture(session, plan, tasks):
+def prepare_formatting_fixture(session):
     session.app.Calculation = -1
     session.app.GanttBarStyleEdit = Mock(return_value=True)
-    for task in tasks:
-        task.Date3 = task.Date4 = None
-    session._reference_summary_tasks = (id(plan), {
-        (summary.rollup_mode, summary.key.upper()): SimpleNamespace(Manual=False, Date3=None, Date4=None)
-        for summary in plan.summaries.values()
-    })
 
 
 class ProjectScheduleColorTests(unittest.TestCase):
@@ -186,7 +180,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
         for task in tasks:
             task.Start, task.Finish = '2026-09-08', '2026-09-11'
         session = formatting.formatting_session(tasks)
-        prepare_display_fixture(session, plan, tasks)
+        prepare_formatting_fixture(session)
         session.snapshot_tasks = Mock(side_effect=AssertionError('Unexpected full snapshot'))
         session.index_tasks_by_key = Mock(wraps=session.index_tasks_by_key)
         session.add_schedule_review_items = Mock(wraps=session.add_schedule_review_items)
@@ -208,7 +202,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
         task = formatting.task('TEAM-1')
         task.Start, task.Finish = '2026-09-08', '2026-09-11'
         session = formatting.formatting_session([task])
-        prepare_display_fixture(session, plan, [task])
+        prepare_formatting_fixture(session)
         session.snapshot_tasks = Mock(side_effect=AssertionError('Unexpected full snapshot'))
         with redirect_stdout(io.StringIO()):
             session.apply_review_formatting(plan, config)
@@ -236,8 +230,8 @@ class ProjectScheduleColorTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             session.apply_review_formatting(plan, config)
         colors = {call.args[1]: call.args[2] for call in session.color_project_cell_error.call_args_list}
-        self.assertEqual(colors['Date3'], config['colors']['changed_cell'])
-        self.assertEqual(colors['Date4'], config['colors']['changed_cell'])
+        self.assertEqual(colors['Start'], config['colors']['changed_cell'])
+        self.assertEqual(colors['Finish'], config['colors']['changed_cell'])
         self.assertEqual(colors['Text8'], config['colors']['review_needed'])
         self.assertEqual(plan.audit_items, original)
 
@@ -255,7 +249,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
         session.save.assert_called_once_with()
         session.verify_saved_plan.assert_called_once_with(plan, config)
 
-    def test_explicit_native_and_display_columns_both_keep_schedule_change_colors(self):
+    def test_legacy_display_aliases_deduplicate_native_columns_and_keep_colors(self):
         plan, config = schedule_plan(1)
         config['review_table']['exposed_columns'] = ['start', 'finish', 'schedule_start', 'schedule_finish']
         plan.audit_items = [
@@ -268,7 +262,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
             session.apply_review_formatting(plan, config)
         colors = {call.args[1]: call.args[2] for call in session.color_project_cell_error.call_args_list}
         self.assertEqual(colors, {column: config['colors']['changed_cell']
-                                  for column in ('Start', 'Finish', 'Date3', 'Date4')})
+                                  for column in ('Start', 'Finish')})
 
     @unittest.skipUnless(len(FILES) == 9 and (YERP / 'ssn-812-config.yaml').exists(),
                          'Requires the nine private yerp CSV exports')

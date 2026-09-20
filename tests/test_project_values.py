@@ -37,6 +37,10 @@ class ProjectValueTests(unittest.TestCase):
             def __init__(self):
                 self._active = True
                 self._percent = 0
+                self.Work = self.ActualWork = self.ActualDuration = 0
+                from types import SimpleNamespace
+                self.Assignments = SimpleNamespace(Count=0)
+                self.TaskDependencies = SimpleNamespace(Count=0)
             @property
             def Active(self):
                 return self._active
@@ -53,6 +57,7 @@ class ProjectValueTests(unittest.TestCase):
                 if not self._active:
                     raise RuntimeError('Cannot record progress on an inactive reference')
                 self._percent = value
+                self.ActualDuration = value
 
         for driving, completed, points_percent, native_percent in (
             (True, True, 60, 100), (False, False, 60, 0), (False, True, 100, 0),
@@ -64,17 +69,18 @@ class ProjectValueTests(unittest.TestCase):
                 epic.percent_complete = points_percent
                 task = ProjectTask()
                 session = object.__new__(MicrosoftProjectSession)
-                with patch.object(session, 'set_native_resource_group'), patch.object(session, 'write_project_date'):
+                with patch.object(session, 'resource_assignments', return_value=[]), patch.object(session, 'set_native_resource_group'), patch.object(session, 'write_project_date'):
                     session.update_epic_task(task, epic, self.config, self.plan)
-                self.assertEqual(task.Active, driving)
+                self.assertTrue(task.Active)
+                self.assertEqual(task.Manual, not driving)
                 self.assertEqual(task.PercentComplete, native_percent)
                 self.assertEqual(task.Number7, points_percent)
 
-        # Do not erase existing actual progress to force a reference inactive.
+        # Do not erase existing actual progress to force copy isolation.
         task = ProjectTask()
         task.PercentComplete = 20
         epic.drives_schedule = False
-        with self.assertRaisesRegex(ProjectAutomationError, 'Cannot inactivate a task with progress'):
+        with self.assertRaisesRegex(ProjectAutomationError, 'Active copy has actuals'):
             session.update_epic_task(task, epic, self.config, self.plan)
         self.assertEqual(task.PercentComplete, 20)
 

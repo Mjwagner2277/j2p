@@ -34,7 +34,10 @@ def compare_with_baseline(
 
         compare_field(audit, epic, "Name", existing.name, epic.summary, "ChangedName")
         compare_field(audit, epic, "Rollup Key", existing.rollup_key, epic.rollup_key, "RollupMove")
-        compare_field(audit, epic, "Resource Group", existing.resource_group, epic.resource_group, "ChangedField")
+        if epic.drives_schedule:
+            # Copies keep their team in Jira/report metadata but intentionally
+            # have no native resource assignments. Compare demand on primaries.
+            compare_field(audit, epic, "Resource Group", existing.resource_group, epic.resource_group, "ChangedField")
         compare_field(
             audit,
             epic,

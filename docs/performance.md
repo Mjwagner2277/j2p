@@ -125,7 +125,7 @@ Live Windows measurements are required before claiming a runtime improvement.
 
 ## Calculate at row-quarter checkpoints
 
-Create and update keep tasks Auto Scheduled but temporarily set Project's
+Create and update keep primary tasks Auto Scheduled but temporarily set Project's
 application calculation mode to manual while writing. They explicitly calculate
 after approximately 25%, 50%, 75%, and 100% of planned epic rows have been
 processed, rounding each threshold upward. Reference rows and unchanged rows
@@ -144,7 +144,7 @@ The original application calculation setting is restored before final review
 and saving, including on write or calculation failure. Reading/setting/restoring
 the setting must succeed; failures are reported rather than silently proceeding
 with unknown calculation behavior. The calculation setting is distinct from a
-task's Auto Scheduled mode, which remains enabled. Native date/progress values
+primary task's Auto Scheduled mode, which remains enabled; copies use manual task mode. Native date/progress values
 remain live during writes so checkpoint recalculations cannot be hidden by the
 selective-update cache. Full reports and save/reopen verification remain enabled.
 

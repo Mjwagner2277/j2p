@@ -130,7 +130,7 @@ def apply_dependencies(
                 planned_epics,
                 epic.key,
                 (
-                    f"Reference row only. Schedule logic is driven by {primary.key} "
+                    f"Active copy. Dates follow {primary.key} "
                     f"under fixVersion {primary.fix_version or primary.rollup_key}."
                 )
             )

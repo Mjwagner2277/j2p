@@ -1,4 +1,4 @@
-"""Display final primary schedules without letting rollup dates drive tasks."""
+"""Synchronize active membership copies; let native summaries roll up children."""
 
 from __future__ import annotations
 
@@ -86,9 +86,10 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
     """Resolve every source and destination before changing any Project values."""
     from .project import ProjectAutomationError
     epics = {_key(key): epic for key, epic in plan.epics.items()}
-    references, display_rows = {}, {}
+    references = {}
     members: Dict[str, list] = {key: [] for key in plan.summaries}
     source_windows = {}
+    memberships = set()
 
     def primary_window(epic):
         primary = _key(epic.key if epic.drives_schedule else epic.primary_schedule_key)
@@ -97,6 +98,8 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
             raise ProjectAutomationError(
                 f"Cannot synchronize reference dates: epic={epic.key}, missing driving primary={primary or '(blank)'}."
             )
+        if _key(source.jira_key or source.key) != _key(epic.jira_key or epic.key):
+            raise ProjectAutomationError(f"Copy identity mismatch: epic={epic.key}, primary={primary} refers to a different Jira issue.")
         if primary not in source_windows:
             if primary not in raw_dates:
                 raise ProjectAutomationError(
@@ -107,11 +110,14 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
 
     for epic in plan.epics.values():
         rollup = summary_id(epic.rollup_mode, epic.rollup_key)
+        membership = (epic.rollup_mode, _key(epic.rollup_key), _key(epic.jira_key or epic.key))
+        if membership in memberships:
+            raise ProjectAutomationError(f"Duplicate Jira membership in planned rollup={rollup}: issue={membership[2]}.")
+        memberships.add(membership)
         window = primary_window(epic)
         key = _key(epic.key)
         if key not in task_by_key:
             raise ProjectAutomationError(f"Cannot synchronize reference dates: missing epic={epic.key}.")
-        display_rows[key] = window
         if not epic.drives_schedule:
             references[key] = window
         if rollup not in members:
@@ -132,7 +138,7 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
             min((window[0] for window in windows), key=_stamp),
             max((window[1] for window in windows), key=_stamp),
         )
-    return references, rollups, display_rows
+    return references, rollups
 
 
 def _matches(task, field: str, expected, context: str) -> bool:
@@ -175,49 +181,54 @@ def _sync_window(task, expected, context: str, stats, fields=("Start", "Finish")
         _verify_window(task, expected, context, fields)
 
 
-def _display_fields(config):
-    fields = config["project_fields"]
-    return (fields["schedule_start"], fields["schedule_finish"])
+def verify_copy_isolation(task, context, *, assignments=True):
+    """Copies must never become a second resource demand or dependency driver.
+
+    Strict reads are intentional: unknown state is not proof of isolation.
+    Never erase actuals or user-owned assignments to make a copy pass.
+    """
+    from .project import ProjectAutomationError
+    for field in ("ActualWork", "ActualDuration"):
+        value = _read(task, field, context)
+        if not isinstance(value, (int, float)) or value != 0:
+            raise ProjectAutomationError(f"Active copy has actuals: {context}, field={field}, value={value!r}. Actuals were preserved.")
+    for field in (("Assignments", "TaskDependencies") if assignments else ("TaskDependencies",)):
+        collection = _read(task, field, context)
+        count = _read(collection, "Count", context)
+        if not isinstance(count, (int, float)) or count != 0:
+            raise ProjectAutomationError(f"Active copy must have no {field}: {context}. Resolve the unexpected assignments/links before retrying.")
+    if assignments:
+        work = _read(task, "Work", context)
+        if not isinstance(work, (int, float)) or work != 0:
+            raise ProjectAutomationError(f"Active copy must have zero Work: {context}, value={work!r}.")
 
 
 def synchronize_reference_dates(session, plan, config, task_by_key, summary_tasks, raw_dates) -> None:
     from .project import ProjectScanProgress, verify_project_value
     session._reference_dates_synchronized = False
     session._reference_primary_date_stamps = None
-    references, rollups, display_rows = _targets(plan, task_by_key, summary_tasks, raw_dates)
-    fields = _display_fields(config)
+    references, rollups = _targets(plan, task_by_key, summary_tasks, raw_dates)
     # Mode changes must happen before the final calculation/date capture, never
-    # during display synchronization. Even a Manual summary can move children.
+    # during copy synchronization. A Manual summary can move children.
     for identity in rollups:
         verify_project_value(summary_tasks[identity], "Manual", False, f"rollup={identity[0]}:{identity[1]}")
+    for key in references:
+        task = task_by_key[key]
+        verify_project_value(task, "Active", True, f"reference={key}")
+        verify_project_value(task, "Manual", True, f"reference={key}")
+        verify_copy_isolation(task, f"reference={key}")
     # Keep the pre-write source values. Relational checks alone would miss a
     # primary moving inside a mixed rollup's unchanged overall date envelope.
     primary_stamps = {
         key: tuple(_stamp(value) for value in raw_dates[key])
         for key in _required_primary_keys(plan)
     }
-    stats = {"written": 0, "skipped": 0, "references": len(references), "rollups": len(rollups),
-             "display_rows": len(display_rows)}
+    stats = {"written": 0, "skipped": 0, "references": len(references), "rollups": len(rollups)}
     plan.stats["project_reference_dates"] = stats
-    progress = ProjectScanProgress("Schedule display dates", len(display_rows) + len(rollups))
-    index = 0
-    for key, window in display_rows.items():
+    progress = ProjectScanProgress("Active copy dates", len(references))
+    for index, (key, window) in enumerate(references.items(), start=1):
         task = task_by_key[key]
-        context = f"epic={key}"
-        if key in references:
-            verify_project_value(task, "Active", False, context)
-            verify_project_value(task, "Manual", False, context)
-            _sync_window(task, window, f"reference={key}", stats)
-        _sync_window(task, window, context, stats, fields)
-        index += 1
-        progress.update(index)
-    for identity, window in rollups.items():
-        task = summary_tasks[identity]
-        context = f"rollup={identity[0]}:{identity[1]}"
-        # Native summary Start/Finish are scheduling inputs. Custom display
-        # dates can include inactive memberships without changing child tasks.
-        _sync_window(task, window, context, stats, fields)
-        index += 1
+        _sync_window(task, window, f"reference={key}", stats)
         progress.update(index)
     session._reference_primary_date_stamps = (id(plan), primary_stamps)
     session._reference_dates_synchronized = True
@@ -262,7 +273,7 @@ def verify_reference_dates(
             raw_dates[primary] = (_read(task, "Start", f"primary={primary}"),
                                   _read(task, "Finish", f"primary={primary}"))
         progress.update(index)
-    references, rollups, display_rows = _targets(plan, task_by_key, summary_tasks, raw_dates)
+    references, rollups = _targets(plan, task_by_key, summary_tasks, raw_dates)
     cached = getattr(session, "_reference_primary_date_stamps", None)
     if cached is not None and cached[0] == id(plan):
         for primary, window in raw_dates.items():
@@ -276,24 +287,22 @@ def verify_reference_dates(
                     f"Primary schedule changed after reference date synchronization: {details}. "
                     "The final autoscheduled primary dates must remain unchanged."
                 )
-    fields = _display_fields(config)
-    progress = ProjectScanProgress("Schedule display verification", len(display_rows) + len(rollups))
+    progress = ProjectScanProgress("Active copies and native rollup verification", len(references) + len(rollups))
     index = 0
-    for key, window in display_rows.items():
+    for key, window in references.items():
         task = task_by_key[key]
-        if key in references:
-            context = f"reference={key}"
-            verify_project_value(task, "Active", False, context)
-            verify_project_value(task, "Manual", False, context)
-            _verify_window(task, window, context)
-        _verify_window(task, window, f"epic={key}", fields)
+        context = f"reference={key}"
+        verify_project_value(task, "Active", True, context)
+        verify_project_value(task, "Manual", True, context)
+        verify_copy_isolation(task, context)
+        _verify_window(task, window, context)
         index += 1
         progress.update(index)
     for identity, window in rollups.items():
         task = summary_tasks[identity]
         context = f"rollup={identity[0]}:{identity[1]}"
         verify_project_value(task, "Manual", False, context)
-        _verify_window(task, window, context, fields)
+        _verify_window(task, window, context)
         index += 1
         progress.update(index)
-    return len(references) * 4 + len(rollups) * 3 + len(display_rows) * 2
+    return len(references) * 9 + len(rollups) * 3

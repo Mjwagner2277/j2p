@@ -119,8 +119,8 @@ review_table:
     - resource_group
     - dependency_review
     - jira_status
-    - schedule_start
-    - schedule_finish
+    - start
+    - finish
     - completion_percent
     - predecessors
   include_audit_columns: false
@@ -148,8 +148,6 @@ project_fields:
   drives_schedule: Flag4
   jira_target_start: Date1
   jira_target_end: Date2
-  schedule_start: Date3
-  schedule_finish: Date4
 
 colors:
   dependency_review: "#F2F2F2"

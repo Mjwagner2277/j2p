@@ -84,7 +84,7 @@ class YerpMissingDateNotesTests(unittest.TestCase):
                 else:
                     self.assertIn(
                         f'Reference row; primary {epic.primary_schedule_key} drives the schedule.', epic.dependency_review)
-                    self.assertIn('Reference row only.', epic.dependency_review)
+                    self.assertIn('Active copy.', epic.dependency_review)
                 previous = self.unannotated.epics[key].dependency_review
                 if previous:
                     old_review_count += 1

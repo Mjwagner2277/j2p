@@ -75,7 +75,7 @@ only 3 to overall counted points under the reference policy. Separate completion
 point fields make this distinction visible. These per-version completion totals
 must not be summed as a portfolio total.
 
-After final scheduling, inactive references mirror their primary task's native Start/Finish. All epic and summary rows remain Auto Scheduled. The visible `Schedule Start`/`Schedule Finish` fields (Date3/Date4 by default) show final primary dates on member rows and the earliest/latest member dates on summaries, including all-reference and mixed groups. Gantt summary bars use these display dates. Native summary dates are left to Project; no header date is written to control children. The display pass verifies unchanged primary schedules and does not change Jira targets, activation, dependencies, or completion math.
+After final primary scheduling, active reference copies receive the exact native Start/Finish of their primary. Copies are Manually Scheduled followers; primaries and summaries stay Auto Scheduled. Native summary dates include all active children. The default table and Gantt summary bars use native Start/Finish. Copies have no resources, dependencies, or actuals; synchronization must leave every primary unchanged. Full relationship and date verification is required after calculation and before/after save/reopen.
 
 For fixVersion rollups, j2p can hide stale completed releases from HTML manager reports without a release metadata file. A fixVersion is considered complete when every issue in the CSV that declares that fixVersion has a status in `done_statuses`. If every completed issue has a usable `Resolved` date and the latest `Resolved` date is older than the configured threshold, the rollup is hidden from HTML manager reports while remaining in detailed CSV outputs and the Project sandbox.
 
@@ -135,7 +135,7 @@ Jira `Target start` and `Target end` map into Project custom date fields and are
 
 Driving tasks are auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
 
-- each native Project Start/Finish change colors its visible Schedule Start/Finish cell green, including cascade branch drivers; explicitly displayed native date columns are also colored
+- each native Project Start/Finish change colors its native date cell green, including cascade branch drivers
 - the HTML has one `Cascading Schedule Drivers` section for upstream Finish changes linked to downstream Start/Finish movement affecting unfinished work with Jira target dates; isolated changes, mismatches alone, and completed-only branches do not qualify
 - branches sort by the number of unique affected unfinished dated issues and are collapsed by default; summaries show the driver key/name, previous/current Finish, and affected count, with linked Start/Finish changes inside
 - work missing both Jira target dates is not promoted as a driver, but can remain as context within a branch
@@ -185,13 +185,11 @@ When `warning_suppression.before` is set:
 Completed scheduled epics remain active in the sandbox with native completion
 set to 100%; their story-point percentage remains in the custom completion
 field. Inactivation is not used to archive completed work. When configured,
-their Gantt bars are hidden where Project permits it. Reference rows are made
-inactive before progress writes and use only custom completion fields, avoiding
-native actuals on non-driving copies. The default review table labels them Reference;
-a dedicated formatting command removes strike-through when supported without
-reactivating the task. Cosmetic failures are audited and leave row-role labels
-available. Existing actuals are never erased to force inactivation. Summary progress is written only to custom fields, because writing
-native summary completion can change child-task actuals.
+their Gantt bars are hidden where Project permits it. Active copies use custom
+completion fields without generating native actuals. They remain labeled Reference;
+legacy strike-through is removed when supported. Existing actuals are never erased
+to force copy isolation. Summary progress is written only to custom fields,
+because writing native summary completion can change child-task actuals.
 
 ## Resource Groups
 

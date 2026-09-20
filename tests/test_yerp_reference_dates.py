@@ -53,6 +53,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             synchronize_reference_dates(self.session, self.plan, self.config,
                                         self.epics, self.summary_map, self.raw_dates())
+            self.session.recalculate()
 
     def verify(self):
         with redirect_stdout(io.StringIO()):
@@ -74,18 +75,18 @@ class YerpReferenceDateTests(unittest.TestCase):
         for key, epic in self.plan.epics.items():
             task = self.epics[key]
             primary = self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
-            self.assertEqual((getattr(task, fields['schedule_start']), getattr(task, fields['schedule_finish'])),
+            self.assertEqual((task.Start, task.Finish),
                              (primary.Start, primary.Finish), key)
-            self.assertIs(task.Manual, False, key)
+            self.assertIs(task.Manual, not epic.drives_schedule, key)
             if not epic.drives_schedule:
                 self.assertEqual((task.Start, task.Finish), (primary.Start, primary.Finish), key)
-                self.assertIs(task.Active, False, key)
+                self.assertIs(task.Active, True, key)
         for identity, task in self.summary_map.items():
             members = [self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
                        for epic in self.plan.epics.values()
                        if (epic.rollup_mode, epic.rollup_key.upper()) == identity]
-            self.assertEqual(getattr(task, fields['schedule_start']), min(member.Start for member in members), identity)
-            self.assertEqual(getattr(task, fields['schedule_finish']), max(member.Finish for member in members), identity)
+            self.assertEqual(task.Start, min(member.Start for member in members), identity)
+            self.assertEqual(task.Finish, max(member.Finish for member in members), identity)
             self.assertIs(task.Manual, False, identity)
 
     def test_current_real_plan_reference_dates_are_already_stable_and_verify(self):
@@ -127,22 +128,19 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.epics[primary_key].task.Finish = finish
         self.synchronize()
         memberships = [self.plan.epics[primary_key], *reference_rows]
-        fields = self.config['project_fields']
-        display_fields = {fields['schedule_start'], fields['schedule_finish']}
         for epic in memberships:
             row = self.epics[epic.key]
             self.assertEqual((row.Start, row.Finish), (start, finish), epic.key)
             rollup = self.summary_map[(epic.rollup_mode, epic.rollup_key.upper())]
-            self.assertEqual((getattr(rollup, fields['schedule_start']), getattr(rollup, fields['schedule_finish'])),
+            self.assertEqual((rollup.Start, rollup.Finish),
                              (start, finish), epic.rollup_key)
         self.assert_reference_geometry()
-        self.assertEqual({field for field, _ in self.epics[primary_key].writes}, display_fields)
+        self.assertEqual(self.epics[primary_key].writes, [])
         self.assertEqual({key for key, task in self.epics.items() if task.writes},
-                         {primary_key, *(epic.key for epic in reference_rows)})
-        self.assertTrue(all(field in {'Start', 'Finish'} | display_fields
+                         {epic.key for epic in reference_rows})
+        self.assertTrue(all(field in {'Start', 'Finish'}
                             for task in self.epics.values() for field, _ in task.writes))
-        self.assertTrue(all(field in display_fields
-                            for task in self.summaries.values() for field, _ in task.writes))
+        self.assertFalse(any(task.writes for task in self.summaries.values()))
         self.session.app.DateFormat.assert_not_called()
         self.assertEqual(self.protected_values(), protected)
         self.assertEqual({key: asdict(epic) for key, epic in self.plan.epics.items()}, source_epics)
@@ -154,16 +152,11 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual([write for task in self.session.project.Tasks.items for write in task.writes], [])
         self.assertGreater(self.verify(), 0)
 
-    def test_existing_files_gain_display_dates_without_writing_native_summary_dates(self):
-        fields = self.config['project_fields']
-        display_fields = {fields['schedule_start'], fields['schedule_finish']}
-        original_primary_dates = self.raw_dates()
+    def test_native_summaries_recalculate_stale_headers_without_setters(self):
+        primary_dates = self.raw_dates()
         for task in self.summary_map.values():
             task.task._start_native += timedelta(days=3)
             task.task._finish_native += timedelta(days=4)
-            for field in display_fields:
-                setattr(task.task, field, 'NA')
-        native_summary_dates = {identity: (task.Start, task.Finish) for identity, task in self.summary_map.items()}
         first = next(iter(self.summary_map.values())).task
         with self.assertRaises(AttributeError):
             first.Start = first.Start + timedelta(days=1)
@@ -171,15 +164,11 @@ class YerpReferenceDateTests(unittest.TestCase):
             first.Finish = first.Finish + timedelta(days=1)
         self.synchronize()
         self.assert_reference_geometry()
-        self.assertEqual(self.raw_dates(), original_primary_dates)
-        self.assertEqual({identity: (task.Start, task.Finish) for identity, task in self.summary_map.items()},
-                         native_summary_dates)
-        self.assertEqual({identity for identity, task in self.summary_map.items() if task.writes}, set(self.summary_map))
-        for task in self.summary_map.values():
-            self.assertEqual({field for field, _ in task.writes}, display_fields)
+        self.assertEqual(self.raw_dates(), primary_dates)
+        self.assertFalse(any(task.writes for task in self.summary_map.values()))
         self.assertGreater(self.verify(), 0)
 
-    def test_sswsw_10464_stays_unchanged_when_fst_display_window_needs_refresh(self):
+    def test_sswsw_10464_stays_unchanged_when_fst_native_window_needs_refresh(self):
         epic = self.plan.epics['SSWSW-10464']
         self.assertTrue(epic.drives_schedule)
         self.assertEqual((epic.rollup_mode, epic.rollup_key), ('fixVersion', 'FST'))
@@ -188,19 +177,16 @@ class YerpReferenceDateTests(unittest.TestCase):
         fst = self.summary_map['fixVersion', 'FST']
         fst.task.summary_shift_children = [primary.task]
         # A summary StartText write would move this unconstrained child. The
-        # bottom-up display fields must not invoke that native scheduling edit.
+        # active-copy calculation must not invoke that native summary edit.
         fst.task._start_native += timedelta(days=120)
-        fields = self.config['project_fields']
-        setattr(fst.task, fields['schedule_start'], fst.Start)
-        setattr(fst.task, fields['schedule_finish'], fst.Finish + timedelta(days=7))
         native_summary = (fst.Start, fst.Finish)
         primary_dates = self.raw_dates()
         protected = self.protected_values()
         self.synchronize()
         self.assertEqual(self.raw_dates(), primary_dates)
         self.assertEqual(primary.writes, [])
-        self.assertEqual((fst.Start, fst.Finish), native_summary)
-        self.assertEqual({field for field, _ in fst.writes}, {fields['schedule_start'], fields['schedule_finish']})
+        self.assertNotEqual((fst.Start, fst.Finish), native_summary)
+        self.assertEqual({field for field, _ in fst.writes}, set())
         self.assertFalse(any(field in {'Start', 'Finish', 'StartText', 'FinishText'}
                              for task in self.summary_map.values() for field, _ in task.writes))
         self.assertEqual(self.protected_values(), protected)

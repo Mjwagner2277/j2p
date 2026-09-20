@@ -60,14 +60,14 @@ class ReferencePipelineTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             session.apply_review_formatting(plan, config, before={})
         self.assertEqual(session.project.Tasks.item_reads, len(session.project.Tasks.items))
-        self.assertEqual({field for field, _ in primary.writes}, {'Date3', 'Date4'})
+        self.assertEqual(primary.writes, [])
         self.assertEqual((epics[reference.key].Start, epics[reference.key].Finish),
                          (primary.Start, primary.Finish))
         header = summaries['fixVersion:Release B']
-        self.assertEqual((header.Date3, header.Date4), (primary.Start, primary.Finish))
+        self.assertEqual((header.Start, header.Finish), (primary.Start, primary.Finish))
         self.assertIs(header.Manual, False)
         self.assertFalse(any(field in {'Start', 'Finish', 'StartText', 'FinishText'} for field, _ in header.writes))
-        self.assertIs(epics[reference.key].Active, False)
+        self.assertIs(epics[reference.key].Active, True)
         self.assertEqual(session.app.Calculation, -1)
         session.app.FontStrikethrough.assert_called_once_with(False)
         self.assertEqual(session.app.ActiveCell.Task, epics[reference.key])
@@ -110,7 +110,7 @@ class ReferencePipelineTests(unittest.TestCase):
             session.end_selective_update(plan)
         self.assertIs(header.Manual, False)
         self.assertEqual([write for write in header.writes if write[0] == 'Manual'], [('Manual', False)])
-        self.assertIs(epics[reference.key].Active, False)
+        self.assertIs(epics[reference.key].Active, True)
         self.assertIs(epics[reference.key].Flag2, False)
 
 

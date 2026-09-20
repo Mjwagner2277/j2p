@@ -20,7 +20,7 @@ from j2p.reports import (
     render_schedule_cascade_review, write_audit_csv, write_manager_html,
 )
 from test_project_schedule_colors import (
-    date_changes, dates, prepare_display_fixture, review, review_session, schedule_plan,
+    date_changes, dates, prepare_formatting_fixture, review, review_session, schedule_plan,
 )
 from yerp_project_support import FILES, YERP
 
@@ -58,7 +58,7 @@ def color_and_render(plan, config, before, after):
         task.Start, task.Finish = values.start, values.finish
         tasks.append(task)
     session = formatting.formatting_session(tasks)
-    prepare_display_fixture(session, plan, tasks)
+    prepare_formatting_fixture(session)
     with redirect_stdout(io.StringIO()):
         session.apply_review_formatting(plan, config, before=before)
     colors = {
@@ -86,8 +86,8 @@ class ScheduleDateReportTests(unittest.TestCase):
         self.assertEqual(date_changes(plan), [])
         self.assertEqual({item.field for item in plan.audit_items
                           if item.category == 'ScheduledDateMismatch'}, {'Start', 'Finish'})
-        self.assertEqual(colors[(1, 'Date3')], config['colors']['review_needed'])
-        self.assertEqual(colors[(1, 'Date4')], config['colors']['review_needed'])
+        self.assertEqual(colors[(1, 'Start')], config['colors']['review_needed'])
+        self.assertEqual(colors[(1, 'Finish')], config['colors']['review_needed'])
         self.assertNotIn('<div class="cascade-node ', rendered)
 
     def test_independent_start_and_finish_changes_stay_green_but_are_not_drivers(self):
@@ -100,8 +100,8 @@ class ScheduleDateReportTests(unittest.TestCase):
         self.assertEqual(branches(rendered), [])
         self.assertEqual({(item.schedule_key, item.field) for item in date_changes(plan)},
                          {('TEAM-1', 'Start'), ('TEAM-2', 'Finish')})
-        self.assertEqual(colors[(1, 'Date3')], config['colors']['changed_cell'])
-        self.assertEqual(colors[(2, 'Date4')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(1, 'Start')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(2, 'Finish')], config['colors']['changed_cell'])
 
     def test_finish_driver_includes_start_only_downstream_impact_and_summary_dates(self):
         plan, config = dated_plan(2)
@@ -120,8 +120,8 @@ class ScheduleDateReportTests(unittest.TestCase):
         self.assertNotRegex(rendered, r'<details[^>]*\bopen\b')
         self.assertIn('TEAM-2', branches(rendered)[0])
         self.assertRegex(text_content(branches(rendered)[0]), r'Start:\s*2026-09-01\s*(?:->|→)\s*2026-09-08')
-        self.assertEqual(colors[(1, 'Date4')], config['colors']['changed_cell'])
-        self.assertEqual(colors[(2, 'Date3')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(1, 'Finish')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(2, 'Start')], config['colors']['changed_cell'])
 
     def test_nodes_show_both_changed_dates_without_duplicate_branches(self):
         plan, config = dated_plan(3)

@@ -131,12 +131,12 @@ class YerpProjectUpdateTests(unittest.TestCase):
         self.assertEqual((task.Number7, task.PercentComplete), (6, 0))
         self.assertTrue(any(item.category == 'ProjectNativeCompletionRecalculated'
                             and item.schedule_key == 'SSWCYBER-3219' for item in plan.audit_items))
-        # The real export includes completed references too: they stay inactive,
+        # The real export includes completed references too: they stay active without assignments,
         # and only driving completed rows carry native100%.
         completed_refs = [epic for epic in plan.epics.values() if epic.completed and not epic.drives_schedule]
         self.assertGreater(len(completed_refs), 0)
         for epic in completed_refs:
-            self.assertFalse(self.epics[epic.key].Active)
+            self.assertTrue(self.epics[epic.key].Active)
             self.assertEqual(self.epics[epic.key].PercentComplete, 0)
 
     def test_schedule_changes_on_unwritten_real_dependency_rows_are_still_reported(self):

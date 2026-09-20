@@ -54,7 +54,7 @@ class MissingDateReviewTests(unittest.TestCase):
         plan, config = self.plan(versions='A;B')
         reference = next(e for e in plan.epics.values() if not e.drives_schedule)
         self.assertIn('Reference row; primary TEAM-1 drives the schedule.', reference.dependency_review)
-        self.assertIn('Reference row only.', reference.dependency_review)
+        self.assertIn('Active copy.', reference.dependency_review)
         self.assertNotIn('Project uses existing dates', reference.dependency_review)
         config['project_fields']['dependency_review'] = 'Text30'
         self.assertTrue(dict(epic_assignments(reference, config))['Text30'].startswith('Missing Jira target start/end.'))

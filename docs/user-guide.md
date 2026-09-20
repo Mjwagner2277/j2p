@@ -30,7 +30,7 @@ The source-of-truth Project file is protected:
 
 - The main `.mpp` is never edited directly.
 - Every `update` run creates a timestamped sandbox copy.
-- All epic tasks and summary headers are Auto Scheduled. The visible `Schedule Start` and `Schedule Finish` columns show final child schedules and all-member rollup dates.
+- Primary tasks and summary headers are Auto Scheduled. Active copies follow their primary dates in manual task mode. Native `Start` and `Finish` show both task schedules and rollup dates.
 - Changed Project cells are colored for review.
 - Excluded and concerning Jira rows are reported.
 - The manager report is self-contained HTML.
@@ -293,7 +293,7 @@ After the final Project recalculation, a driving epic with both Jira target date
 
 `Cascading Schedule Drivers` is the single schedule-impact section. It lists changed upstream finishes linked to downstream Start or Finish changes on unfinished work with Jira target dates, ordered by the number of unique affected issues. Each collapsed branch shows the driver's key and name, previous/current Finish, and affected count. Expand it to inspect linked Start/Finish changes. Isolated date changes, Jira/Project mismatches without movement, and branches affecting only completed work stay out of this section. Work with both Jira target dates missing is not promoted as a driver, but can appear as context within a branch.
 
-Existing rows compare against the input `.mpp`; new rows and creation runs compare against dates initially supplied or captured before scheduling. Red cards identify drivers and green cards identify affected changes; native date movement colors the corresponding Schedule Start/Finish cells green. The branches follow the Jira blocker links written as Project predecessors. They show related changes, not proof of causation or a calculated critical path. Resource-group reports show branches starting in that group, including affected downstream work in other groups. Complete date-change and Jira-target-mismatch evidence remains in `audit-detail.csv`. An amber date cell can reflect an existing Jira/Project mismatch or a rejected write without any new schedule movement.
+Existing rows compare against the input `.mpp`; new rows and creation runs compare against dates initially supplied or captured before scheduling. Red cards identify drivers and green cards identify affected changes; native date movement colors the corresponding Start/Finish cells green. The branches follow the Jira blocker links written as Project predecessors. They show related changes, not proof of causation or a calculated critical path. Resource-group reports show branches starting in that group, including affected downstream work in other groups. Complete date-change and Jira-target-mismatch evidence remains in `audit-detail.csv`. An amber date cell can reflect an existing Jira/Project mismatch or a rejected write without any new schedule movement.
 
 ## Color Key
 
@@ -376,7 +376,7 @@ j2p supports two policies:
 
 | Policy | Default | Behavior |
 | --- | --- | --- |
-| `reference` | Yes | The first fixVersion gets the primary driving schedule row. Additional fixVersions get visible non-driving reference rows. |
+| `reference` | Yes | The first fixVersion gets the primary driving schedule row. Additional fixVersions get active reference copies that follow the primary schedule. |
 | `split` | No | Every fixVersion gets its own driving schedule row. |
 
 Recommended default:
@@ -396,9 +396,9 @@ multi_fixversion_policy:
 
 Reference rows are useful when the same Jira epic should be visible in multiple business views without double-counting story points in schedule summaries. Split rows are useful only when the team truly wants the same Jira epic to drive schedule placement under each listed fixVersion.
 
-After Project finishes scheduling the children, `Schedule Start` and `Schedule Finish` show each epic's final schedule. References show their primary task's dates. Rollups show the earliest Start and latest Finish across all their members, including referenced primaries; this covers both reference-only and mixed fixVersions. These two columns and Gantt summary bars use display fields, so updating a header cannot reschedule its children. Native summary dates remain automatically calculated by Project and can differ because inactive references do not drive those calculations. All summaries stay Auto Scheduled. References stay inactive, with no duplicate dependencies or extra overall story points. Jira targets remain separate.
+After Project schedules the primary tasks, j2p synchronizes each active reference copy to its primary's final Start and Finish, including time of day. Copies are Manually Scheduled date followers; they have no resource assignments or dependency links. Primaries and summary headers remain Auto Scheduled. Project calculates native summary Start/Finish from all active children, including copy-only and mixed fixVersions. The default table and Gantt summary bars use those native dates, with no second pair of schedule columns. Each version gets the issue's full completion credit; overall counted story points and resource demand belong to the primary once.
 
-The default review table includes `j2p Row Role`, with `Reference` identifying secondary rows. j2p removes strike-through from reference rows when Project accepts the formatting command, while keeping them inactive. If formatting fails, the audit records one `ProjectReferenceFormattingFailed` warning; use the row-role label and check Project's inactive-task text style. Task names and review background colors are unchanged. Validate the visible result in Project because the automation interface does not expose a strike-through readback.
+The default review table labels secondary rows `Reference`; these are active copies, not inactive tasks. j2p removes legacy strike-through when supported. Their native Resource Group is empty to avoid duplicate assignments; team ownership remains in the Jira-derived report metadata. Use the default Story Point Completion % column for progress, including completed copies. Native % Complete is duration-based and is written only on primary tasks. Copies refresh during each j2p create/update run; editing a primary directly in Project does not live-update its copies.
 
 ## Identity And Schedule Keys
 
@@ -515,7 +515,7 @@ Jira target dates are stored in Project custom fields:
 
 Jira exports may include dates with times or `DD-MON-YY` syntax, such as `17-SEP-26 12:00 AM`. j2p normalizes supported Jira target-date values to `YYYY-MM-DD` before writing them to Microsoft Project.
 
-Epic tasks and summary headers are Auto Scheduled. The default review table shows `Schedule Start` and `Schedule Finish`, populated after the final child scheduling pass. The original native Start/Finish columns remain available through configuration. During a Windows Microsoft Project `create` or `update` run:
+Primary tasks and summary headers are Auto Scheduled; active copies are Manually Scheduled followers. The default review table shows native `Start` and `Finish`. During a Windows Microsoft Project `create` or `update` run:
 
 - Changed Jira target-date cells are colored green.
 - If Project auto-scheduling shifts Start or Finish, the corresponding visible schedule-date cells are green, including cascade branch drivers.
@@ -525,7 +525,7 @@ Epic tasks and summary headers are Auto Scheduled. The default review table show
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
 
-The display-date pass checks that primary Start/Finish values remain unchanged. A failed check stops publication; a cosmetic Gantt-style failure is recorded separately while the verified date columns remain available.
+The active-copy synchronization pass checks that primary Start/Finish values remain unchanged. A failed check stops publication; a cosmetic Gantt-style failure is recorded separately while the verified date columns remain available.
 
 Validate mode does not open Microsoft Project, so it cannot detect actual auto-schedule cascades. It can still report Jira date changes and likely review candidates.
 
@@ -840,7 +840,7 @@ Do not mix baseline and updated snapshots in one run. See
 
 ### Scheduling during a Project write
 
-J2P keeps epic tasks Auto Scheduled and batches Project calculation while it writes.
+J2P keeps primary tasks Auto Scheduled and batches Project calculation while it writes.
 New-project creation appends each rollup and its epic rows in final outline order, avoiding repeated insertion above rows already written. Explicit outline levels and parent readback validate the hierarchy. Creation also caches the shared team resources while continuing to verify each task's actual resource assignments. Existing-project updates retain their current placement behavior.
 
 The run manifest records Project creation and row timings. The row breakdown separates placement/summary fields, epic values and resources, and quarter-point calculation time. Resource-assignment time is also shown as a subset of epic-value time; do not sum it twice. Saving, dependency writes, formatting, and close/reopen verification have separate phase timings. These measurements help distinguish slow Project automation calls from calculation time on the actual Windows machine.

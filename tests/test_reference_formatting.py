@@ -10,13 +10,13 @@ from j2p.models import RunPlan
 from j2p.reference_formatting import format_reference_rows
 
 
-def task(row, active=False):
+def task(row, active=True):
     return SimpleNamespace(
         ID=row, UniqueID=1000 + row, Active=active, ExternalTask=False,
         Name=f'Epic {row}', Start='2026-09-01', Finish='2026-09-03',
         PercentComplete=40, Number1=5.0, Number2=2.0, Number7=40.0,
         CellColorEx=0xC6EFCE, FontColorEx=0x303030, Bold=False,
-        Text11='Scheduled' if active else 'Reference', Strikethrough=not active,
+        Text11='Reference', Strikethrough=True,
     )
 
 
@@ -116,7 +116,7 @@ class ReferenceFormattingTests(unittest.TestCase):
         self.assertEqual(app.font_calls, [])
         self.assertEqual(plan.stats['project_reference_formatting']['failed'], 1)
         self.assertIn('does not match', plan.audit_items[0].message)
-        self.assertFalse(reference.Active)
+        self.assertTrue(reference.Active)
         self.assertTrue(wrong.Active)
 
     def test_external_task_with_same_unique_id_is_not_formatted(self):
@@ -166,17 +166,17 @@ class ReferenceFormattingTests(unittest.TestCase):
                          dict(total=3, applied=1, failed=2))
         self.assertEqual(vars(references['TEAM-1']), before['TEAM-1'])
         self.assertEqual(vars(references['TEAM-2']), before['TEAM-2'])
-        self.assertTrue(all(item.Active is False for item in references.values()))
+        self.assertTrue(all(item.Active is True for item in references.values()))
         self.assertEqual(len(plan.audit_items), 1)
 
-    def test_active_or_unreadable_reference_is_not_selected_or_reactivated(self):
-        active, unreadable = task(1, True), task(2)
+    def test_inactive_or_unreadable_reference_is_not_selected_or_reactivated(self):
+        active, unreadable = task(1, False), task(2)
         del unreadable.Active
         plan = plan_for([('TEAM-1', False), ('TEAM-2', False)])
         app, _ = apply(plan, {'TEAM-1': active, 'TEAM-2': unreadable})
         self.assertEqual(app.selected_rows, [])
         self.assertEqual(app.font_calls, [])
-        self.assertTrue(active.Active)
+        self.assertFalse(active.Active)
         self.assertFalse(hasattr(unreadable, 'Active'))
         self.assertEqual(plan.stats['project_reference_formatting']['failed'], 2)
 

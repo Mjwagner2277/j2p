@@ -32,7 +32,7 @@ Required adapter checks now include:
 - Existing summary names are updated. Native summary percent complete remains Project's calculation from child durations; its custom story-point metrics are verified against the plan.
 - On an incomplete driving epic, native `% Complete` may recalculate after scheduling. Confirm a different valid native percentage produces `ProjectNativeCompletionRecalculated`, while Story Point Completion % retains the exact planned value. Missing/invalid native values and completed driving rows below native 100% still fail. Custom completion corruption must fail before and after reopening.
 
-The Project edition must support writing and reading the required `Active` task property. Reference rows must remain inactive and show progress through Story Point Completion %. Completed driving rows remain active with native completion at 100%. Test a shared epic with partial completion and a completed epic. Confirm summary updates do not change child actuals. Existing reference actuals must produce a clear failure without being cleared. A rejected Active transition includes its attempted boolean value and Project's original error.
+The Project edition must support writing and reading the required `Active` task property. Reference copies must remain active and Manually Scheduled, with zero assignments, incoming/outgoing links, and actual work/duration; they show progress through Story Point Completion %. Completed driving rows remain active with native completion at 100%. Test a shared epic with partial completion and a completed epic. Confirm summary updates do not change child actuals. Existing reference actuals must produce a clear failure without being cleared. A rejected Active transition includes its attempted boolean value and Project's original error.
 
 ## Fixture matrix and release evidence
 
@@ -48,15 +48,15 @@ Run the harness on each supported Project version/edition with these fixture var
 | One task changes points, name, rollup, or owned resource group | Only differing managed values/relationships written; complete rollups and report detail retained |
 | Incomplete native completion differs from unchanged Jira completion | No repeated native percentage seed; exact custom completion and valid native completion verified |
 | Reordered Project row IDs, generated multi-fixVersion keys | Relationships resolve to the same schedule keys/UniqueIDs |
-| Reference-only or mixed fixVersion group | Inactive references mirror primary dates; Schedule Start/Finish and Gantt summary bars span every member's final dates, including times, before and after reopening; all native summaries stay Auto Scheduled and the display pass leaves every primary schedule unchanged |
-| Reference row appearance | Reference label visible; strike-through removed in the review view while Active remains No and existing review backgrounds remain intact |
+| Reference-only or mixed fixVersion group | Active copies mirror primary dates; native Start/Finish and Gantt summary bars span every member's final dates, including times, before and after reopening; all native summaries stay Auto Scheduled and the display pass leaves every primary schedule unchanged |
+| Reference row appearance | Reference label visible; strike-through removed in the review view while Active remains Yes and existing review backgrounds remain intact |
 | Duplicate matching keys in the MPP | Failed before task mutation; useful duplicate-key error |
 | A managed resource group changed between runs | Previous owned assignment removed; new owned assignment retained |
 | Existing human resources with the same names as group labels | Human resource metadata/assignments retained; separate owned placeholder used |
 | Restricted fields, unsupported Active, or invalid outline | Failed with field/row context; no successful verification result |
 | Save cancelled, disk unavailable, or active window switched | Failed; source hash check still recorded |
 
-Also inspect the sandbox's review table and colors visually; the automated JSON checks do not certify visual formatting. Confirm the Summary bar spans Schedule Start/Finish, its intended shape/colors remain legible, and inactive reference rows do not affect primary scheduling. The bar-style API's success result is not a rendered-appearance check. Check the warning list for formatting/date issues and preserved unmanaged resources.
+Also inspect the sandbox's review table and colors visually; the automated JSON checks do not certify visual formatting. Confirm the Summary bar spans native Start/Finish, its intended shape/colors remain legible, and active reference copies do not affect primary scheduling. The bar-style API's success result is not a rendered-appearance check. Check the warning list for formatting/date issues and preserved unmanaged resources.
 
 ## Selective update measurements
 
@@ -95,10 +95,31 @@ also calculates before dependency writes following its initial save. Check that
 Cascading Schedule Drivers, the complete date audit, and saved/reopened values reflect the final linked schedule.
 
 Repeat with Project initially set to automatic calculation and then manual
-calculation; each run must restore its original application setting while epic tasks
-and summary headers remain Auto Scheduled, including inactive reference rows.
-Schedule Start/Finish display fields and Gantt summary bars derive from the final
-child schedule; native summary dates are never written to push children. On a disposable sandbox, interrupt with a controlled
+calculation; each run must restore its original application setting while primary tasks
+and summary headers remain Auto Scheduled and copies remain Manually Scheduled.
+Native summary dates and Gantt summary bars derive from all active children; native summary dates are never written to push children. On a disposable sandbox, interrupt with a controlled
 write/calculation exception and check that the calculation setting is restored.
 Measure identical-input and changed-input runs and retain their manifests; do
 not infer runtime improvement from portable checkpoint tests alone.
+
+## Active-copy upgrade acceptance
+
+Update an older file containing inactive references and Date3/Date4 display bars.
+Confirm every planned reference is active, has Manual=True, and has no resource
+assignments, and has zero native Work. Only j2p-owned assignments may be removed. Unexpected actuals,
+human assignments, or dependency links must stop the run without erasing them.
+The review table and Summary Gantt bars must use native Start/Finish. Date3/Date4
+values may remain stored but must not be presented as current schedule dates.
+
+Exercise pure-copy and mixed fixVersions, zero-duration milestones, weekends,
+different primary calendars, partial/completed issues, and multiple memberships.
+After changing one primary through Jira, every copy must match both endpoints to
+the minute; each header must span its active children. Primary dates must survive
+the copy calculation and save/reopen unchanged. Confirm SSWSW-10464 under FST
+when using the authorized yerp data. Removing a membership should flag and
+inactivate the old copy; repeated identical updates should issue zero copy date
+writes. Changing the first fixVersion must preserve one primary Jira identity
+while moving its outline placement and retiring obsolete copy identities.
+
+Portable fakes test these contracts but cannot certify Microsoft Project's native
+calendar calculations, manual-child rollup rendering, or persistence behavior.

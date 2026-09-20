@@ -555,7 +555,8 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
         "",
         "| j2p Value | Project Field | Purpose |",
         "| --- | --- | --- |",
-        "| Resource Group | Resource Group | Populated by assigning a Project resource whose Group value comes from the Jira key prefix mapping in `resource_groups`. |",
+        "| Resource Group | Resource Group | Primary tasks only: assigned from the Jira key prefix mapping. Active copies have no resource assignments. |",
+        "| Scheduled dates | Start / Finish | Native primary schedule, synchronized active-copy dates, and automatically calculated summary dates. |",
         "",
         "Custom task fields used by j2p:",
         "",
@@ -565,6 +566,8 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
     project_fields = config.get("project_fields", {})
     project_field_names = config.get("project_field_names", {})
     for key in sorted(project_fields):
+        if key in {"schedule_start", "schedule_finish"}:
+            continue  # Retired custom snapshots are not current schedule fields.
         lines.append(f"| `{key}` | `{project_fields[key]}` | {project_field_names.get(key, key)} |")
     lines.extend(
         [

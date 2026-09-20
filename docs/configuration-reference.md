@@ -147,8 +147,6 @@ project_fields:
   drives_schedule: Flag4
   jira_target_start: Date1
   jira_target_end: Date2
-  schedule_start: Date3
-  schedule_finish: Date4
 ```
 
 ## Top-Level Fields
@@ -249,7 +247,7 @@ Allowed policies:
 
 | Policy | Behavior |
 | --- | --- |
-| `reference` | First fixVersion gets the primary driving row. Additional fixVersions get visible non-driving reference rows. |
+| `reference` | First fixVersion gets the primary driving row. Additional fixVersions get active reference copies with manual dates, no assignments, and no dependencies. |
 | `split` | Every fixVersion gets a driving schedule row. |
 
 Rules:
@@ -545,14 +543,14 @@ review_table:
     - resource_group
     - dependency_review
     - jira_status
-    - schedule_start
-    - schedule_finish
-    - percent_complete
+    - start
+    - finish
+    - completion_percent
     - predecessors
   include_audit_columns: false
 ```
 
-The default table includes `row_role` so reference rows are explicitly labeled. It hides internal matching keys, rollup categories, rollup mode, Jira key prefix, Jira issue type, Jira target dates, story point detail fields, logged-hours detail fields, fixVersion, in-planning flags, and other flag-style review indicators. Those values are still written into the Project file and retained in CSV outputs.
+The default table includes `row_role` so active copies are explicitly labeled Reference, and `completion_percent` shows story-point progress rather than native duration progress. It hides internal matching keys, rollup categories, rollup mode, Jira key prefix, Jira issue type, Jira target dates, story point detail fields, logged-hours detail fields, fixVersion, in-planning flags, and other flag-style review indicators. Those values are still written into the Project file and retained in CSV outputs.
 
 Use `all` when an administrator wants every standard j2p field visible in Project:
 
@@ -571,8 +569,8 @@ review_table:
     - summary
     - resource_group
     - dependency_review
-    - schedule_finish
-    - percent_complete
+    - finish
+    - completion_percent
     - predecessors
   include_audit_columns: false
 ```
@@ -596,10 +594,10 @@ Supported friendly names for `exposed_columns`:
 | `resource_group` | Native Project Resource Group. |
 | `dependency_review` | Human-readable dependency review notes. |
 | `jira_status` or `status` | Jira status. |
-| `schedule_start` | Final primary start on epics/references; earliest member start on rollups (default visible date). |
-| `schedule_finish` | Final primary finish on epics/references; latest member finish on rollups (default visible date). |
-| `start` | Native Project scheduled start; optional. |
-| `finish` | Native Project scheduled finish; optional. |
+| `schedule_start` | Compatibility alias for native `start`; no custom snapshot is written. |
+| `schedule_finish` | Compatibility alias for native `finish`; no custom snapshot is written. |
+| `start` | Native Project scheduled start (default visible). |
+| `finish` | Native Project scheduled finish (default visible). |
 | `jira_target_start` or `target_start` | Jira target start. |
 | `jira_target_end` or `target_end` | Jira target end. |
 | `percent_complete` | Native Project `% Complete`. |
@@ -666,8 +664,8 @@ Supported fields:
 | `drives_schedule` | `Flag4` | Indicates whether the row drives Project schedule logic. |
 | `jira_target_start` | `Date1` | Jira target start. |
 | `jira_target_end` | `Date2` | Jira target end. |
-| `schedule_start` | `Date3` | Final schedule start for display; rollups include all member primary schedules. |
-| `schedule_finish` | `Date4` | Final schedule finish for display; rollups include all member primary schedules. |
+| `schedule_start` | `Date3` | Retired mapping accepted for old configs; custom values are left untouched. |
+| `schedule_finish` | `Date4` | Retired mapping accepted for old configs; custom values are left untouched. |
 
 For developer-level detail on what each Project field enables in matching, rollups, dependency review, coloring, and reporting, see `docs/project-fields.md`.
 

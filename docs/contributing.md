@@ -134,7 +134,7 @@ Manually confirm:
 - dependency review cells are light gray
 - unmatched/excluded cells are amber
 - in-planning cells are marked
-- completed driving epics remain active at native 100%; configured Gantt-bar hiding is best effort, and references remain inactive with custom story-point progress
+- completed driving epics remain active at native 100%; configured Gantt-bar hiding is best effort, and copies remain active with manual dates and no assignments with custom story-point progress
 - report CSVs match visible sandbox changes
 
 For details on why each Project custom field exists and which code paths depend on it, read `docs/project-fields.md`.

@@ -8,7 +8,7 @@ from .models import AuditItem, RunPlan
 
 
 def format_reference_rows(session: Any, plan: RunPlan, task_by_key: Dict[str, Any]) -> None:
-    """Remove strike-through from selected inactive reference rows when supported.
+    """Remove legacy strike-through from selected active copies when supported.
 
     A successful command is not a readback of the rendered font: Project's Cell
     object has no documented strike-through property. Active remains mandatory;
@@ -46,8 +46,8 @@ def format_reference_rows(session: Any, plan: RunPlan, task_by_key: Dict[str, An
             if row <= 0:
                 raise ValueError("Reference task has no positive Project row ID.")
             expected_identity = project_task_identity(task)
-            if safe_bool(safe_get(task, "Active")) is not False:
-                raise ValueError("Reference task could not be confirmed inactive; formatting skipped.")
+            if safe_bool(safe_get(task, "Active")) is not True:
+                raise ValueError("Reference task could not be confirmed active; formatting skipped.")
             result = session.app.SelectRow(
                 Row=row, RowRelative=False, Height=0, Extend=False, Add=False,
             )
@@ -61,8 +61,8 @@ def format_reference_rows(session: Any, plan: RunPlan, task_by_key: Dict[str, An
             result = session.app.FontStrikethrough(False)
             if project_call_failed(result):
                 raise ValueError("Project rejected removing reference-row strike-through.")
-            if safe_bool(safe_get(task, "Active")) is not False:
-                raise ValueError("Reference task could not be confirmed inactive after formatting.")
+            if safe_bool(safe_get(task, "Active")) is not True:
+                raise ValueError("Reference task could not be confirmed active after formatting.")
             counts["applied"] += 1
         except Exception as exc:
             counts["failed"] += 1
@@ -79,8 +79,8 @@ def format_reference_rows(session: Any, plan: RunPlan, task_by_key: Dict[str, An
                 f"{counts['total']} reference task(s). " + " | ".join(examples)
             ),
             reviewer_action=(
-                "Use j2p Row Role to identify Reference rows. Check Project's inactive-task "
-                "text style if strike-through remains; keep references inactive. "
+                "Use j2p Row Role to identify Reference rows (active copies). Check Project's "
+                "text style if legacy strike-through remains; keep copies active. "
                 "The formatting pass does not change task activation or schedule values."
             ),
         ))

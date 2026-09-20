@@ -48,7 +48,7 @@ and all 87 dependencies. It checks:
   audit item, and manager/resource-group HTML reports.
 - `SSWCYBER-3219` retains its actual 3.2 total / 0.2 completed points and 6% custom
   completion when native duration completion is simulated as recalculating to 0%.
-- Completed reference rows stay inactive; native completion is not written to
+- Completed reference copies stay active without assignments; native completion is not written to
   them. There are 80 completed reference rows in these exports.
 - Simulated downstream date changes on real dependency rows are still reported
   when those rows received no direct field assignments.

@@ -105,6 +105,9 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
         values.setdefault('Assignments', CountedCollection())
         values.setdefault('ResourceGroup', '')
         values.setdefault('PercentComplete', 0)
+        values.setdefault('Work', 0)
+        values.setdefault('ActualWork', 0)
+        values.setdefault('ActualDuration', 0)
         values.setdefault('Start', project_date_for_com('2026-09-17', 'Start'))
         values.setdefault('Finish', project_date_for_com('2026-09-17', 'Finish'))
         native = SummaryDateTask(**values) if values.get('Summary') else SimpleNamespace(**values)
@@ -117,11 +120,11 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
                    **dict(summary_assignments(summary, config)))
         summaries[summary.summary_id] = task
     for epic in sorted(plan.epics.values(), key=lambda item: item.key):
-        resource = resources.get(epic.resource_group)
+        resource = resources.get(epic.resource_group) if epic.drives_schedule else None
         values = dict(epic_assignments(epic, config))
-        values.update(Summary=False, Active=epic.drives_schedule,
+        values.update(Summary=False, Active=True, Manual=not epic.drives_schedule,
                       OutlineParent=summaries[f'{epic.rollup_mode}:{epic.rollup_key}'],
-                      ResourceGroup=epic.resource_group,
+                      ResourceGroup=epic.resource_group if epic.drives_schedule else '',
                       Assignments=CountedCollection([SimpleNamespace(ResourceID=resource.ID)] if resource else []),
                       HideBar=bool(epic.completed and config['behavior']['hide_completed_epics']))
         if epic.target_start:
@@ -155,29 +158,21 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
         if not epic.drives_schedule:
             primary = epics[epic.primary_schedule_key]
             epics[epic.key].task.Start, epics[epic.key].task.Finish = primary.Start, primary.Finish
-    fields = config['project_fields']
-    for epic in plan.epics.values():
-        primary = epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
-        setattr(epics[epic.key].task, fields['schedule_start'], primary.Start)
-        setattr(epics[epic.key].task, fields['schedule_finish'], primary.Finish)
-    for summary in plan.summaries.values():
-        members = [epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
-                   for epic in plan.epics.values()
-                   if epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key]
-        task = summaries[summary.summary_id].task
-        if members:
-            setattr(task, fields['schedule_start'], min(member.Start for member in members))
-            setattr(task, fields['schedule_finish'], max(member.Finish for member in members))
-        driving = [epics[epic.key] for epic in plan.epics.values()
-                   if epic.drives_schedule and epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key]
-        if driving:
-            task._start_native = min(member.Start for member in driving)
-            task._finish_native = max(member.Finish for member in driving)
+    def calculate_summaries():
+        for summary in plan.summaries.values():
+            members = [epics[epic.key] for epic in plan.epics.values()
+                       if epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key
+                       and epics[epic.key].Active]
+            task = summaries[summary.summary_id].task
+            if members:
+                task._start_native = min(member.Start for member in members)
+                task._finish_native = max(member.Finish for member in members)
+    calculate_summaries()
     session = object.__new__(MicrosoftProjectSession)
     session.project = SimpleNamespace(Tasks=CountedCollection(tasks), Resources=CountedCollection(resources.values()))
     session.app = SimpleNamespace(ActiveProject=session.project)
     session.assert_project_identity = Mock()
-    session.recalculate = Mock()  # Native scheduling must still be checked in Windows.
+    session.recalculate = Mock(side_effect=calculate_summaries)  # Not a Windows scheduling engine.
     names = {config['project_fields'][key]: value for key, value in config['project_field_names'].items()}
     session.app.FieldNameToFieldConstant = Mock(side_effect=lambda name: name)
     session.app.CustomFieldGetName = Mock(side_effect=lambda name: names.get(name, ''))

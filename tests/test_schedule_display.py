@@ -28,10 +28,10 @@ class ScheduleDisplayTests(unittest.TestCase):
         self.assertEqual(config['project_field_names']['schedule_start'], 'Schedule Start')
         self.assertEqual(config['project_field_names']['schedule_finish'], 'Schedule Finish')
         exposed = config['review_table']['exposed_columns']
-        self.assertTrue({'schedule_start', 'schedule_finish'} <= set(exposed))
-        self.assertFalse({'start', 'finish'} & set(exposed))
+        self.assertTrue({'start', 'finish'} <= set(exposed))
+        self.assertFalse({'schedule_start', 'schedule_finish'} & set(exposed))
 
-    def test_yerp_uses_the_same_schedule_display_fields(self):
+    def test_yerp_uses_native_schedule_columns(self):
         path = Path(__file__).resolve().parents[1] / 'yerp' / 'ssn-812-config.yaml'
         if not path.exists():
             self.skipTest('Requires project-specific yerp configuration')
@@ -39,14 +39,14 @@ class ScheduleDisplayTests(unittest.TestCase):
         self.assertEqual(config['project_fields']['schedule_start'], 'Date3')
         self.assertEqual(config['project_fields']['schedule_finish'], 'Date4')
         exposed = config['review_table']['exposed_columns']
-        self.assertTrue({'schedule_start', 'schedule_finish'} <= set(exposed))
-        self.assertFalse({'start', 'finish'} & set(exposed))
+        self.assertTrue({'start', 'finish'} <= set(exposed))
+        self.assertFalse({'schedule_start', 'schedule_finish'} & set(exposed))
 
     def test_summary_style_edit_uses_only_explicit_field_names_without_creating_rows(self):
         session, plan, config = fixture()
         self.assertTrue(configure_schedule_display(session, plan, config))
         session.app.GanttBarStyleEdit.assert_called_once_with(
-            Item='Summary', Create=False, From='Date3', To='Date4',
+            Item='Summary', Create=False, From='Start', To='Finish',
         )
         self.assertEqual(plan.audit_items, [])
         self.assertEqual(plan.stats['project_schedule_display'], {'configured': True, 'attempts': 1})
@@ -59,8 +59,8 @@ class ScheduleDisplayTests(unittest.TestCase):
         self.assertTrue(all(call.kwargs['Item'] == 'Summary' and call.kwargs['Create'] is False
                             for call in session.app.GanttBarStyleEdit.call_args_list))
 
-    def test_custom_remapped_fields_and_resolved_localized_style_are_supported(self):
-        session, plan, config = fixture(aliases={'Summary': ['Résumé'], 'Date8': ['Début'], 'Date9': ['Fin']})
+    def test_legacy_custom_mappings_are_ignored_and_native_localized_fields_work(self):
+        session, plan, config = fixture(aliases={'Summary': ['Résumé'], 'Start': ['Début'], 'Finish': ['Fin']})
         config['project_fields'].update(schedule_start='Date8', schedule_finish='Date9')
         config['project_field_names'].update(schedule_start='Visible Start', schedule_finish='Visible Finish')
         session.app.GanttBarStyleEdit.side_effect = lambda **kwargs: (
@@ -82,7 +82,7 @@ class ScheduleDisplayTests(unittest.TestCase):
                 self.assertEqual(audit.category, 'ProjectScheduleDisplayFormattingFailed')
                 self.assertEqual(audit.severity, 'Warning')
                 self.assertIn('display-only', audit.message)
-                self.assertIn('Schedule Start and Schedule Finish', audit.reviewer_action)
+                self.assertIn('Start and Finish', audit.reviewer_action)
                 self.assertFalse(plan.stats['project_schedule_display']['configured'])
                 self.assertEqual(config, before_config)
                 self.assertTrue(all(call.kwargs['Create'] is False for call in session.app.GanttBarStyleEdit.call_args_list))

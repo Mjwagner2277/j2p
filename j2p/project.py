@@ -25,7 +25,7 @@ from .project_values import (
     project_dependency_review, value_metadata,
 )
 from .rollups import summary_id
-from .reference_dates import synchronize_reference_dates, verify_reference_dates
+from .reference_dates import synchronize_reference_dates, verify_reference_dates, verify_copy_isolation
 from .reference_formatting import format_reference_rows
 from .schedule_display import configure_schedule_display
 
@@ -514,7 +514,7 @@ class MicrosoftProjectSession:
                 raise ProjectAutomationError(
                     f"Could not pause Microsoft Project automatic calculation: {exc}"
                 ) from exc
-            project_progress("Automatic calculation paused; epic tasks remain auto scheduled")
+            project_progress("Automatic calculation paused; primary tasks remain auto scheduled")
             yield
         finally:
             # Attempt restoration even if the setter partially succeeded before
@@ -601,6 +601,13 @@ class MicrosoftProjectSession:
         task_list = self.iter_tasks(progress_label="Verification task scan")
         tasks = self.index_tasks_by_key(config, task_list)
         summaries = self.index_rollup_summaries(config, task_list)
+        # Retired copies remain for review, but must not re-enter any native
+        # rollup after save/reopen, even if their dates fit inside its span.
+        fields = config["project_fields"]
+        for key, task in tasks.items():
+            if key not in plan.epics and str(safe_get(task, fields["row_role"])) == "Reference":
+                verify_project_value(task, "Active", False, f"retired reference={key}")
+                verify_project_value(task, fields["unmatched_project_task"], True, f"retired reference={key}")
         project_progress("Indexing Project resources for verification")
         resources = {int(resource.ID): resource for resource in self.iter_resources()} if plan.epics else {}
         count = 0
@@ -646,11 +653,14 @@ class MicrosoftProjectSession:
                     if project_date_to_iso(safe_get(task, field)) != date_text:
                         raise ProjectAutomationError(f"Jira date readback failed: {context}, field={field}.")
                     count += 1
-            verify_project_value(task, "Manual", False, context)
-            verify_project_value(task, "Active", epic.drives_schedule, context)
+            verify_project_value(task, "Manual", not epic.drives_schedule, context)
+            verify_project_value(task, "Active", True, context)
             parent = summaries.get((epic.rollup_mode, epic.rollup_key.upper()))
             self.verify_outline_parent(task, parent, context)
-            self.verify_managed_resource_assignment(task, epic.resource_group, resources)
+            if epic.drives_schedule:
+                self.verify_managed_resource_assignment(task, epic.resource_group, resources)
+            else:
+                verify_copy_isolation(task, context)
             if epic.drives_schedule:
                 predecessors = [tasks.get(key.upper()) for key in epic.predecessors]
                 if any(item is None for item in predecessors):
@@ -782,6 +792,7 @@ class MicrosoftProjectSession:
             (logical_name, project_field)
             for logical_name, project_field in config.get("project_fields", {}).items()
             if config.get("project_field_names", {}).get(logical_name)
+            and logical_name not in {"schedule_start", "schedule_finish"}
         ]
         if configured:
             project_progress(f"Configuring {len(configured)} named custom Project field(s)")
@@ -899,7 +910,8 @@ class MicrosoftProjectSession:
         rollup_tasks = self.index_rollup_summaries(config, task_list)
         self._reference_dates_synchronized = False
         project_progress("Setting Project scheduling modes")
-        self.set_auto_scheduled(task_list)
+        self.set_auto_scheduled(task_list, config, plan)
+        self.mark_unmatched_tasks(plan, config, task_by_key)
         project_progress("Ensuring rollup summary rows")
         # A new file is built in final outline order. Inserting every epic right
         # after its summary repeatedly shifts rows already written to Project.
@@ -1013,9 +1025,16 @@ class MicrosoftProjectSession:
         project_progress("Marking Project rows that no longer match Jira")
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
-    def set_auto_scheduled(self, task_list: Optional[List[Any]] = None) -> None:
+    def set_auto_scheduled(self, task_list: Optional[List[Any]] = None,
+                           config: Optional[Dict[str, Any]] = None, plan: Optional[RunPlan] = None) -> None:
+        fields = (config or {}).get("project_fields", {})
         for task in self.iter_tasks() if task_list is None else task_list:
-            self.write_task_value(task, "Manual", False, project_task_context(task))
+            key = str(safe_get(task, fields.get("j2p_key", "Text10")) or
+                      safe_get(task, fields.get("jira_key", "Text1"))).strip().upper()
+            epic = plan.epics.get(key) if plan is not None else None
+            # Do not briefly auto-schedule an existing copy during an update.
+            manual = epic is not None and not epic.drives_schedule
+            self.write_task_value(task, "Manual", manual, project_task_context(task))
 
     def iter_tasks(self, progress_label: Optional[str] = None) -> List[Any]:
         tasks = []
@@ -1211,20 +1230,21 @@ class MicrosoftProjectSession:
                 for field, desired in ((fields.get("jira_target_start", "Date1"), epic.target_start),
                                        (fields.get("jira_target_end", "Date2"), epic.target_end))
             )
-        if getattr(self, "_update_values", None) is not None and not epic.completed:
+        if epic.drives_schedule and getattr(self, "_update_values", None) is not None and not epic.completed:
             completion = self.read_task_value(task, fields.get("completion_percent", "Number7"))
             seed_completion = not (
                 getattr(self, "_update_completion_field_known", True)
                 and project_values_equal(completion, epic.percent_complete)
                 and project_values_equal(self.read_task_value(task, fields.get("jira_status", "Text9")), epic.status)
                 and source_dates_match
-                and project_values_equal(self.read_task_value(task, "Active"), epic.drives_schedule)
+                and project_values_equal(self.read_task_value(task, "Active"), True)
                 and self.get_native_resource_group(task) == epic.resource_group
             )
-        self.write_task_value(task, "Manual", False, epic_context(epic))
-        # Inactivate reference rows before any writes that could create actuals.
-        # Existing actuals are never cleared to force inactivation.
-        self.write_task_value(task, "Active", epic.drives_schedule, epic_context(epic))
+        self.write_task_value(task, "Manual", not epic.drives_schedule, epic_context(epic))
+        if not epic.drives_schedule:
+            with project_row_phase(plan, "resources_within_values"):
+                self.prepare_active_copy(task, epic)
+        self.write_task_value(task, "Active", True, epic_context(epic))
         for field, value in epic_assignments(epic, config):
             if field == "PercentComplete":
                 continue  # Seed native progress only after duration-changing date/resource writes.
@@ -1234,7 +1254,7 @@ class MicrosoftProjectSession:
             self.write_task_value(task, field, value, epic_context(epic))
         try:
             with project_row_phase(plan, "resources_within_values"):
-                resource_changed = self.set_native_resource_group(task, epic.resource_group)
+                resource_changed = self.set_native_resource_group(task, epic.resource_group) if epic.drives_schedule else False
             seed_completion = seed_completion or resource_changed is True
         except Exception as exc:
             raise ProjectAutomationError(
@@ -1258,7 +1278,7 @@ class MicrosoftProjectSession:
             )
         elif epic.drives_schedule:
             self.count_update("task_fields", "skipped")
-        verify_project_value(task, "Active", epic.drives_schedule, epic_context(epic))
+        verify_project_value(task, "Active", True, epic_context(epic))
         try:
             self.write_optional_task_value(task, "HideBar", bool(epic.completed and config.get("behavior", {}).get("hide_completed_epics", True)))
         except Exception:
@@ -1325,6 +1345,8 @@ class MicrosoftProjectSession:
                 )
             )
 
+        if not epic.drives_schedule:
+            return  # Copy dates come only from the final primary, never Jira seeds.
         if self.write_optional_task_value(task, schedule_attribute, project_date):
             return
         plan.audit_items.append(
@@ -1376,6 +1398,27 @@ class MicrosoftProjectSession:
 
     def resource_cache_enabled(self) -> bool:
         return bool(getattr(self, "_resource_cache_active", False)) or getattr(self, "_update_values", None) is not None
+
+    def prepare_active_copy(self, task: Any, epic: PlanEpic) -> None:
+        context = epic_context(epic)
+        verify_copy_isolation(task, context, assignments=False)
+        self.resource_assignment_warnings = []
+        assignments = self.resource_assignments(task)
+        if not assignments:
+            self.write_task_value(task, "Work", 0, context)
+            return  # The common update case needs no resource writes or repeat readback.
+        if any(not is_managed_group_resource(resource) for _, resource in assignments):
+            raise ProjectAutomationError(
+                f"Cannot activate copy with unmanaged resource assignments: {context}. "
+                "Assignments were preserved; copies must have no resource demand."
+            )
+        # Migrate earlier inactive references, which had managed assignments.
+        # Remove only j2p-owned assignments, before activating the row.
+        self.set_native_resource_group(task, "")
+        # An unassigned estimate must not inflate native total Work either.
+        # Actuals have already been checked and are never cleared here.
+        self.write_task_value(task, "Work", 0, context)
+        verify_copy_isolation(task, context)
 
     def set_native_resource_group(self, task: Any, resource_group: str) -> bool:
         self.resource_assignment_warnings = []
@@ -1920,6 +1963,13 @@ class MicrosoftProjectSession:
         )
         for key, task in task_by_key.items():
             self.write_optional_task_value(task, flag_field, key not in planned_keys)
+            if key not in planned_keys:
+                fields = config.get("project_fields", {})
+                role = str(safe_get(task, fields.get("row_role", "Text11")))
+                primary = str(safe_get(task, fields.get("primary_schedule_key", "Text13"))).strip().upper()
+                if role == "Reference" and primary and primary != key:
+                    verify_copy_isolation(task, f"retired reference={key}", assignments=False)
+                    self.write_task_value(task, "Active", False, f"retired reference={key}")
 
     def read_schedule_dates(
         self, plan: RunPlan, task_by_key: Dict[str, Any],
@@ -2113,7 +2163,7 @@ class MicrosoftProjectSession:
         if before is not None or plan.stats.get("project_run_mode") == "create":
             with project_phase(plan, "schedule_review"):
                 after = self.read_schedule_dates(plan, task_by_key)
-            if plan.epics:
+            if any(not epic.drives_schedule for epic in plan.epics.values()):
                 with project_phase(plan, "reference_dates"):
                     cached = getattr(self, "_reference_summary_tasks", None)
                     summaries = (cached[1] if cached and cached[0] == id(plan)
@@ -2122,6 +2172,13 @@ class MicrosoftProjectSession:
                         synchronize_reference_dates(
                             self, plan, config, task_by_key, summaries, self._scheduled_native_dates,
                         )
+                        if plan.stats["project_reference_dates"]["written"]:
+                            project_progress("Recalculating native summaries after active copy synchronization")
+                            self.recalculate()
+                    # Restoring calculation mode can calculate too. Check fresh
+                    # values after that boundary, before reports or saving.
+                    verify_reference_dates(self, plan, config, task_by_key, summaries,
+                                           verification_stage="after copy calculation")
             with project_phase(plan, "schedule_review"):
                 self.add_schedule_review_items(plan, before or {}, config, after=after)
         with project_phase(plan, "review_duration"):
@@ -2146,7 +2203,6 @@ class MicrosoftProjectSession:
             and item.field in {"Start", "Finish"} and item.old_value != item.new_value
         }
         formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
-        configured_columns = set(review_table_columns(config, []))
         with project_phase(plan, "review_candidates"):
             audit_items = list(plan.audit_items)
             progress = ProjectScanProgress("Review color candidates", len(audit_items), "audit item(s)", every=1000)
@@ -2158,11 +2214,6 @@ class MicrosoftProjectSession:
                         column = project_column_for_audit_field(item.field, config)
                         if column:
                             columns = [column]
-                            if item.field in {"Start", "Finish"}:
-                                logical = "schedule_start" if item.field == "Start" else "schedule_finish"
-                                display = config["project_fields"][logical]
-                                if display in configured_columns:
-                                    columns = [display] + ([column] if column in configured_columns else [])
                             # Confirmed date changes stay green even when the
                             # same cell also has a target-mismatch review note.
                             color_key = "changed_cell" if (lookup_key, item.field) in shifted_date_cells else item.color
@@ -2888,7 +2939,7 @@ def project_column_for_audit_field(field_name: str, config: Dict[str, Any]) -> s
     )
     mapping = {
         "Name": "Name",
-        "% Complete": "% Complete",
+        "% Complete": fields.get("completion_percent", "Number7"),
         "Predecessors": "Predecessors",
         "Successors": "Successors",
         "Finish": "Finish",
@@ -2940,8 +2991,8 @@ def review_table_standard_columns(config: Dict[str, Any]) -> List[Tuple[str, str
         ("jira_status", fields.get("jira_status", "Text9")),
         ("start", "Start"),
         ("finish", "Finish"),
-        ("schedule_start", fields.get("schedule_start", "Date3")),
-        ("schedule_finish", fields.get("schedule_finish", "Date4")),
+        ("schedule_start", "Start"),  # Compatibility aliases for previous configs.
+        ("schedule_finish", "Finish"),
         ("jira_target_start", fields.get("jira_target_start", "Date1")),
         ("jira_target_end", fields.get("jira_target_end", "Date2")),
         ("percent_complete", "% Complete"),
