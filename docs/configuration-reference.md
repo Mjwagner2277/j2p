@@ -481,6 +481,23 @@ If a fixVersion is complete by status but one or more issues are missing `Resolv
 | `as_of_date` | `""` | Optional run date override for repeatable audits and tests. Blank means today's date. |
 | `keep_audit_summary` | `true` | Adds a non-action audit detail row for each hidden completed fixVersion in CSV outputs. |
 
+## `report_review`
+
+Controls the report's grouped Focus Now review list without removing the detailed audit.
+
+```yaml
+report_review:
+  focus_days: 90
+  max_focus_items: 25
+```
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `focus_days` | `90` | Number of days from report generation included in the normal focus window. `0` includes all dated unfinished work; it does not promote undated work. |
+| `max_focus_items` | `25` | Maximum grouped actions shown in Highest Priority Fixes. Remaining current actions are collapsed under More Current Fixes. |
+
+Overdue unfinished work, serious errors on dated work, and report-wide errors remain eligible for Focus Now. Work with neither Jira target date is grouped in the collapsed Unscheduled Work section, even when it has dependency impact or errors. Decision Briefing shows its count, and the full review audit preserves every entry. A usable target start or end follows normal ranking, as does a grouped action containing dated affected work. Invalid supplied dates retain their date-error review. Project auto-scheduled dates are not Jira priority anchors.
+
 ## `planning_horizon`
 
 Bins review items by planning date so managers can separate immediate issues from future planning cleanup.
@@ -665,7 +682,7 @@ Use this section only if your organization needs different column names in the s
 
 ## `colors`
 
-Controls sandbox cell colors.
+Controls sandbox cell colors and the report diagram palette.
 
 Most users can omit this section.
 
@@ -676,7 +693,7 @@ colors:
   changed_cell: "#C6EFCE"
   cascade_root: "#FFC7CE"
   review_needed: "#FFEB9C"
-  dependency_review: "#BDD7EE"
+  dependency_review: "#F2F2F2"
   in_planning: "#D9EAD3"
 ```
 
@@ -685,9 +702,9 @@ Default meanings:
 | Color Key | Meaning |
 | --- | --- |
 | `changed_cell` | Green changed cells. |
-| `cascade_root` | Red cascade branch driver finish-date cells. |
+| `cascade_root` | Red cascade branch driver cards in the HTML report diagram; Project date cells remain green. |
 | `review_needed` | Yellow/amber review cells. |
-| `dependency_review` | Blue dependency review cells. |
+| `dependency_review` | Light-gray dependency review cells. |
 | `in_planning` | Gray/green-gray in-planning cells. |
 
 ## Configuration Checklist

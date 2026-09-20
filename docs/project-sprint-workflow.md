@@ -223,10 +223,10 @@ For Project review:
 1. Open the sandbox `.mpp`, not the source-of-truth `.mpp`.
 2. Use the Gantt Chart view.
 3. Apply the `j2p Review` table if it is not already active.
-4. Review red date cascade drivers first.
+4. Review red cascade driver cards in the manager report first.
 5. Review green changed cells.
 6. Review amber items requiring manager action.
-7. Review blue dependency review cells.
+7. Review light-gray dependency review cells.
 
 ## Step 6: Decide What Becomes Source Of Truth
 

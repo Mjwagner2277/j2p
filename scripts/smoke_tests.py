@@ -148,7 +148,7 @@ def run_smoke(output_dir: Path) -> int:
             "Story Point Ratio",
             "Story Point Ratio By Resource Group",
             "Color Case Examples",
-            "Project update only",
+            "Project run only",
             "Full Planned Epic Rows",
             "<details class=\"detail-block\">",
             "CORE-1000",

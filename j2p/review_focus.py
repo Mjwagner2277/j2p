@@ -19,7 +19,7 @@ _SCOPE_FAILURES = {
     "ExcludedMissingRollup", "ExcludedUnknownPrefix", "StoryEpicExcluded", "StoryEpicNotFound",
     "StoryMissingEpicLink", "StoryParentNotEpic", "MissingResourceGroupConfig",
 }
-_TIERS = {"Fix first": 0, "Focus now": 1, "Later": 2, "Historical": 3}
+_TIERS = {"Fix first": 0, "Focus now": 1, "Later": 2, "Unscheduled": 3, "Historical": 4}
 
 
 def _key(value: Any) -> str:
@@ -115,7 +115,9 @@ def build_review_focus(
 
     A past date alone never makes an item historical. Completion must be confirmed
     for every known affected issue, and unfinished downstream work keeps its
-    upstream action visible. ``days=0`` includes all unfinished work in Focus now.
+    upstream action visible. Undated issue groups stay in Unscheduled, including
+    those with dependency impact or errors. ``days=0`` includes all dated
+    unfinished work in Focus now.
     Supply the full ``dependency_plan`` for filtered reports so cross-team
     successors remain part of impact analysis; only ``plan`` audits are grouped.
     """
@@ -201,7 +203,16 @@ def build_review_focus(
         ]
         active_ends = [value for entity in active if (value := _date(entity.get("target_end"))) is not None]
         overdue = min((value for value in active_ends if value < as_of), default=None)
-        undated = any(not _date(entity.get("target_start")) and not _date(entity.get("target_end")) for entity in active)
+        # Only Jira dates establish priority. Blank dates are different from
+        # supplied but invalid dates, which remain actionable date errors.
+        # For grouped omissions, dated unfinished parents/children can establish
+        # urgency; a completed sibling's dates cannot. Global run/data errors
+        # without an issue identity are not undated task groups.
+        relevant_entities = active or entities
+        unscheduled = bool(entity_keys) and not invalid_dates and not any(
+            str(entity.get(field) or "").strip()
+            for entity in relevant_entities for field in ("target_start", "target_end")
+        )
         root = contexts.get(key, {})
         if key in missing_initiative_groups:
             parent_ends = [
@@ -231,26 +242,26 @@ def build_review_focus(
             critical_rank = min(critical_rank, 3)
         if downstream:
             reasons.append(f"Impacts {len(downstream)} unfinished downstream epic(s).")
-        current_scope = (not complete) and (
-            unknown or undated or not active_dates or not days or min(active_dates) <= cutoff
+        current_scope = (not complete) and bool(active_dates) and (
+            not days or min(active_dates) <= cutoff
         )
         if current_scope and any(category in _SCOPE_FAILURES for category in categories):
             reasons.append("Unfinished or unconfirmed work is omitted from schedule scope or completion totals.")
             critical_rank = min(critical_rank, 3)
 
-        if critical_rank < 4:
-            tier = "Fix first"
-        elif complete and not downstream:
+        if complete and not downstream and critical_rank == 4:
             tier = "Historical"
             reasons.append("All affected work is complete; retained for traceability.")
+        elif unscheduled:
+            tier = "Unscheduled"
+            reasons.append("No Jira target dates are supplied for the affected work; retained outside high-priority fixes.")
+        elif critical_rank < 4:
+            tier = "Fix first"
         elif downstream:
             tier = "Focus now"
-        elif unknown:
+        elif unknown and not active_dates:
             tier = "Focus now"
             reasons.append("Completion could not be confirmed.")
-        elif undated or not active_dates:
-            tier = "Focus now"
-            reasons.append("Unfinished work has no usable target dates.")
         elif not days or min(active_dates) <= cutoff:
             tier = "Focus now"
             if not overdue:
@@ -311,5 +322,6 @@ def build_review_focus(
         "focus_count": sum(group["tier"] in {"Fix first", "Focus now"} for group in groups),
         "historical_count": sum(group["tier"] == "Historical" for group in groups),
         "later_count": sum(group["tier"] == "Later" for group in groups),
+        "unscheduled_count": sum(group["tier"] == "Unscheduled" for group in groups),
         "grouped_count": len(groups),
     }

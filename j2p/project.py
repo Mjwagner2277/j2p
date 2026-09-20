@@ -169,12 +169,9 @@ def apply_plan_to_sandbox(
             project_progress("Recalculating Project after Jira updates")
             with project_phase(plan, "recalculate"):
                 session.recalculate()
-        project_progress("Analyzing schedule date changes")
-        with project_phase(plan, "schedule_review"):
-            session.add_schedule_review_items(plan, before, config)
         project_progress("Applying Project review table and cell colors")
         with project_phase(plan, "format_review"):
-            session.apply_review_formatting(plan, config)
+            session.apply_review_formatting(plan, config, before=before)
         project_progress("Saving sandbox MPP")
         with project_phase(plan, "save"):
             session.save()
@@ -883,6 +880,7 @@ class MicrosoftProjectSession:
         defer_undated_reviews: bool = False,
     ) -> None:
         self.assert_project_identity()
+        self._new_task_schedule_dates: Dict[str, ProjectTaskSnapshot] = {}
         task_list = getattr(self, "_update_task_list", None)
         if task_list is None:
             task_list = self.iter_tasks()
@@ -912,6 +910,7 @@ class MicrosoftProjectSession:
                 project_progress(f"Epic row write progress: {index}/{total_epics} row(s)")
             parent_summary_id = summary_id(epic.rollup_mode, epic.rollup_key)
             task = task_by_key.get(epic.key)
+            new_task = append_only or task is None
             try:
                 with project_row_phase(plan, "placement"):
                     if append_only:
@@ -937,6 +936,15 @@ class MicrosoftProjectSession:
                     self.update_epic_task(task, epic, config, plan, defer_undated_review=True)
                 else:
                     self.update_epic_task(task, epic, config, plan)
+                if new_task and epic.drives_schedule:
+                    # Supplied Jira targets are the initial scheduling input.
+                    # Capture defaults only for missing targets, before any
+                    # quarter-point calculation can move an undated new task.
+                    self._new_task_schedule_dates[epic.key] = ProjectTaskSnapshot(
+                        key=epic.key,
+                        start=epic.target_start or project_date_to_iso(safe_get(task, "Start")),
+                        finish=epic.target_end or project_date_to_iso(safe_get(task, "Finish")),
+                    )
             if index in checkpoints:
                 project_progress(
                     f"Recalculating after {index}/{total_epics} epic rows "
@@ -1897,45 +1905,79 @@ class MicrosoftProjectSession:
         for key, task in task_by_key.items():
             self.write_optional_task_value(task, flag_field, key not in planned_keys)
 
+    def read_schedule_dates(
+        self, plan: RunPlan, task_by_key: Dict[str, Any],
+    ) -> Dict[str, ProjectTaskSnapshot]:
+        """Read only native dates, using the existing formatting task index."""
+        epics = [epic for epic in plan.epics.values() if epic.drives_schedule]
+        progress = ProjectScanProgress("Scheduled date readback", len(epics))
+        after = {}
+        for index, epic in enumerate(epics, start=1):
+            task = task_by_key.get(epic.key.upper())
+            if task is None:
+                raise ProjectAutomationError(f"Cannot review schedule dates: Project is missing epic {epic.key}.")
+            after[epic.key] = ProjectTaskSnapshot(
+                key=epic.key,
+                start=project_date_to_iso(safe_get(task, "Start")),
+                finish=project_date_to_iso(safe_get(task, "Finish")),
+            )
+            progress.update(index)
+        return after
+
     def add_schedule_review_items(
         self,
         plan: RunPlan,
         before: Dict[str, ProjectTaskSnapshot],
         config: Dict[str, Any],
+        after: Optional[Dict[str, ProjectTaskSnapshot]] = None,
     ) -> None:
-        project_progress("Reading post-update Project task state")
-        after = self.snapshot_tasks(config)
+        if after is None:
+            project_progress("Reading post-update Project task state")
+            after = self.snapshot_tasks(config)
+        changed_starts: Dict[str, Tuple[str, str]] = {}
         changed_finishes: Dict[str, Tuple[str, str]] = {}
-        project_progress("Comparing Project finish dates for schedule review")
+        initial_dates = getattr(self, "_new_task_schedule_dates", {})
+        project_progress("Comparing Project start and finish dates for schedule review")
         for key, epic in plan.epics.items():
             if not epic.drives_schedule:
                 continue
-            before_finish = before.get(key).finish if key in before else ""
-            after_finish = after.get(key).finish if key in after else ""
-            if before_finish and after_finish and before_finish != after_finish:
-                changed_finishes[key] = (before_finish, after_finish)
-            if epic.target_end and after_finish and after_finish != epic.target_end:
-                plan.audit_items.append(
-                    AuditItem(
-                        "Review",
-                        "ScheduledDateMismatch",
-                        jira_key=epic.jira_key or key,
-                        schedule_key=key,
-                        issue_type="Epic",
-                        summary=epic.summary,
-                        field="Finish",
-                        old_value=epic.target_end,
-                        new_value=after_finish,
-                        color="review_needed",
-                        message="Auto-scheduled Project finish does not match Jira Target end.",
+            previous = before.get(key) or initial_dates.get(key)
+            current = after.get(key)
+            for field, attribute, target, changes in (
+                ("Start", "start", epic.target_start, changed_starts),
+                ("Finish", "finish", epic.target_end, changed_finishes),
+            ):
+                old_date = getattr(previous, attribute) if previous else target
+                new_date = getattr(current, attribute) if current else ""
+                if old_date and new_date and old_date != new_date:
+                    changes[key] = (old_date, new_date)
+                if target and new_date and target != new_date:
+                    plan.audit_items.append(AuditItem(
+                        "Review", "ScheduledDateMismatch",
+                        jira_key=epic.jira_key or key, schedule_key=key,
+                        issue_type="Epic", summary=epic.summary, field=field,
+                        old_value=target, new_value=new_date, color="review_needed",
+                        message=f"Auto-scheduled Project {field.lower()} does not match Jira Target {'start' if field == 'Start' else 'end'}.",
                         reviewer_action="Review schedule drivers and decide whether Project or Jira should be adjusted.",
-                    )
-                )
+                    ))
 
-        if not changed_finishes:
-            project_progress("Schedule review found no Project finish-date shifts")
+        for key, (old_start, new_start) in sorted(changed_starts.items()):
+            epic = plan.epics[key]
+            plan.audit_items.append(AuditItem(
+                "Info", "ScheduledStartChange",
+                jira_key=epic.jira_key or key, schedule_key=key,
+                issue_type="Epic", summary=epic.summary, field="Start",
+                old_value=old_start, new_value=new_start, color="changed_cell",
+                message="Start date changed after auto-scheduling.",
+                reviewer_action="Review the calculated start date and its schedule drivers.",
+            ))
+        if not changed_starts and not changed_finishes:
+            project_progress("Schedule review found no Project start/finish-date shifts")
             return
-        project_progress(f"Schedule review found {len(changed_finishes)} Project finish-date shift(s)")
+        project_progress(
+            f"Schedule review found {len(changed_starts)} start-date and "
+            f"{len(changed_finishes)} finish-date shift(s)"
+        )
         cascade_driver_keys = cascade_branch_driver_keys(plan, set(changed_finishes))
         if cascade_driver_keys:
             project_progress(
@@ -1945,32 +1987,23 @@ class MicrosoftProjectSession:
             changed_finishes.items(),
             key=lambda item: (item[0] not in cascade_driver_keys, item[1][1], item[0]),
         ):
-            epic = plan.epics.get(key)
+            epic = plan.epics[key]
             is_driver = key in cascade_driver_keys
-            plan.audit_items.append(
-                AuditItem(
-                    "Review" if is_driver else "Info",
-                    "CascadeBranchDriver" if is_driver else "CascadingDateChange",
-                    jira_key=epic.jira_key if epic and epic.jira_key else key,
-                    schedule_key=key,
-                    issue_type="Epic",
-                    summary=epic.summary if epic else "",
-                    field="Finish",
-                    old_value=old_finish,
-                    new_value=new_finish,
-                    color="cascade_root" if is_driver else "changed_cell",
-                    message=(
-                        "Finish date changed and at least one downstream successor also shifted after auto-scheduling."
-                        if is_driver
-                        else "Finish date changed after auto-scheduling."
-                    ),
-                    reviewer_action=(
-                        "Review this red finish date as a schedule branch driver before downstream changes."
-                        if is_driver
-                        else "Review as a downstream or independent schedule change."
-                    ),
-                )
-            )
+            plan.audit_items.append(AuditItem(
+                "Review" if is_driver else "Info",
+                "CascadeBranchDriver" if is_driver else "CascadingDateChange",
+                jira_key=epic.jira_key or key, schedule_key=key,
+                issue_type="Epic", summary=epic.summary, field="Finish",
+                old_value=old_finish, new_value=new_finish, color="changed_cell",
+                message=(
+                    "Finish date changed and at least one downstream successor also shifted after auto-scheduling."
+                    if is_driver else "Finish date changed after auto-scheduling."
+                ),
+                reviewer_action=(
+                    "Review this schedule branch driver before downstream changes."
+                    if is_driver else "Review as a downstream or independent schedule change."
+                ),
+            ))
 
     def add_one_day_schedule_reviews(
         self, plan: RunPlan, config: Dict[str, Any], task_by_key: Dict[str, Any],
@@ -2050,12 +2083,19 @@ class MicrosoftProjectSession:
             f"{unknown_count} duration(s) unconfirmed, {written_count} review field write(s)"
         )
 
-    def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
+    def apply_review_formatting(
+        self, plan: RunPlan, config: Dict[str, Any],
+        before: Optional[Dict[str, ProjectTaskSnapshot]] = None,
+    ) -> None:
         self.assert_project_identity()
         project_progress("Indexing Project tasks for review formatting")
         with project_phase(plan, "review_index"):
             task_by_key = self.index_tasks_by_key(config, progress_label="Review formatting")
         project_progress(f"Review formatting index complete: {len(task_by_key)} keyed task(s)")
+        if before is not None or plan.stats.get("project_run_mode") == "create":
+            with project_phase(plan, "schedule_review"):
+                after = self.read_schedule_dates(plan, task_by_key)
+                self.add_schedule_review_items(plan, before or {}, config, after=after)
         with project_phase(plan, "review_duration"):
             self.add_one_day_schedule_reviews(plan, config, task_by_key)
 
@@ -2071,6 +2111,12 @@ class MicrosoftProjectSession:
             return aliases_by_column[column]
 
         project_progress("Collecting Project review color candidates")
+        shifted_date_cells = {
+            ((item.schedule_key or item.jira_key).upper(), item.field)
+            for item in plan.audit_items
+            if item.category in {"ScheduledStartChange", "CascadeBranchDriver", "CascadingDateChange"}
+            and item.field in {"Start", "Finish"} and item.old_value != item.new_value
+        }
         formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
         with project_phase(plan, "review_candidates"):
             audit_items = list(plan.audit_items)
@@ -2082,7 +2128,10 @@ class MicrosoftProjectSession:
                     if task is not None:
                         column = project_column_for_audit_field(item.field, config)
                         if column:
-                            color = config.get("colors", {}).get(item.color, item.color)
+                            # Confirmed date changes stay green even when the
+                            # same cell also has a target-mismatch review note.
+                            color_key = "changed_cell" if (lookup_key, item.field) in shifted_date_cells else item.color
+                            color = config.get("colors", {}).get(color_key, color_key)
                             formatting_items.append((item, task, column, color, selection_aliases(column)))
                 progress.update(index)
 
@@ -3444,6 +3493,8 @@ def project_pj_color(hex_color: str, project_rgb_color: Optional[int] = None) ->
         "ffc7ce": PJ_COLOR_RED,
         "#ffeb9c": PJ_COLOR_YELLOW,
         "ffeb9c": PJ_COLOR_YELLOW,
+        "#f2f2f2": PJ_COLOR_SILVER,
+        "f2f2f2": PJ_COLOR_SILVER,
         "#bdd7ee": PJ_COLOR_BLUE,
         "bdd7ee": PJ_COLOR_BLUE,
         "#d9ead3": PJ_COLOR_SILVER,

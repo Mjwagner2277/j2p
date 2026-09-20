@@ -182,7 +182,7 @@ Common arguments (values may also come from `--profile`):
 
 During normal runs, j2p prints timestamped progress messages in the terminal so users can see that the run is still moving through CSV parsing, Project automation, state writing, and report generation.
 
-Review formatting reports task scanning, key indexing, undated-task duration checks, color-candidate collection, and visible-column resolution separately, with completed counts and elapsed time. Task scans and key indexing print every 50 rows, or after a completed row when 10 seconds have passed; candidate collection prints every 1,000 audit items or 10 seconds. Each distinct column is resolved once during preparation instead of repeatedly for every audit item. All color candidates retain their original order, including repeated colors for the same cell, and duplicate-key checks still run. The timing report lists indexing, undated-task duration checks, candidate preparation, and visible-column resolution as subsets of Format review; do not add those subsets to the formatting total again.
+Review formatting reports task scanning, key indexing, schedule-change review, undated-task duration checks, color-candidate collection, and visible-column resolution separately, with completed counts and elapsed time. Task scans and key indexing print every 50 rows, or after a completed row when 10 seconds have passed; candidate collection prints every 1,000 audit items or 10 seconds. Each distinct column is resolved once during preparation instead of repeatedly for every audit item. All color candidates retain their original order, including repeated colors for the same cell, and duplicate-key checks still run. Schedule-change review reuses the task index and reads only scheduled Start/Finish dates. The timing report lists indexing, schedule-change review, undated-task duration checks, candidate preparation, and visible-column resolution as subsets of Format review; do not add those subsets to the formatting total again.
 
 During Project automation, the slowest phases are usually Project recalculation, review cell coloring, and saving the `.mpp`. `--debug-visible` makes these phases easier to observe but can also make them slower because Microsoft Project is actively repainting its window while COM commands run.
 
@@ -284,7 +284,7 @@ Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Repor
 3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
 4. Review `Rollup Status` for initiative/fixVersion progress. Rollups with no completion points (In Planning) are omitted from this HTML section, including resource-group reports. The complete plan, Project rows, state, and CSV audit retain them. All rollups with completion points show their actual progress status and percentage, including versions whose epic rows are all references. Completion includes every member; reference rows affect scheduling placement and do not reduce version completion credit. Rollups sort by Target End, earliest first, with missing dates last. Initiatives use their own Jira target end; fixVersions use the latest target end among their member epic tasks, including references. Resource-group views retain the whole rollup’s target date. Due Status marks dates before the report generation date as Past due (independently of completion), the same date as Due today, and later dates as Upcoming. Missing dates show Not set. Summary CSV and state outputs also retain the target end.
 5. Review `Schedule Cascade Review` for date-change branches after Microsoft Project recalculates the sandbox.
-6. Start remediation with `Focus Now` and its first 25 grouped fixes. Warnings from reference rows and missing/excluded parents are consolidated so the same underlying fix appears once. Each action explains its priority, affected issues, unfinished downstream issues, target end, and next action. Expand `More Current Fixes`, `Later Work`, or `Historical Cleanup` as needed.
+6. Start remediation with `Focus Now` and its first 25 grouped fixes. Warnings from reference rows and missing/excluded parents are consolidated so the same underlying fix appears once. Each action explains its priority, affected issues, unfinished downstream issues, target end, and next action. Expand `More Current Fixes`, `Later Work`, `Unscheduled Work`, or `Historical Cleanup` as needed.
 7. Expand `Full Review Audit` for `Review Type Summary` and `Reviewer Action Needed By Planning Horizon`. These retain every underlying review entry; the focus view does not remove data from the CSV audit or alter Project calculations.
 8. Review `Project Key Rollup Mapping`.
 9. Review `Color Key` and `Color Case Examples`.
@@ -293,7 +293,7 @@ Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Repor
 12. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
 13. Open the sandbox `.mpp` and compare colored cells with the report.
 
-`report_review.focus_days` defaults to 90 days from report generation; set it to `0` for all unfinished work. `report_review.max_focus_items` defaults to 25. Overdue unfinished work, unknown dates, and serious dependency errors remain visible. Completed work is moved to Historical Cleanup only when no known open parent/child scope or downstream dependency is affected. Completion follows configured `done_statuses`; Cancelled is not silently reclassified. These are report priorities, not a calculated Microsoft Project critical path. The older planning-horizon buckets remain available for audit and do not decide the focus ranking.
+`report_review.focus_days` defaults to 90 days from report generation; set it to `0` for all dated unfinished work. `report_review.max_focus_items` defaults to 25. Overdue unfinished work and serious errors on dated work remain visible. Work with neither Jira target date stays out of Focus Now and Highest Priority Fixes, even when it has dependency impact or errors. Its grouped actions and full evidence remain in the collapsed Unscheduled Work section, with a count in Decision Briefing. A usable target start or end is enough to follow the normal ranking, and a grouped action with dated affected work remains eligible. Invalid supplied dates still require date-error review; report-wide errors remain eligible. Project auto-scheduled dates do not substitute for Jira target dates in this ranking, and `focus_days: 0` does not promote undated work. Completed work is moved to Historical Cleanup only when no known open parent/child scope or downstream dependency is affected. Completion follows configured `done_statuses`; Cancelled is not silently reclassified. These are report priorities, not a calculated Microsoft Project critical path. The older planning-horizon buckets remain available for audit and do not decide the focus ranking.
 
 Epics missing a Jira target start or end have a note at the beginning of the Project Dependency Review column (Text8 by default). It names the missing field and explains that Project uses existing dates or the nearest available dates allowed by dependencies and calendars. Reference rows identify which primary row drives the schedule. Jira target dates remain blank, and existing dependency notes are retained. The date note clears automatically when both Jira targets are supplied in a later export. These notes are informational and do not add warnings to Focus Now.
 
@@ -301,21 +301,21 @@ After the final Project recalculation, a driving epic with both Jira target date
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
-`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. Branches are collapsed by default and ordered from most downstream affected issues to least downstream affected issues. In resource-group reports, this section includes cascade branches whose starting issue belongs to that resource group; downstream affected issues remain visible even when they belong to another group. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
+`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. These colors describe report diagram roles; all changed Project Start/Finish cells remain green. Branches are collapsed by default and ordered from most downstream affected issues to least downstream affected issues. In resource-group reports, this section includes cascade branches whose starting issue belongs to that resource group; downstream affected issues remain visible even when they belong to another group. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
 
 ## Color Key
 
 | Color | Meaning | Typical Reviewer Decision |
 | --- | --- | --- |
-| Green | Changed cell. | Confirm the Jira value should update the sandbox schedule. |
-| Red | Cascade branch driver finish date. Red overrides green. | Review first because this changed item has changed downstream successors. |
+| Green | Changed cell, including autoscheduled Start/Finish. | Confirm the changed value or Project schedule. |
+| Red (report diagram only) | Cascade branch driver card; Project date cells remain green. | Review first because this changed item has changed downstream successors. |
 | Yellow/amber | Unmatched item, excluded item, or manager review needed. | Decide whether Jira/configuration/source Project data should be corrected. |
-| Blue | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
+| Light gray | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning when that column is exposed. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
 j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. By default, the table shows only manager-facing columns such as Jira key, summary, resource group, dependency review, status, Project start/finish, percent complete, and predecessors. Rollup categories, row role, fixVersion, internal matching keys, story/hour detail fields, Jira target dates, and review flag fields are hidden unless a schedule owner exposes them with `review_table.exposed_columns` in YAML. Hidden fields are still written and reported, but they are not colored in the default Project review table.
 
-To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. The colors appear in the left task-sheet cells, not on the right-side Gantt bars and not inside the HTML manager report.
+To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. Cell formatting appears in the left task sheet, not on the right-side Gantt bars. The HTML manager report has its own cascade diagram colors; red branch driver cards do not make the corresponding Project date cells red.
 
 If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories. Current j2p versions try exact RGB cell coloring first and then Project's built-in direct `CellColor` palette as a fallback.
 
@@ -519,12 +519,12 @@ Jira target dates are stored in Project custom fields:
 
 Jira exports may include dates with times or `DD-MON-YY` syntax, such as `17-SEP-26 12:00 AM`. j2p normalizes supported Jira target-date values to `YYYY-MM-DD` before writing them to Microsoft Project.
 
-The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `update` run:
+The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `create` or `update` run:
 
 - Changed Jira target-date cells are colored green.
-- If Project auto-scheduling shifts finish dates, every changed finish with changed downstream successors is colored red.
-- Changed finish dates with no changed downstream successor remain green.
-- If a Project scheduled finish does not match Jira `Target end`, the mismatch is reported.
+- If Project auto-scheduling shifts Start or Finish, the changed Project date cells are green, including cascade branch drivers.
+- Red branch driver cards appear only in the HTML report diagram when a changed finish also has changed downstream successors.
+- If a Project scheduled Start/Finish does not match the corresponding Jira target date, the mismatch is reported.
 - The HTML reports add a `Schedule Cascade Review` visual that groups those finish changes into dependency branches.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
@@ -763,10 +763,10 @@ After running `validate`:
 After running `update`:
 
 - Open the sandbox `.mpp`, not the source-of-truth `.mpp`.
-- Review red finish-date cells first.
+- Review red cascade driver cards in the manager report first.
 - Review green changed cells.
 - Review amber unmatched/excluded items.
-- Review blue dependency review cells.
+- Review light-gray dependency review cells.
 - Compare the sandbox against the manager report before accepting schedule changes.
 
 ## Full Training Scenario

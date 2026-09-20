@@ -2,7 +2,7 @@
 
 import hashlib
 import unittest
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from j2p.config import load_config
@@ -38,6 +38,11 @@ class YerpReviewFocusTests(unittest.TestCase):
         cls.display_plan = completed_fixversion_report_plan(cls.plan)
         cls.focus = build_review_focus(cls.display_plan)
         cls.groups = {group['key']: group for group in cls.focus['groups']}
+        cls.contexts = cls.plan.stats['review_issue_context']
+        cls.children = defaultdict(set)
+        for key, context in cls.contexts.items():
+            if context.get('parent_epic'):
+                cls.children[context['parent_epic']].add(key)
 
     @classmethod
     def tearDownClass(cls):
@@ -53,7 +58,83 @@ class YerpReviewFocusTests(unittest.TestCase):
         self.assertEqual(sum(group['audit_count'] for group in focus['groups']), len(expected))
         self.assertEqual(len({group['key'] for group in focus['groups']}), len(focus['groups']))
         self.assertEqual(focus['grouped_count'],
-                         focus['focus_count'] + focus['later_count'] + focus['historical_count'])
+                         focus['focus_count'] + focus['later_count']
+                         + focus['unscheduled_count'] + focus['historical_count'])
+
+    def assert_priority_has_jira_dates(self, focus):
+        for group in focus['groups']:
+            if group['tier'] not in {'Fix first', 'Focus now'}:
+                continue
+            # An omission is one parent/initiative action, so its unfinished
+            # parent and siblings are relevant alongside the audited issues.
+            entity_keys = {item.jira_key for item in group['items'] if item.jira_key}
+            parents = set()
+            for item in group['items']:
+                context = self.contexts.get(item.jira_key, {})
+                if item.category in {'StoryEpicExcluded', 'StoryEpicNotFound'}:
+                    parents.add(context.get('parent_epic') or item.old_value)
+                elif item.category == 'ExcludedMissingRollup' and context.get('missing_rollup_parent'):
+                    parents.add(item.jira_key)
+            for parent in parents:
+                entity_keys.update(self.children.get(parent, ()))
+                if parent in self.contexts:
+                    entity_keys.add(parent)
+            entities = [self.contexts.get(key, {}) for key in entity_keys]
+            relevant = [entity for entity in entities if entity.get('completed') is not True] or entities
+            with self.subTest(high_priority_group=group['key']):
+                self.assertTrue(any(entity.get('target_start') or entity.get('target_end')
+                                    for entity in relevant),
+                                'High-priority issue groups need a Jira target-date anchor')
+
+    def test_high_priority_groups_have_jira_dates(self):
+        self.assert_priority_has_jira_dates(self.focus)
+        self.assertGreater(self.focus['unscheduled_count'], 0)
+
+    def test_undated_omitted_epic_and_all_43_audits_remain_unscheduled(self):
+        key = 'SSWSW-11775'
+        group = self.groups[key]
+        affected = self.children[key] | {key}
+        unfinished = [self.contexts[item_key] for item_key in affected
+                      if self.contexts[item_key].get('completed') is not True]
+        self.assertEqual(len(unfinished), 43)
+        self.assertTrue(all(not item.get('target_start') and not item.get('target_end')
+                            for item in unfinished))
+        self.assertEqual(group['tier'], 'Unscheduled')
+        self.assertEqual(group['audit_count'], 43)
+        self.assertEqual(Counter(item.category for item in group['items']),
+                         Counter({'ExcludedMissingRollup': 1, 'StoryEpicExcluded': 42}))
+        self.assertTrue(group['actions'])
+        self.assertTrue(any('No Jira target dates' in reason for reason in group['reasons']))
+
+    def test_undated_dependency_drivers_do_not_enter_high_priority(self):
+        all_unfinished = {group['key']: group for group in
+                          build_review_focus(self.display_plan, days=0)['groups']}
+        for key in ['SSWSYS-3846', 'SSWSYS-3848', 'SSWSYS-3849']:
+            with self.subTest(epic=key):
+                context = self.contexts[key]
+                self.assertFalse(context['completed'])
+                self.assertFalse(context['target_start'])
+                self.assertFalse(context['target_end'])
+                group = self.groups[key]
+                self.assertEqual(group['tier'], 'Unscheduled')
+                self.assertEqual(all_unfinished[key]['tier'], 'Unscheduled')
+                self.assertEqual(group['downstream_count'], 2)
+                self.assertTrue(any('Impacts 2 unfinished downstream' in reason
+                                    for reason in group['reasons']))
+                self.assertEqual(group['audit_count'], 1)
+
+    def test_undated_parent_with_dated_unfinished_children_still_has_priority(self):
+        key = 'SSWSW-10328'
+        self.assertFalse(self.contexts[key]['target_start'])
+        self.assertFalse(self.contexts[key]['target_end'])
+        dated_open_children = {child for child in self.children[key]
+                               if self.contexts[child].get('completed') is not True
+                               and (self.contexts[child].get('target_start')
+                                    or self.contexts[child].get('target_end'))}
+        self.assertEqual(dated_open_children,
+                         {'SSWSW-11847', 'SSWSW-11848', 'SSWSW-11849', 'SSWSW-11850'})
+        self.assertIn(self.groups[key]['tier'], {'Fix first', 'Focus now'})
+        self.assertEqual(self.groups[key]['audit_count'], 25)
 
     def test_every_actionable_entry_survives_grouping(self):
         self.assert_conserved(self.display_plan, self.focus)
@@ -116,7 +197,9 @@ class YerpReviewFocusTests(unittest.TestCase):
                 self.assertTrue(any(item.category == 'ExcludedMissingRollup' for item in actual))
                 self.assertTrue(any(item.category in {'StoryEpicExcluded', 'StoryEpicNotFound',
                                                       'StoryMissingEpicLink'} for item in actual))
-                self.assert_conserved(scoped, build_review_focus(scoped, dependency_plan=self.plan))
+                scoped_focus = build_review_focus(scoped, dependency_plan=self.plan)
+                self.assert_conserved(scoped, scoped_focus)
+                self.assert_priority_has_jira_dates(scoped_focus)
                 scoped_all.extend(actual)
         self.assertEqual(Counter(map(id, scoped_all)), Counter(map(id, original)))
         self.assertEqual(fingerprints(self.files), self.before)

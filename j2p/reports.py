@@ -575,10 +575,10 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
             "",
             "Color key:",
             "",
-            "- Green: changed cell",
-            "- Red: cascade branch driver finish date; red overrides green",
+            "- Green: changed cell, including autoscheduled Start/Finish",
+            "- Red: cascade branch driver cards in the report diagram only; Project date cells remain green",
             "- Yellow/amber: unmatched or manager review needed",
-            "- Blue: dependency review marker",
+            "- Light gray: dependency review marker",
             "- Gray/green-gray: in planning",
             "",
         ]
@@ -1004,6 +1004,7 @@ def decision_briefing(plan: RunPlan, focus: Optional[Dict[str, Any]] = None) -> 
         ("Review Entries", focus["total_audit_count"], f"{focus['grouped_count']} grouped actions, including future planning"),
         ("Rollups In Progress", in_progress_rollups, f"{completed_rollups} complete"),
         ("Later / Historical", f"{focus['later_count']} / {focus['historical_count']}", "Grouped actions available below"),
+        ("Unscheduled Work", focus["unscheduled_count"], "Grouped actions without Jira target dates; expand below"),
         ("Completed Epics", len(completed_items), "Completed since comparison baseline"),
         ("Logged Hours", format_number(plan.stats.get("logged_hours", 0)), "Rolled up from child work"),
         (
@@ -1039,11 +1040,15 @@ def render_review_focus(focus: Dict[str, Any], days: int, limit: int) -> str:
     current = [group for group in groups if group["tier"] in {"Fix first", "Focus now"}]
     later = [group for group in groups if group["tier"] == "Later"]
     historical = [group for group in groups if group["tier"] == "Historical"]
-    window = f"the next {days} days" if days else "all unfinished work"
+    unscheduled = [group for group in groups if group["tier"] == "Unscheduled"]
+    window = f"the next {days} days" if days else "all dated unfinished work"
     intro = (
         '<section><h2>Focus Now</h2><p>Start with these grouped fixes. '
-        f'This view covers {html_escape(window)}, overdue unfinished work, unknown dates, '
-        'and serious dependency or data errors. Repeated reference rows and child warnings '
+        f'This view covers {html_escape(window)}, overdue unfinished work, '
+        'and serious dependency or data errors on dated work. Report-wide errors also remain visible. '
+        'Work without Jira target dates is kept in Unscheduled Work, including its dependency and error details. '
+        'Project auto-scheduled dates do not promote it into this priority list. '
+        'Repeated reference rows and child warnings '
         'with the same missing or excluded parent are grouped into one action.</p>'
         '<p class="muted">Ranking uses error severity, dependency reach, dates, and affected issues; '
         'it is not a calculated Project critical path. Completed work is historical only when '
@@ -1060,6 +1065,11 @@ def render_review_focus(focus: Dict[str, Any], days: int, limit: int) -> str:
         parts.append(render_collapsible(
             "Later Work", render_focus_group_table("Future Fixes", later),
             f"{len(later)} grouped actions beyond the focus window.",
+        ))
+    if unscheduled:
+        parts.append(render_collapsible(
+            "Unscheduled Work", render_focus_group_table("Undated Work Review", unscheduled),
+            f"{len(unscheduled)} grouped actions without Jira target dates; retained outside the priority list.",
         ))
     if historical:
         parts.append(render_collapsible(
@@ -1179,6 +1189,7 @@ def render_schedule_cascade_review(
         "<p class=\"cascade-help\">"
         "Red cards are changed finish dates that also have changed downstream successors. "
         "Green cards are changed finish dates with no changed downstream successor. "
+        "These diagram colors describe branch roles; all changed Project Start/Finish cells are green. "
         "Branches are collapsed and ordered from most downstream affected issues to least. "
         "Nested branches follow the Jira dependency links written to Project as predecessor relationships. "
         "Shared downstream issues are shown once, with references on other paths. "
@@ -1373,7 +1384,7 @@ def render_schedule_cascade_table(plan: RunPlan, cascade_items: Dict[str, AuditI
     return render_table(
         "Schedule Cascade Detail",
         [
-            "Color",
+            "Diagram Color",
             "Jira Key",
             "Schedule Key",
             "Summary",
@@ -1606,7 +1617,7 @@ def render_project_update_metrics(plan: RunPlan) -> str:
             "configure_fields": "Configure custom fields",
             "apply_changes": "Create Project rows" if creating else "Apply changes and prepare dependencies",
             "recalculate": "Final Project recalculation",
-            "schedule_review": "Review schedule changes",
+            "schedule_review": "Format review: schedule changes (subset)",
             "review_index": "Format review: task indexing (subset)",
             "review_duration": "Format review: undated task durations (subset)",
             "review_candidates": "Format review: color candidates (subset)",
@@ -1631,6 +1642,12 @@ def render_project_update_metrics(plan: RunPlan) -> str:
             "postwrite pass. Total Project update includes session startup and "
             "shutdown; it excludes initial CSV preflight, sandbox copying, and "
             "HTML/CSV report generation.</p>"
+        )
+        parts.append(
+            '<p class="muted">Task indexing, schedule-change review, undated-task duration checks, '
+            'color-candidate preparation, and visible-column resolution are subsets of Format review; '
+            'do not add them to its total again. Schedule-change review reuses the task index '
+            'and reads only scheduled Start/Finish dates.</p>'
         )
     if row_seconds:
         labels = {
@@ -1770,7 +1787,7 @@ def color_label(color: str) -> str:
         "changed_cell": "Green",
         "cascade_root": "Red",
         "review_needed": "Yellow/amber",
-        "dependency_review": "Blue",
+        "dependency_review": "Light gray",
         "in_planning": "Gray/green-gray",
     }.get(color, "")
 
@@ -1779,10 +1796,10 @@ def color_key() -> str:
     return """<section>
   <h2>Color Key</h2>
   <div class="swatches">
-    <div class="swatch"><span class="dot changed"></span>Green: changed cell</div>
-    <div class="swatch"><span class="dot cascade"></span>Red: cascade branch driver finish date; overrides green</div>
+    <div class="swatch"><span class="dot changed"></span>Green: changed cell, including autoscheduled Start/Finish</div>
+    <div class="swatch"><span class="dot cascade"></span>Red: cascade branch driver cards in the report diagram only; Project date cells remain green</div>
     <div class="swatch"><span class="dot review"></span>Yellow/amber: unmatched or manager review needed</div>
-    <div class="swatch"><span class="dot dependency"></span>Blue: dependency review marker</div>
+    <div class="swatch"><span class="dot dependency"></span>Light gray: dependency review marker</div>
     <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
   </div>
 </section>"""
@@ -1794,13 +1811,13 @@ def render_color_examples(plan: RunPlan) -> str:
             "changed_cell",
             "Green",
             "Changed cell",
-            "A Jira value changed, a dependency changed, or a new epic was added.",
+            "A Jira value changed, Project autoscheduling shifted Start/Finish, a dependency changed, or a new epic was added.",
         ),
         (
             "cascade_root",
             "Red",
-            "Cascade branch driver finish change",
-            "Project update only. Appears when a changed Project finish also has changed downstream successors.",
+            "Cascade branch driver card (report diagram only)",
+            "Project run only. Appears when a changed Project finish also has changed downstream successors; the Project Finish cell remains green.",
         ),
         (
             "review_needed",
@@ -1810,9 +1827,9 @@ def render_color_examples(plan: RunPlan) -> str:
         ),
         (
             "dependency_review",
-            "Blue",
+            "Light gray",
             "Dependency review",
-            "A dependency was changed, skipped, circular, self-referencing, or points outside the included epic set.",
+            "A dependency needs review, Jira dates are missing, or a reference row needs explanation.",
         ),
         (
             "in_planning",
@@ -1823,21 +1840,26 @@ def render_color_examples(plan: RunPlan) -> str:
     ]
     rows = []
     for color_key_name, display_color, meaning, fallback in cases:
-        item = next((audit for audit in plan.audit_items if audit.color == color_key_name), None)
+        if color_key_name == "cascade_root":
+            item = next((audit for audit in plan.audit_items if audit.category == "CascadeBranchDriver"), None)
+        else:
+            item = next((audit for audit in plan.audit_items if audit.color == color_key_name), None)
         if item:
             jira_key = item.jira_key
             category = item.category
             field = item.field
             example = item.message
+            if color_key_name == "cascade_root":
+                example += " Red applies to the report diagram card only; the Project Finish cell remains green."
         elif color_key_name == "cascade_root":
             candidate = schedule_driver_candidate(plan)
             jira_key = candidate.jira_key if candidate else ""
-            category = "Project update only"
+            category = "Project run only"
             field = "Finish"
             example = (
-                "Validate mode does not choose the red cell. This kind of Jira target-end change "
-                "becomes a red example only after Microsoft Project auto-scheduling identifies it "
-                "as a changed finish date with changed downstream successors."
+                "Validate mode cannot identify red report diagram cards. This kind of Jira target-end change "
+                "becomes a red diagram example only after Microsoft Project auto-scheduling identifies it "
+                "as a changed finish date with changed downstream successors. The Project Finish cell remains green."
             )
         else:
             jira_key = ""

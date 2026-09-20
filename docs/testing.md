@@ -111,10 +111,10 @@ Review the generated sandbox `.mpp` and confirm:
 - Story Point Ratio is visible in the `Story Point Ratio` custom number field
 - predecessor links match Jira blocker relationships; Project may display row IDs such as `12FS` instead of Jira keys
 - changed cells are green
-- dependency review cells are blue
+- dependency review cells are light gray
 - unmatched review cells are amber
 - no Microsoft Project Font formatting dialog appears, including when `--debug-visible` is used
-- cascade branch driver finish changes are red when applicable
+- autoscheduled Start/Finish changes are green, including cascade branch drivers; red driver cards appear only in the report diagram
 - `Schedule Cascade Review` appears in the overall manager report and resource-group reports, shows red branch drivers with downstream changed finish dates, orders branches from most affected to least affected, and collapses every branch by default
 - Resource-group HTML reports include schedule cascade branches that start with that resource group
 - completed driving epics remain active at native 100%, with configured Gantt-bar hiding; reference rows remain inactive and show progress in Story Point Completion %

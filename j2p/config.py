@@ -174,7 +174,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "changed_cell": "#C6EFCE",
         "cascade_root": "#FFC7CE",
         "review_needed": "#FFEB9C",
-        "dependency_review": "#BDD7EE",
+        "dependency_review": "#F2F2F2",
         "in_planning": "#D9EAD3",
     },
 }

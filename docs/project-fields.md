@@ -27,7 +27,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
 | `% Complete` / `PercentComplete` | Driving epics only | Yes | Native duration-based progress. Incomplete driving rows are seeded after date/resource writes and may recalculate; differences are audited. Completed driving rows must retain 100%. Summary and reference native progress is not written. Story-point reporting uses custom completion fields. |
 | `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Used with `Date1` to show Jira target start and with Project scheduling for review. |
-| `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison, green changed finish dates, and red cascade branch driver finish dates. |
+| `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison and green changed finish-date cells; red cascade branch driver cards appear only in the report diagram. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
 | `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the task so Project's native `Resource Group` field is populated. |
@@ -44,7 +44,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `rollup_mode` | `Text4` | `Rollup Mode` | Summary rows, epics | Stores `initiative` or `fixVersion`. Used with `rollup_key` to find existing summary rows and keep mixed-mode schedules stable. |
 | `rollup_key` | `Text5` | `Rollup Key` | Summary rows, epics | Stores the initiative Jira key or exact fixVersion string. Enables rollup comparison, summary row lookup, and moving epics under a changed parent/rollup. |
 | `jira_key_prefix` | `Text7` | `Jira Key Prefix` | Epics | Stores prefixes such as `CORE`, `WEB`, or `PLAT`. Used for review visibility and per-project-key output alignment. `Text6` is intentionally unused because resource group is native. |
-| `dependency_review` | `Text8` | `Dependency Review` | Epics | Stores human-readable dependency notes, such as missing targets, self-dependencies, circular skips, or reference-row notes. Cells using this field are colored blue when dependency review is needed. |
+| `dependency_review` | `Text8` | `Dependency Review` | Epics | Stores human-readable dependency notes, such as missing targets, self-dependencies, circular skips, or reference-row notes. Cells using this field are colored light gray when dependency review is needed. |
 | `jira_status` | `Text9` | `Jira Status` | Epics | Stores the Jira epic status. Used for baseline comparison and completed-since-last-update reporting. Child story status is not written to Project rows. |
 | `j2p_key` | `Text10` | `j2p Unique Key` | Epics, generated secondary rows | Primary stable schedule row identity. Ordinary epics use the Jira key. Secondary reference/split rows use a generated key such as `PLAT-4028::FV::SHOP-DELIVERABLE-A::DE89D3A4`. This field prevents multi-fixVersion rows from overwriting one another. |
 | `row_role` | `Text11` | `j2p Row Role` | Epics, generated secondary rows | Shows `Scheduled`, `Primary`, `Reference`, or `Split`. Enables reviewer understanding of multi-fixVersion handling and helps developers reason about whether a row is a normal epic, a primary row, a non-driving reference, or a split row. |
@@ -100,10 +100,10 @@ Review coloring:
 - `project_column_for_audit_field()` maps audit fields to the Project column that should be colored.
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
 - `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and reported in HTML/CSV, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
-- Red `cascade_root` coloring applies to native `Finish` when a changed finish has changed downstream successors after Project scheduling analysis.
-- Green changed-cell coloring applies to the changed native/custom field.
+- Red `cascade_root` coloring identifies report diagram cards when a changed finish has changed downstream successors; it does not override green native Project date cells.
+- Green changed-cell coloring applies to the changed native/custom field, including all autoscheduled `Start` and `Finish` shifts.
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.
-- Blue dependency coloring commonly applies to `dependency_review`.
+- Light-gray dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
 - Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property and does not call Project font-formatting commands.
 

@@ -147,3 +147,6 @@ project_fields:
   drives_schedule: Flag4
   jira_target_start: Date1
   jira_target_end: Date2
+
+colors:
+  dependency_review: "#F2F2F2"

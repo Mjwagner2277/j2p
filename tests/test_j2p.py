@@ -1009,7 +1009,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("Historical Items Suppressed", manager_report)
         self.assertIn("Completed FixVersions Hidden", manager_report)
 
-    def test_schedule_review_marks_every_changed_branch_driver_red(self) -> None:
+    def test_schedule_review_keeps_changed_dates_green_and_identifies_branch_drivers(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
 
         def epic(key: str, summary: str, successors: list[str] | None = None) -> PlanEpic:
@@ -1066,17 +1066,17 @@ class J2PPlanningTests(unittest.TestCase):
         MicrosoftProjectSession.add_schedule_review_items(session, plan, before, config)
 
         self.assertEqual(cascade_branch_driver_keys(plan, set(after)), {"TEAM-A", "TEAM-B"})
-        red_keys = {
+        driver_keys = {
             item.jira_key
             for item in plan.audit_items
-            if item.category == "CascadeBranchDriver" and item.color == "cascade_root"
+            if item.category == "CascadeBranchDriver" and item.color == "changed_cell"
         }
         green_keys = {
             item.jira_key
             for item in plan.audit_items
             if item.category == "CascadingDateChange" and item.color == "changed_cell"
         }
-        self.assertEqual(red_keys, {"TEAM-A", "TEAM-B"})
+        self.assertEqual(driver_keys, {"TEAM-A", "TEAM-B"})
         self.assertEqual(green_keys, {"TEAM-C", "TEAM-D", "TEAM-E"})
 
         html = render_schedule_cascade_review(plan, project_update_run=True)
@@ -1559,7 +1559,8 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(project_pj_color("#C6EFCE"), 3)
         self.assertEqual(project_pj_color("#FFC7CE"), 1)
         self.assertEqual(project_pj_color("#FFEB9C"), 2)
-        self.assertEqual(project_pj_color("#BDD7EE"), 5)
+        self.assertEqual(project_pj_color("#F2F2F2"), 15)
+        self.assertEqual(project_pj_color("#BDD7EE"), 5)  # Explicit legacy/custom blue remains supported.
         self.assertEqual(project_pj_color("#D9EAD3"), 15)
 
     def test_select_project_cell_treats_false_return_as_failure(self) -> None:

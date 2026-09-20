@@ -130,8 +130,8 @@ Manually confirm:
 - the sandbox `.mpp` is timestamped
 - custom fields are named correctly
 - changed cells are green
-- cascade branch driver finish-date cells are red when applicable
-- dependency review cells are blue
+- autoscheduled Start/Finish changes are green, including cascade branch drivers; red driver cards appear only in the report diagram
+- dependency review cells are light gray
 - unmatched/excluded cells are amber
 - in-planning cells are marked
 - completed driving epics remain active at native 100%; configured Gantt-bar hiding is best effort, and references remain inactive with custom story-point progress

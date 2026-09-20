@@ -131,13 +131,19 @@ Circular dependencies are skipped and reported so the sandbox can still be gener
 
 Jira `Target start` and `Target end` map into Project custom date fields and are used to update sandbox schedule dates. Supported Jira export date values, including date-time values such as `17-SEP-26 12:00 AM`, are normalized to `YYYY-MM-DD` before Microsoft Project automation writes them.
 
-The sandbox is auto-scheduled. If Project auto-scheduling shifts finish dates:
+The sandbox is auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
 
-- every changed finish with changed downstream successors is colored red
-- changed finish dates with no changed downstream successor are colored green
-- any Project scheduled finish that does not match Jira `Target end` is reported
+- every changed Project Start/Finish cell is colored green, including cascade branch drivers
+- the report diagram uses red cards for changed finishes with changed downstream successors and green cards for other changed finishes
+- any Project scheduled Start/Finish that does not match the corresponding Jira target date is reported
 - the HTML reports include a `Schedule Cascade Review` section that visualizes changed finish dates by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes a collapsible detail table
 - each resource-group HTML report includes schedule cascade branches whose starting issue belongs to that resource group
+
+## Review Priorities
+
+Focus Now and Highest Priority Fixes use Jira target dates when prioritizing issue work. Work with neither target date belongs in a collapsed Unscheduled Work section, even when it has dependency impact or errors; Decision Briefing includes an unscheduled grouped-action count. The complete audit and diagnostics remain available.
+
+A usable target start or end follows normal ranking. Grouped actions with dated affected work remain eligible, malformed supplied dates retain date-error review, and report-wide errors remain eligible. Project auto-scheduled dates do not make undated Jira work high priority. Setting `report_review.focus_days` to `0` widens the window for dated unfinished work without promoting undated work.
 
 ## Historical Warning Suppression
 
@@ -158,9 +164,9 @@ When `warning_suppression.before` is set:
 | Color | Meaning |
 | --- | --- |
 | Green | Changed cell |
-| Red | Cascade branch driver finish date; overrides green |
+| Red (report diagram only) | Cascade branch driver card; Project date cells remain green |
 | Yellow/amber | Unmatched or manager review needed |
-| Blue | Dependency review marker |
+| Light gray | Dependency review marker |
 | Gray/green-gray | In planning |
 
 ## Completed Epics

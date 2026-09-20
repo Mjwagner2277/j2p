@@ -126,8 +126,8 @@ class ProjectSelectiveUpdateTests(unittest.TestCase):
         with patch('j2p.project.MicrosoftProjectSession', return_value=session):
             result = apply_plan_to_sandbox(Path('sandbox.mpp'), self.plan, self.config)
         session.snapshot_tasks.assert_called_once_with(self.config)
-        session.add_schedule_review_items.assert_called_once_with(self.plan, before, self.config)
-        session.apply_review_formatting.assert_called_once_with(self.plan, self.config)
+        session.add_schedule_review_items.assert_not_called()  # Reuses the formatting index instead.
+        session.apply_review_formatting.assert_called_once_with(self.plan, self.config, before=before)
         session.recalculate.assert_called_once_with()
         session.save.assert_called_once_with()
         session.verify_saved_plan.assert_called_once_with(self.plan, self.config)

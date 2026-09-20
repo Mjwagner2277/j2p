@@ -132,7 +132,7 @@ class CalculationCheckpointTests(unittest.TestCase):
                 def calculating():
                     self.assertEqual(session.app.Calculation, 0)
                     events.append('calculate')
-                def finished(*args):
+                def finished(*args, **kwargs):
                     self.assertEqual(session.app.Calculation, -1)
                     self.assertEqual(events[-1], 'calculate')
                 session.apply_plan.side_effect = writing

@@ -1,11 +1,13 @@
 """The focused report retains the full audit and source context."""
 import tempfile
+from copy import deepcopy
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from j2p.config import ConfigError, load_config
 from j2p.core import build_run_plan
+from j2p.models import AuditItem
 from j2p.reports import render_review_focus, resource_group_run_plan, write_manager_html
 from j2p.review_focus import build_review_focus
 
@@ -63,6 +65,65 @@ class ReviewFocusReportTests(unittest.TestCase):
         self.assertIn('2 more grouped actions', content)
         self.assertNotIn('<script>', content)
         self.assertIn('&lt;script&gt;', content)
+
+    def test_undated_actions_are_collapsed_outside_high_priority_with_evidence_retained(self):
+        plan, config = self.plan()
+        for context in plan.stats['review_issue_context'].values():
+            context['target_start'] = ''
+            context['target_end'] = ''
+        plan.audit_items.append(AuditItem(
+            'Error', 'ProjectDependencyWriteFailed', jira_key='TEAM-1',
+            summary='Undated dependency error', field='Predecessors',
+            message='The supplied dependency was rejected.',
+            reviewer_action='Review the dependency details.',
+        ))
+        plan.stats['review_issue_context']['TEAM-4'] = {
+            'summary': 'Dated work needing review', 'completed': False,
+            'target_start': '', 'target_end': '2026-09-20',
+            'resource_group': 'Team',
+        }
+        plan.audit_items.append(AuditItem(
+            'Review', 'InPlanning', jira_key='TEAM-4',
+            summary='Dated work needing review', reviewer_action='Confirm the planned work.',
+        ))
+        before = deepcopy(plan)
+        focus = build_review_focus(plan)
+        self.assertEqual(focus['unscheduled_count'], 2)
+        self.assertEqual(focus['focus_count'], 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            report = Path(tmp) / 'report.html'
+            write_manager_html(report, plan, config, None, None)
+            content = report.read_text()
+        highest = content.split('<h2>Highest Priority Fixes</h2>', 1)[1].split('</section>', 1)[0]
+        self.assertIn('TEAM-4', highest)
+        self.assertNotIn('TEAM-1', highest)
+        self.assertNotIn('TEAM-999', highest)
+        unscheduled = content.split('<summary><span>Unscheduled Work</span>', 1)
+        self.assertTrue(unscheduled[0].endswith('<details class="detail-block">'))
+        self.assertIn('TEAM-1', unscheduled[1].split('</details>', 1)[0])
+        self.assertIn('TEAM-999', unscheduled[1].split('</details>', 1)[0])
+        self.assertIn('<span>Unscheduled Work</span><strong>2</strong>', content)
+        audit = content.split('<summary><span>Full Review Audit</span>', 1)[1].split('</details>', 1)[0]
+        self.assertIn('TEAM-2', audit)
+        self.assertIn('TEAM-3', audit)
+        self.assertIn('ProjectDependencyWriteFailed', audit)
+        self.assertIn('The supplied dependency was rejected.', audit)
+        self.assertEqual(plan, before)
+
+    def test_unlimited_focus_window_still_keeps_undated_work_outside_priority_table(self):
+        plan, _ = self.plan()
+        for context in plan.stats['review_issue_context'].values():
+            context['target_start'] = ''
+            context['target_end'] = ''
+        focus = build_review_focus(plan, days=0)
+        content = render_review_focus(focus, 0, 25)
+        highest = content.split('<h2>Highest Priority Fixes</h2>', 1)[1].split('</section>', 1)[0]
+        self.assertIn('No items.', highest)
+        self.assertNotIn('TEAM-999', highest)
+        self.assertIn('Unscheduled Work', content)
+        self.assertIn('all dated unfinished work', content)
+        self.assertIn('Project auto-scheduled dates do not promote it', content)
+        self.assertNotIn('unknown dates', content)
 
     def test_focus_configuration_is_validated(self):
         self.assertEqual(load_config(None, {'report_review': {'focus_days': 0}})['report_review']['focus_days'], 0)

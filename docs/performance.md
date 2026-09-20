@@ -94,9 +94,13 @@ The manager report's **Report Context** and `run-manifest.json` expose:
   custom field configuration, applying changes, final recalculation, schedule
   review, review formatting, saving, save/reopen verification, and total Project
   update time. Applying changes includes the row-quarter calculation checkpoints
-  before dependency writes. The final recalculation has its own timing. Total includes
-  session startup/shutdown but excludes CSV preflight, sandbox copying, and
-  HTML/CSV report generation.
+  before dependency writes. The final recalculation has its own timing. Schedule
+  review runs inside review formatting after task indexing, reuses that index, and
+  reads only Start/Finish. Its time, task indexing, undated-task duration checks,
+  candidate preparation, and visible-column resolution are formatting subsets;
+  do not add these subsets to the formatting total again. Total includes session
+  startup/shutdown but excludes CSV preflight, sandbox copying, and HTML/CSV
+  report generation.
 
 Metrics remain run-wide when displayed in filtered resource-group reports.
 Skipped date/completion seeds also count as skipped operations when unchanged
