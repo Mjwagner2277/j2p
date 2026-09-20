@@ -1164,7 +1164,7 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertEqual(html.count('<details class="cascade-branch">'), 2)
         self.assertIn("6 downstream affected issues", html)
-        self.assertLess(html.index("TEAM-A: TEAM-A summary"), html.index("TEAM-X"))
+        self.assertLess(html.index("TEAM-A: TEAM-A summary"), html.index("TEAM-X: TEAM-X summary"))
 
     def test_schedule_cascade_review_filters_branch_roots_by_resource_group(self) -> None:
         def epic(key: str, summary: str, resource_group: str, successors: list[str] | None = None) -> PlanEpic:
@@ -1235,7 +1235,9 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("TEAM-B", html)
         self.assertIn("TEAM-C", html)
         self.assertNotIn("TEAM-X", html)
-        self.assertNotIn("TEAM-Y", html)
+        self.assertIn("TEAM-Y", html)  # Team-local leaf remains in date details.
+        diagram = html.split('<div class="cascade-flow">', 1)[1].split('</section>', 1)[0]
+        self.assertNotIn("TEAM-Y", diagram)  # Its branch starts in another team.
 
     def test_resource_group_uses_project_resource_assignment(self) -> None:
         session = object.__new__(MicrosoftProjectSession)

@@ -301,7 +301,9 @@ After the final Project recalculation, a driving epic with both Jira target date
 
 The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
 
-`Schedule Cascade Review` is the clearest place to understand schedule movement. Red cards are branch drivers: changed finish dates that also have changed downstream successors. Green cards are changed finish dates with no changed downstream successor. These colors describe report diagram roles; all changed Project Start/Finish cells remain green. Branches are collapsed by default and ordered from most downstream affected issues to least downstream affected issues. In resource-group reports, this section includes cascade branches whose starting issue belongs to that resource group; downstream affected issues remain visible even when they belong to another group. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail table keeps the exact old/new finish dates.
+`Schedule Cascade Review` separates date movement from differences against Jira. `Start Changes` and `Finish Changes` count recorded native Project date changes, and `Project Date Changes` lists the old/new dates, including start-only changes and independent tasks. Existing rows compare against the input `.mpp`; newly added rows and creation runs compare against the dates initially supplied or captured before scheduling. `Jira Target Differences` separately compares Jira targets with the current Project dates and indicates whether each date changed during this run or no new change was recorded. An amber date cell can indicate an existing Jira/Project mismatch or a rejected write; its color alone does not mean the schedule moved during this run. For example, a Project finish that already differed from Jira in the input file can stay amber even when the update leaves it unchanged. Recorded native date changes are green.
+
+The branch diagram explains changed finish dates linked by dependencies. Red cards are branch drivers: changed finishes with changed downstream successors. Green cards are other changed finishes in those branches. These colors describe report diagram roles; all changed Project Start/Finish cells remain green. Branches are collapsed by default and ordered by downstream impact. Resource-group reports include that group's start/finish changes and Jira target differences even when those issues do not start a cascade branch. Their diagrams show branches starting in that group and retain downstream affected issues from other groups. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail tables retain the exact dates.
 
 ## Color Key
 
@@ -524,8 +526,9 @@ The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `
 - Changed Jira target-date cells are colored green.
 - If Project auto-scheduling shifts Start or Finish, the changed Project date cells are green, including cascade branch drivers.
 - Red branch driver cards appear only in the HTML report diagram when a changed finish also has changed downstream successors.
-- If a Project scheduled Start/Finish does not match the corresponding Jira target date, the mismatch is reported.
-- The HTML reports add a `Schedule Cascade Review` visual that groups those finish changes into dependency branches.
+- The `Project Date Changes` table lists recorded native Start/Finish movement from the input Project file (or initial scheduling dates for new rows), including changes without a cascade.
+- `Jira Target Differences` lists scheduled dates that differ from Jira, distinguishing dates changed this run from those with no new change recorded. A mismatch can remain amber without any new schedule movement.
+- The `Schedule Cascade Review` diagram groups linked finish changes into dependency branches; the absence of a branch does not rule out start-only or independent changes.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
 

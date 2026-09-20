@@ -1112,48 +1112,49 @@ def render_schedule_cascade_review(
     root_resource_group: Optional[str] = None,
 ) -> str:
     cascade_items = schedule_cascade_change_items(plan)
-    if not cascade_items:
-        message = (
-            "No Project auto-schedule finish-date changes were detected in this update run."
-            if project_update_run
-            else (
-                "No Project auto-schedule finish-date changes were evaluated in this report. "
-                "This section is populated during create/update runs after Microsoft Project recalculates the sandbox."
-            )
-        )
-        return f"<section><h2>Schedule Cascade Review</h2><p class=\"empty\">{html_escape(message)}</p></section>"
-
     changed_keys = set(cascade_items)
     driver_keys = {
         key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
     }
-    leaf_keys = changed_keys - driver_keys
     graph = CascadeGraph({key: changed_successors(plan, key, changed_keys) for key in changed_keys})
-    roots = graph.roots
     downstream_counts = graph.downstream_counts
     branch_roots = [
-        key for key in roots if key in driver_keys or changed_successors(plan, key, changed_keys)
+        key for key in graph.roots if key in driver_keys or changed_successors(plan, key, changed_keys)
     ]
+    date_categories = {"ScheduledStartChange", "CascadeBranchDriver", "CascadingDateChange", "ScheduledDateMismatch"}
+    date_items = [item for item in plan.audit_items if item.category in date_categories]
     if root_resource_group:
         branch_roots = [
             key for key in branch_roots if epic_resource_group(plan, key) == root_resource_group
         ]
-    branch_roots = sorted(
-        branch_roots,
-        key=lambda key: (-downstream_counts.get(key, 0), key),
-    )
-    if root_resource_group:
+        # The diagram follows team-owned branches. Counts and date tables must
+        # also retain the team's independent changes and leaves of other teams.
         visible_keys = graph.reachable(branch_roots)
-        cascade_items = {
-            key: item for key, item in cascade_items.items() if key in visible_keys
-        }
+        date_items = [
+            item for item in date_items
+            if (item.schedule_key or item.jira_key).upper() in visible_keys
+            or audit_item_resource_group(plan, item) == root_resource_group
+        ]
+        visible_keys.update((item.schedule_key or item.jira_key).upper() for item in date_items)
+        cascade_items = {key: item for key, item in cascade_items.items() if key in visible_keys}
         changed_keys = set(cascade_items)
-        driver_keys = {
-            key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
-        }
-        leaf_keys = changed_keys - driver_keys
+        driver_keys &= changed_keys
+    branch_roots = sorted(branch_roots, key=lambda key: (-downstream_counts.get(key, 0), key))
+    leaf_keys = changed_keys - driver_keys
+    comparison = render_schedule_date_comparison(plan, date_items, project_update_run)
+    heading = '<section><h2>Schedule Cascade Review</h2>'
+    if not cascade_items:
+        if project_update_run or date_items:
+            baseline = "initial scheduling dates" if plan.stats.get("project_run_mode") == "create" else "input Project baseline or initial dates for new rows"
+            message = f"No new Project Finish changes were detected relative to the {baseline}."
+        else:
+            message = (
+                "No Project date changes or Jira target differences were evaluated in this report. "
+                "This comparison is populated during create/update runs after Microsoft Project recalculates the sandbox."
+            )
+        return heading + comparison + f'<p class="empty">{html_escape(message)}</p></section>'
+
     metrics = [
-        ("Finish Changes", len(changed_keys), "Changed after Project recalculated the sandbox"),
         ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
         ("Green Finish Changes", len(leaf_keys), "Changed leaves or independent rows"),
     ]
@@ -1166,11 +1167,7 @@ def render_schedule_cascade_review(
         branches.append(render_cascade_branch(plan, cascade_items, root_key, downstream_counts, projection))
     branch_html = "".join(branches)
     if not branch_html:
-        branch_html = (
-            "<p class=\"empty\">"
-            + html_escape(cascade_empty_message(root_resource_group))
-            + "</p>"
-        )
+        branch_html = '<p class="empty">' + html_escape(cascade_empty_message(root_resource_group)) + '</p>'
     detail_table = render_collapsible(
         "Schedule Cascade Detail",
         render_schedule_cascade_table(plan, cascade_items),
@@ -1183,10 +1180,10 @@ def render_schedule_cascade_review(
             'Review the complete detail table or audit-detail.csv for omitted branches.</p>'
         )
     return (
-        "<section><h2>Schedule Cascade Review</h2>"
-        "<div class=\"cascade-review\">"
-        f"<div class=\"briefing-grid\">{render_metric_cards(metrics)}</div>"
-        "<p class=\"cascade-help\">"
+        heading + comparison
+        + '<div class="cascade-review">'
+        + f'<div class="briefing-grid">{render_metric_cards(metrics)}</div>'
+        + '<p class="cascade-help">'
         "Red cards are changed finish dates that also have changed downstream successors. "
         "Green cards are changed finish dates with no changed downstream successor. "
         "These diagram colors describe branch roles; all changed Project Start/Finish cells are green. "
@@ -1197,10 +1194,70 @@ def render_schedule_cascade_review(
         "The complete Schedule Cascade Detail table and audit-detail.csv retain all finish changes."
         "</p>"
         f"{limit_notice}"
-        f"<div class=\"cascade-flow\">{branch_html}</div>"
+        f'<div class="cascade-flow">{branch_html}</div>'
         "</div></section>"
         f"{detail_table}"
     )
+
+
+def render_schedule_date_comparison(
+    plan: RunPlan, items: Sequence[AuditItem], evaluated: bool,
+) -> str:
+    """Explain native date movement separately from Jira/Project disagreement."""
+    if not evaluated and not items:
+        return ""
+    changes = {}
+    mismatches = {}
+    for item in items:
+        key = (item.schedule_key or item.jira_key).upper()
+        if item.category == "ScheduledDateMismatch":
+            mismatches[(key, item.field)] = item
+        else:
+            field = "Start" if item.category == "ScheduledStartChange" else "Finish"
+            changes[(key, field)] = item
+    creating = plan.stats.get("project_run_mode") == "create"
+    baseline = "initial scheduling dates" if creating else "input Project baseline or initial dates for new rows"
+    metrics = [
+        ("Start Changes", sum(field == "Start" for _, field in changes), f"Compared with {baseline}"),
+        ("Finish Changes", sum(field == "Finish" for _, field in changes), f"Compared with {baseline}"),
+        ("Jira Target Differences", len(mismatches), "Date cells where Project differs from Jira; may already exist in the baseline"),
+    ]
+    parts = [
+        f'<div class="briefing-grid">{render_metric_cards(metrics)}</div>',
+        '<p class="muted">Green date cells mark recorded Start/Finish changes. '
+        'Yellow date cells can flag a Jira target mismatch or a rejected date write; '
+        'yellow does not necessarily mean the date changed during this run. '
+        f'Date changes are compared with the {baseline}; Jira target differences compare '
+        'the current Project date with Jira. A target difference alone does not establish a cascade.</p>',
+    ]
+    if changes:
+        rows = [[
+            item.jira_key or key, item.schedule_key or key, item.summary, field,
+            item.old_value, item.new_value,
+        ] for (key, field), item in sorted(changes.items())]
+        parts.append(render_collapsible(
+            "Project Date Changes",
+            render_table("Project Date Changes", [
+                "Jira Key", "Schedule Key", "Summary", "Field",
+                "Initial Scheduling Date" if creating else "Previous / Initial Date", "Current Project Date",
+            ], rows),
+            f"{len(changes)} Start/Finish change(s), including independent and start-only changes.",
+        ))
+    if mismatches:
+        rows = [[
+            item.jira_key or key, item.schedule_key or key, item.summary, field,
+            item.old_value, item.new_value,
+            "Changed this run" if (key, field) in changes else "No new change recorded",
+        ] for (key, field), item in sorted(mismatches.items())]
+        parts.append(render_collapsible(
+            "Jira Target Differences",
+            render_table("Jira Target Differences", [
+                "Jira Key", "Schedule Key", "Summary", "Field", "Jira Target",
+                "Current Project Date", "Change This Run",
+            ], rows),
+            f"{len(mismatches)} Jira/Project date difference(s); these are not necessarily new changes.",
+        ))
+    return "".join(parts)
 
 
 def schedule_cascade_change_items(plan: RunPlan) -> Dict[str, AuditItem]:

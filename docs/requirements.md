@@ -135,9 +135,10 @@ The sandbox is auto-scheduled. During creation and updates, if Project auto-sche
 
 - every changed Project Start/Finish cell is colored green, including cascade branch drivers
 - the report diagram uses red cards for changed finishes with changed downstream successors and green cards for other changed finishes
-- any Project scheduled Start/Finish that does not match the corresponding Jira target date is reported
-- the HTML reports include a `Schedule Cascade Review` section that visualizes changed finish dates by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes a collapsible detail table
-- each resource-group HTML report includes schedule cascade branches whose starting issue belongs to that resource group
+- `Start Changes` and `Finish Changes` count recorded native date movement from the input Project file for existing rows or initial schedule seeds for newly added rows and creation runs; `Project Date Changes` includes start-only and independent changes
+- `Jira Target Differences` separately lists scheduled Start/Finish dates that differ from Jira, indicating whether each changed this run or no new change was recorded; an amber mismatch alone does not establish schedule movement
+- the HTML reports include a `Schedule Cascade Review` section that visualizes linked finish changes by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes collapsible detail tables
+- each resource-group HTML report includes its own native date changes and Jira target differences, plus schedule cascade branches whose starting issue belongs to that resource group and their downstream issues
 
 ## Review Priorities
 

@@ -1957,7 +1957,7 @@ class MicrosoftProjectSession:
                         jira_key=epic.jira_key or key, schedule_key=key,
                         issue_type="Epic", summary=epic.summary, field=field,
                         old_value=target, new_value=new_date, color="review_needed",
-                        message=f"Auto-scheduled Project {field.lower()} does not match Jira Target {'start' if field == 'Start' else 'end'}.",
+                        message=f"Current Project {field.lower()} differs from Jira Target {'start' if field == 'Start' else 'end'}; this is not necessarily a new date change.",
                         reviewer_action="Review schedule drivers and decide whether Project or Jira should be adjusted.",
                     ))
 

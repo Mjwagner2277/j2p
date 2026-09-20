@@ -26,7 +26,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | --- | --- | --- | --- |
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
 | `% Complete` / `PercentComplete` | Driving epics only | Yes | Native duration-based progress. Incomplete driving rows are seeded after date/resource writes and may recalculate; differences are audited. Completed driving rows must retain 100%. Summary and reference native progress is not written. Story-point reporting uses custom completion fields. |
-| `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Used with `Date1` to show Jira target start and with Project scheduling for review. |
+| `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Native changes appear in `Project Date Changes` and use green cells; differences from `Date1` appear separately in `Jira Target Differences`. |
 | `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison and green changed finish-date cells; red cascade branch driver cards appear only in the report diagram. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
@@ -102,7 +102,7 @@ Review coloring:
 - `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and reported in HTML/CSV, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
 - Red `cascade_root` coloring identifies report diagram cards when a changed finish has changed downstream successors; it does not override green native Project date cells.
 - Green changed-cell coloring applies to the changed native/custom field, including all autoscheduled `Start` and `Finish` shifts.
-- Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields.
+- Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields. A native date can be amber because it differs from the Jira target or a write was rejected, without any new date movement. `Project Date Changes` compares native dates against the input Project file (or initial scheduling dates for new rows); `Jira Target Differences` compares current native dates against Jira. Confirmed native date changes stay green even when they also differ from Jira.
 - Light-gray dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
 - Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property and does not call Project font-formatting commands.
