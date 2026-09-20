@@ -8,7 +8,6 @@ from j2p.core import build_run_plan
 from j2p.jira import read_csv_rows
 from j2p.project import MicrosoftProjectSession, managed_resource_marker, project_date_for_com, summary_assignments
 from j2p.project_values import epic_assignments
-from j2p.reference_dates import reference_rollup_ids
 from test_project_update_integration import RecordingTask
 from test_project_verification_scaling import CountedCollection
 
@@ -40,7 +39,7 @@ def changed_child_plan(config, baseline=None):
 
 
 class SummaryDateTask(SimpleNamespace):
-    """Project summary native dates are read-only; editable text controls dates."""
+    """Model native summary dates and the danger of editing their text values."""
 
     def __init__(self, **values):
         start, finish = values.pop('Start'), values.pop('Finish')
@@ -61,7 +60,12 @@ class SummaryDateTask(SimpleNamespace):
 
     @StartText.setter
     def StartText(self, value):
-        self._start_native = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+        start = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+        delta = start - self._start_native
+        self._start_native = start
+        for child in getattr(self, 'summary_shift_children', ()):
+            child.Start += delta
+            child.Finish += delta
 
     @property
     def FinishText(self):
@@ -108,9 +112,8 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
         tasks.append(task)
         return task
 
-    manual_rollups = reference_rollup_ids(plan)
     for summary in sorted(plan.summaries.values(), key=lambda item: item.summary_id):
-        task = row(Summary=True, Manual=summary.summary_id in manual_rollups,
+        task = row(Summary=True, Manual=False,
                    **dict(summary_assignments(summary, config)))
         summaries[summary.summary_id] = task
     for epic in sorted(plan.epics.values(), key=lambda item: item.key):
@@ -152,15 +155,24 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
         if not epic.drives_schedule:
             primary = epics[epic.primary_schedule_key]
             epics[epic.key].task.Start, epics[epic.key].task.Finish = primary.Start, primary.Finish
+    fields = config['project_fields']
+    for epic in plan.epics.values():
+        primary = epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
+        setattr(epics[epic.key].task, fields['schedule_start'], primary.Start)
+        setattr(epics[epic.key].task, fields['schedule_finish'], primary.Finish)
     for summary in plan.summaries.values():
-        if summary.summary_id not in manual_rollups:
-            continue
         members = [epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
                    for epic in plan.epics.values()
                    if epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key]
         task = summaries[summary.summary_id].task
-        task._start_native = min(member.Start for member in members)
-        task._finish_native = max(member.Finish for member in members)
+        if members:
+            setattr(task, fields['schedule_start'], min(member.Start for member in members))
+            setattr(task, fields['schedule_finish'], max(member.Finish for member in members))
+        driving = [epics[epic.key] for epic in plan.epics.values()
+                   if epic.drives_schedule and epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key]
+        if driving:
+            task._start_native = min(member.Start for member in driving)
+            task._finish_native = max(member.Finish for member in driving)
     session = object.__new__(MicrosoftProjectSession)
     session.project = SimpleNamespace(Tasks=CountedCollection(tasks), Resources=CountedCollection(resources.values()))
     session.app = SimpleNamespace(ActiveProject=session.project)

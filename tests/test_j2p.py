@@ -1382,8 +1382,8 @@ class J2PPlanningTests(unittest.TestCase):
                 "Resource Group",
                 "Text8",
                 "Text9",
-                "Start",
-                "Finish",
+                "Date3",
+                "Date4",
                 "% Complete",
                 "Predecessors",
             ],
@@ -1504,8 +1504,9 @@ class J2PPlanningTests(unittest.TestCase):
 
         self.assertNotIn("Date2", prepared_columns)
         self.assertNotIn("Text5", prepared_columns)
-        self.assertIn("Finish", prepared_columns)
-        self.assertEqual(colored_columns, ["Finish"])
+        self.assertIn("Date4", prepared_columns)
+        self.assertNotIn("Finish", prepared_columns)
+        self.assertEqual(colored_columns, ["Date4"])
 
     def test_prepare_formatting_view_updates_existing_review_table_on_name_conflict(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")

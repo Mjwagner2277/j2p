@@ -60,12 +60,13 @@ class ReferencePipelineTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             session.apply_review_formatting(plan, config, before={})
         self.assertEqual(session.project.Tasks.item_reads, len(session.project.Tasks.items))
-        self.assertEqual(primary.writes, [])
+        self.assertEqual({field for field, _ in primary.writes}, {'Date3', 'Date4'})
         self.assertEqual((epics[reference.key].Start, epics[reference.key].Finish),
                          (primary.Start, primary.Finish))
         header = summaries['fixVersion:Release B']
-        self.assertEqual((header.Start, header.Finish), (primary.Start, primary.Finish))
-        self.assertIs(header.Manual, True)
+        self.assertEqual((header.Date3, header.Date4), (primary.Start, primary.Finish))
+        self.assertIs(header.Manual, False)
+        self.assertFalse(any(field in {'Start', 'Finish', 'StartText', 'FinishText'} for field, _ in header.writes))
         self.assertIs(epics[reference.key].Active, False)
         self.assertEqual(session.app.Calculation, -1)
         session.app.FontStrikethrough.assert_called_once_with(False)
@@ -86,7 +87,7 @@ class ReferencePipelineTests(unittest.TestCase):
                 ProjectAutomationError, 'synchronized reference dates'):
             session.verify_plan(plan, config)
 
-    def test_unchanged_update_keeps_manual_rollup_without_mode_or_date_churn(self):
+    def test_unchanged_update_keeps_automatic_rollup_without_mode_or_date_churn(self):
         session, plan, config, epics, summaries, reference = fixture()
         with redirect_stdout(io.StringIO()):
             session.begin_selective_update()
@@ -96,22 +97,21 @@ class ReferencePipelineTests(unittest.TestCase):
             session.apply_review_formatting(plan, config, before=before)
         self.assertEqual([write for task in session.project.Tasks.items for write in task.writes], [])
         self.assertEqual(plan.stats['project_reference_dates']['written'], 0)
-        self.assertIs(summaries['fixVersion:Release B'].Manual, True)
+        self.assertIs(summaries['fixVersion:Release B'].Manual, False)
 
-    def test_removing_last_reference_restores_automatic_summary_once(self):
+    def test_legacy_manual_summary_is_restored_to_automatic_before_schedule_readback(self):
         session, plan, config, epics, summaries, reference = fixture()
-        del plan.epics[reference.key]
-        plan.summaries = build_summaries(plan.epics, config)
+        header = summaries['fixVersion:Release B']
+        header.task.Manual = True
         with redirect_stdout(io.StringIO()):
             session.begin_selective_update()
             session.snapshot_tasks(config)
             session.apply_plan(plan, config)
             session.end_selective_update(plan)
-        header = summaries['fixVersion:Release B']
         self.assertIs(header.Manual, False)
         self.assertEqual([write for write in header.writes if write[0] == 'Manual'], [('Manual', False)])
         self.assertIs(epics[reference.key].Active, False)
-        self.assertIs(epics[reference.key].Flag2, True)
+        self.assertIs(epics[reference.key].Flag2, False)
 
 
 if __name__ == '__main__':

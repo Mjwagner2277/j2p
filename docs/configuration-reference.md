@@ -147,6 +147,8 @@ project_fields:
   drives_schedule: Flag4
   jira_target_start: Date1
   jira_target_end: Date2
+  schedule_start: Date3
+  schedule_finish: Date4
 ```
 
 ## Top-Level Fields
@@ -543,8 +545,8 @@ review_table:
     - resource_group
     - dependency_review
     - jira_status
-    - start
-    - finish
+    - schedule_start
+    - schedule_finish
     - percent_complete
     - predecessors
   include_audit_columns: false
@@ -569,7 +571,7 @@ review_table:
     - summary
     - resource_group
     - dependency_review
-    - finish
+    - schedule_finish
     - percent_complete
     - predecessors
   include_audit_columns: false
@@ -594,8 +596,10 @@ Supported friendly names for `exposed_columns`:
 | `resource_group` | Native Project Resource Group. |
 | `dependency_review` | Human-readable dependency review notes. |
 | `jira_status` or `status` | Jira status. |
-| `start` | Project scheduled start. |
-| `finish` | Project scheduled finish. |
+| `schedule_start` | Final primary start on epics/references; earliest member start on rollups (default visible date). |
+| `schedule_finish` | Final primary finish on epics/references; latest member finish on rollups (default visible date). |
+| `start` | Native Project scheduled start; optional. |
+| `finish` | Native Project scheduled finish; optional. |
 | `jira_target_start` or `target_start` | Jira target start. |
 | `jira_target_end` or `target_end` | Jira target end. |
 | `percent_complete` | Native Project `% Complete`. |
@@ -662,6 +666,8 @@ Supported fields:
 | `drives_schedule` | `Flag4` | Indicates whether the row drives Project schedule logic. |
 | `jira_target_start` | `Date1` | Jira target start. |
 | `jira_target_end` | `Date2` | Jira target end. |
+| `schedule_start` | `Date3` | Final schedule start for display; rollups include all member primary schedules. |
+| `schedule_finish` | `Date4` | Final schedule finish for display; rollups include all member primary schedules. |
 
 For developer-level detail on what each Project field enables in matching, rollups, dependency review, coloring, and reporting, see `docs/project-fields.md`.
 

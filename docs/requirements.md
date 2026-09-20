@@ -75,7 +75,7 @@ only 3 to overall counted points under the reference policy. Separate completion
 point fields make this distinction visible. These per-version completion totals
 must not be summed as a portfolio total.
 
-After final scheduling, inactive references mirror their primary task's native Start/Finish. FixVersion summaries containing references use the earliest Start and latest Finish across all members, resolving references to primary schedules. This includes both all-reference and mixed groups. Only those summary headers use Manual mode for their j2p-managed date windows; all epic tasks, including inactive references, remain Auto Scheduled. The reference-date pass does not change Jira targets, primary task schedules, activation, dependencies, or completion math.
+After final scheduling, inactive references mirror their primary task's native Start/Finish. All epic and summary rows remain Auto Scheduled. The visible `Schedule Start`/`Schedule Finish` fields (Date3/Date4 by default) show final primary dates on member rows and the earliest/latest member dates on summaries, including all-reference and mixed groups. Gantt summary bars use these display dates. Native summary dates are left to Project; no header date is written to control children. The display pass verifies unchanged primary schedules and does not change Jira targets, activation, dependencies, or completion math.
 
 For fixVersion rollups, j2p can hide stale completed releases from HTML manager reports without a release metadata file. A fixVersion is considered complete when every issue in the CSV that declares that fixVersion has a status in `done_statuses`. If every completed issue has a usable `Resolved` date and the latest `Resolved` date is older than the configured threshold, the rollup is hidden from HTML manager reports while remaining in detailed CSV outputs and the Project sandbox.
 
@@ -135,7 +135,7 @@ Jira `Target start` and `Target end` map into Project custom date fields and are
 
 Driving tasks are auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
 
-- every changed Project Start/Finish cell is colored green, including cascade branch drivers
+- each native Project Start/Finish change colors its visible Schedule Start/Finish cell green, including cascade branch drivers; explicitly displayed native date columns are also colored
 - the HTML has one `Cascading Schedule Drivers` section for upstream Finish changes linked to downstream Start/Finish movement affecting unfinished work with Jira target dates; isolated changes, mismatches alone, and completed-only branches do not qualify
 - branches sort by the number of unique affected unfinished dated issues and are collapsed by default; summaries show the driver key/name, previous/current Finish, and affected count, with linked Start/Finish changes inside
 - work missing both Jira target dates is not promoted as a driver, but can remain as context within a branch

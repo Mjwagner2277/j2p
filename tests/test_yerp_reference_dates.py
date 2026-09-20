@@ -17,7 +17,7 @@ from j2p.reference_dates import (
 from yerp_project_support import FILES, YERP, project_from_yerp_plan
 
 
-def manual_rollup_keys(plan):
+def reference_rollup_keys(plan):
     ids = reference_rollup_ids(plan)
     return {(summary.rollup_mode, summary.key.upper()) for summary in plan.summaries.values()
             if summary.summary_id in ids}
@@ -69,26 +69,24 @@ class YerpReferenceDateTests(unittest.TestCase):
         }
 
     def assert_reference_geometry(self):
-        manual = manual_rollup_keys(self.plan)
-        self.assertGreater(len(manual), 0)
+        self.assertGreater(len(reference_rollup_keys(self.plan)), 0)
+        fields = self.config['project_fields']
         for key, epic in self.plan.epics.items():
             task = self.epics[key]
-            if epic.drives_schedule:
-                continue
-            primary = self.epics[epic.primary_schedule_key]
-            self.assertEqual((task.Start, task.Finish), (primary.Start, primary.Finish), key)
-            self.assertIs(task.Active, False, key)
+            primary = self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
+            self.assertEqual((getattr(task, fields['schedule_start']), getattr(task, fields['schedule_finish'])),
+                             (primary.Start, primary.Finish), key)
             self.assertIs(task.Manual, False, key)
+            if not epic.drives_schedule:
+                self.assertEqual((task.Start, task.Finish), (primary.Start, primary.Finish), key)
+                self.assertIs(task.Active, False, key)
         for identity, task in self.summary_map.items():
-            if identity not in manual:
-                self.assertIs(task.Manual, False, identity)
-                continue
             members = [self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
                        for epic in self.plan.epics.values()
                        if (epic.rollup_mode, epic.rollup_key.upper()) == identity]
-            self.assertEqual(task.Start, min(member.Start for member in members), identity)
-            self.assertEqual(task.Finish, max(member.Finish for member in members), identity)
-            self.assertIs(task.Manual, True, identity)
+            self.assertEqual(getattr(task, fields['schedule_start']), min(member.Start for member in members), identity)
+            self.assertEqual(getattr(task, fields['schedule_finish']), max(member.Finish for member in members), identity)
+            self.assertIs(task.Manual, False, identity)
 
     def test_current_real_plan_reference_dates_are_already_stable_and_verify(self):
         original = copy.deepcopy(self.plan)
@@ -101,20 +99,20 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual(self.plan.epics, original.epics)
         self.assertEqual(self.plan.summaries, original.summaries)
         references = [epic for epic in self.plan.epics.values() if not epic.drives_schedule]
-        manual_summaries = [summary for summary in self.plan.summaries.values()
-                            if (summary.rollup_mode, summary.key.upper()) in manual_rollup_keys(self.plan)]
+        reference_summaries = [summary for summary in self.plan.summaries.values()
+                               if (summary.rollup_mode, summary.key.upper()) in reference_rollup_keys(self.plan)]
         self.assertEqual(len(references), 495)
-        self.assertTrue(any(summary.driving_epic_count == 0 for summary in manual_summaries))
-        self.assertTrue(any(summary.driving_epic_count > 0 for summary in manual_summaries))
+        self.assertTrue(any(summary.driving_epic_count == 0 for summary in reference_summaries))
+        self.assertTrue(any(summary.driving_epic_count > 0 for summary in reference_summaries))
 
     def test_final_primary_time_shifts_propagate_to_every_reference_membership_once(self):
         refs_by_primary = {}
         for epic in self.plan.epics.values():
             if not epic.drives_schedule:
                 refs_by_primary.setdefault(epic.primary_schedule_key, []).append(epic)
-        manual = manual_rollup_keys(self.plan)
+        reference_rollups = reference_rollup_keys(self.plan)
         candidates = [key for key in refs_by_primary
-                      if (self.plan.epics[key].rollup_mode, self.plan.epics[key].rollup_key.upper()) in manual]
+                      if (self.plan.epics[key].rollup_mode, self.plan.epics[key].rollup_key.upper()) in reference_rollups]
         primary_key = max(candidates, key=lambda key: len(refs_by_primary[key]))
         reference_rows = refs_by_primary[primary_key]
         self.assertGreater(len(reference_rows), 1)
@@ -129,21 +127,23 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.epics[primary_key].task.Finish = finish
         self.synchronize()
         memberships = [self.plan.epics[primary_key], *reference_rows]
+        fields = self.config['project_fields']
+        display_fields = {fields['schedule_start'], fields['schedule_finish']}
         for epic in memberships:
             row = self.epics[epic.key]
             self.assertEqual((row.Start, row.Finish), (start, finish), epic.key)
             rollup = self.summary_map[(epic.rollup_mode, epic.rollup_key.upper())]
-            self.assertEqual((rollup.Start, rollup.Finish), (start, finish), epic.rollup_key)
+            self.assertEqual((getattr(rollup, fields['schedule_start']), getattr(rollup, fields['schedule_finish'])),
+                             (start, finish), epic.rollup_key)
         self.assert_reference_geometry()
-        self.assertEqual(self.epics[primary_key].writes, [])
+        self.assertEqual({field for field, _ in self.epics[primary_key].writes}, display_fields)
         self.assertEqual({key for key, task in self.epics.items() if task.writes},
-                         {epic.key for epic in reference_rows})
-        self.assertTrue(all(field in {'Start', 'Finish'}
+                         {primary_key, *(epic.key for epic in reference_rows)})
+        self.assertTrue(all(field in {'Start', 'Finish'} | display_fields
                             for task in self.epics.values() for field, _ in task.writes))
-        self.assertTrue(all(field in {'Manual', 'StartText', 'FinishText'}
+        self.assertTrue(all(field in display_fields
                             for task in self.summaries.values() for field, _ in task.writes))
-        self.assertTrue(self.session.app.DateFormat.called)
-        self.assertTrue(all(call.args[1] == 2 for call in self.session.app.DateFormat.call_args_list))
+        self.session.app.DateFormat.assert_not_called()
         self.assertEqual(self.protected_values(), protected)
         self.assertEqual({key: asdict(epic) for key, epic in self.plan.epics.items()}, source_epics)
         self.assertEqual({key: asdict(summary) for key, summary in self.plan.summaries.items()}, source_summaries)
@@ -154,15 +154,17 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual([write for task in self.session.project.Tasks.items for write in task.writes], [])
         self.assertGreater(self.verify(), 0)
 
-    def test_old_automatic_rollups_migrate_using_text_fields_with_read_only_native_dates(self):
-        manual = manual_rollup_keys(self.plan)
+    def test_existing_files_gain_display_dates_without_writing_native_summary_dates(self):
+        fields = self.config['project_fields']
+        display_fields = {fields['schedule_start'], fields['schedule_finish']}
         original_primary_dates = self.raw_dates()
-        for identity in manual:
-            task = self.summary_map[identity]
-            task.task.Manual = False
+        for task in self.summary_map.values():
             task.task._start_native += timedelta(days=3)
             task.task._finish_native += timedelta(days=4)
-        first = self.summary_map[next(iter(manual))].task
+            for field in display_fields:
+                setattr(task.task, field, 'NA')
+        native_summary_dates = {identity: (task.Start, task.Finish) for identity, task in self.summary_map.items()}
+        first = next(iter(self.summary_map.values())).task
         with self.assertRaises(AttributeError):
             first.Start = first.Start + timedelta(days=1)
         with self.assertRaises(AttributeError):
@@ -170,10 +172,39 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.synchronize()
         self.assert_reference_geometry()
         self.assertEqual(self.raw_dates(), original_primary_dates)
-        self.assertEqual({identity for identity, task in self.summary_map.items() if task.writes}, manual)
-        for identity in manual:
-            fields = {field for field, _ in self.summary_map[identity].writes}
-            self.assertEqual(fields, {'Manual', 'StartText', 'FinishText'})
+        self.assertEqual({identity: (task.Start, task.Finish) for identity, task in self.summary_map.items()},
+                         native_summary_dates)
+        self.assertEqual({identity for identity, task in self.summary_map.items() if task.writes}, set(self.summary_map))
+        for task in self.summary_map.values():
+            self.assertEqual({field for field, _ in task.writes}, display_fields)
+        self.assertGreater(self.verify(), 0)
+
+    def test_sswsw_10464_stays_unchanged_when_fst_display_window_needs_refresh(self):
+        epic = self.plan.epics['SSWSW-10464']
+        self.assertTrue(epic.drives_schedule)
+        self.assertEqual((epic.rollup_mode, epic.rollup_key), ('fixVersion', 'FST'))
+        self.assertEqual((epic.target_start, epic.target_end, epic.predecessors, epic.successors), ('', '', [], []))
+        primary = self.epics[epic.key]
+        fst = self.summary_map['fixVersion', 'FST']
+        fst.task.summary_shift_children = [primary.task]
+        # A summary StartText write would move this unconstrained child. The
+        # bottom-up display fields must not invoke that native scheduling edit.
+        fst.task._start_native += timedelta(days=120)
+        fields = self.config['project_fields']
+        setattr(fst.task, fields['schedule_start'], fst.Start)
+        setattr(fst.task, fields['schedule_finish'], fst.Finish + timedelta(days=7))
+        native_summary = (fst.Start, fst.Finish)
+        primary_dates = self.raw_dates()
+        protected = self.protected_values()
+        self.synchronize()
+        self.assertEqual(self.raw_dates(), primary_dates)
+        self.assertEqual(primary.writes, [])
+        self.assertEqual((fst.Start, fst.Finish), native_summary)
+        self.assertEqual({field for field, _ in fst.writes}, {fields['schedule_start'], fields['schedule_finish']})
+        self.assertFalse(any(field in {'Start', 'Finish', 'StartText', 'FinishText'}
+                             for task in self.summary_map.values() for field, _ in task.writes))
+        self.assertEqual(self.protected_values(), protected)
+        self.assert_reference_geometry()
         self.assertGreater(self.verify(), 0)
 
     def test_fresh_verification_detects_a_real_reference_that_no_longer_matches_its_primary(self):
@@ -181,6 +212,23 @@ class YerpReferenceDateTests(unittest.TestCase):
         reference = next(epic for epic in self.plan.epics.values() if not epic.drives_schedule)
         self.epics[reference.key].task.Finish += timedelta(minutes=7)
         with self.assertRaises(ProjectAutomationError):
+            self.verify()
+
+    def test_old_manual_fst_must_be_migrated_before_schedule_capture(self):
+        self.summary_map['fixVersion', 'FST'].task.Manual = True
+        primary_dates = self.raw_dates()
+        with self.assertRaises(ProjectAutomationError):
+            self.synchronize()
+        self.assertEqual(self.raw_dates(), primary_dates)
+        self.assertIs(self.summary_map['fixVersion', 'FST'].Manual, True)
+        self.assertFalse(self.session._reference_dates_synchronized)
+
+    def test_verification_still_rejects_an_unexpected_sswsw_10464_primary_shift(self):
+        self.synchronize()
+        primary = self.epics['SSWSW-10464'].task
+        primary.Start += timedelta(hours=1)
+        primary.Finish += timedelta(hours=1)
+        with self.assertRaisesRegex(ProjectAutomationError, 'primary=SSWSW-10464'):
             self.verify()
 
 

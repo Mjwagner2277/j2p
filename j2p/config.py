@@ -110,8 +110,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "resource_group",
             "dependency_review",
             "jira_status",
-            "start",
-            "finish",
+            "schedule_start",
+            "schedule_finish",
             "percent_complete",
             "predecessors",
         ],
@@ -143,6 +143,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "drives_schedule": "Flag4",
         "jira_target_start": "Date1",
         "jira_target_end": "Date2",
+        "schedule_start": "Date3",
+        "schedule_finish": "Date4",
     },
     "project_field_names": {
         "jira_key": "Jira Key",
@@ -170,6 +172,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "drives_schedule": "Drives Schedule",
         "jira_target_start": "Jira Target Start",
         "jira_target_end": "Jira Target End",
+        "schedule_start": "Schedule Start",
+        "schedule_finish": "Schedule Finish",
     },
     "colors": {
         "changed_cell": "#C6EFCE",

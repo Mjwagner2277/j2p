@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 from j2p.models import ProjectTaskSnapshot
 from j2p.project import (
@@ -252,6 +252,10 @@ class ProjectReliabilityTests(unittest.TestCase):
             session.snapshot_tasks = Mock(return_value={'TEAM-1': snapshot})
             plan = SimpleNamespace(epics={'TEAM-1': object()}, stats={})
             session.verify_saved_plan(plan, {})
+            self.assertEqual(session.verify_plan.call_args_list, [
+                call(plan, {}, verification_stage='after save, before close'),
+                call(plan, {}, verification_stage='after reopen'),
+            ])
             self.assertTrue(plan.stats['project_verification']['save_reopen'])
             self.assertEqual(plan.stats['project_verification']['verified_fields'], 20)
             self.assertEqual(len(plan.stats['project_verification']['sha256']), 64)

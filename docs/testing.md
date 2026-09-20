@@ -114,7 +114,7 @@ Review the generated sandbox `.mpp` and confirm:
 - dependency review cells are light gray
 - unmatched review cells are amber
 - no Microsoft Project Font formatting dialog appears, including when `--debug-visible` is used
-- autoscheduled Start/Finish changes are green, including cascade branch drivers; red driver cards appear only in the report diagram
+- autoscheduled Start/Finish changes color the corresponding visible Schedule Start/Finish cells green, including cascade branch drivers; red driver cards appear only in the report diagram
 - overall and resource-group reports contain only Cascading Schedule Drivers, Rollup and Completion, and Items for Review, in that order and all collapsed by default; their headers contain only title, generation time, and scope
 - HTML omits context, legends, point-efficiency views, raw audits, and full planned rows; section links retain access to full CSV outputs
 - `Cascading Schedule Drivers` is the single schedule-impact section; changed upstream finishes must link to downstream Start/Finish movement affecting unfinished dated work
@@ -124,7 +124,8 @@ Review the generated sandbox `.mpp` and confirm:
 - completed driving epics remain active at native 100%, with configured Gantt-bar hiding; reference rows remain inactive and show progress in Story Point Completion %
 - reference rows display `Reference` in the default row-role column; removing strike-through leaves native activation, numeric values, task names, and review backgrounds unchanged
 - wrong-task selection or rejected formatting produces one cosmetic warning without formatting another row or reactivating references
-- reference dates match final primary Start/Finish, including times, and all-reference/mixed fixVersion summary windows include every member after save/reopen
+- reference dates match final primary Start/Finish, including times; Schedule Start/Finish and Gantt summary bars include every member after save/reopen; native summaries remain Auto Scheduled
+- an older manual-summary sandbox migrates to automatic summary scheduling; display-date updates preserve every primary's final native dates and reject unexpected movement
 - `reports\html\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
 - `reports\csv\by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
 

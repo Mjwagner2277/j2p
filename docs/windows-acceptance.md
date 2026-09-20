@@ -48,7 +48,7 @@ Run the harness on each supported Project version/edition with these fixture var
 | One task changes points, name, rollup, or owned resource group | Only differing managed values/relationships written; complete rollups and report detail retained |
 | Incomplete native completion differs from unchanged Jira completion | No repeated native percentage seed; exact custom completion and valid native completion verified |
 | Reordered Project row IDs, generated multi-fixVersion keys | Relationships resolve to the same schedule keys/UniqueIDs |
-| Reference-only or mixed fixVersion group | Inactive references mirror primary dates; the summary spans every member's final dates, including times, before and after reopening; updating the summary leaves every primary schedule unchanged |
+| Reference-only or mixed fixVersion group | Inactive references mirror primary dates; Schedule Start/Finish and Gantt summary bars span every member's final dates, including times, before and after reopening; all native summaries stay Auto Scheduled and the display pass leaves every primary schedule unchanged |
 | Reference row appearance | Reference label visible; strike-through removed in the review view while Active remains No and existing review backgrounds remain intact |
 | Duplicate matching keys in the MPP | Failed before task mutation; useful duplicate-key error |
 | A managed resource group changed between runs | Previous owned assignment removed; new owned assignment retained |
@@ -56,7 +56,7 @@ Run the harness on each supported Project version/edition with these fixture var
 | Restricted fields, unsupported Active, or invalid outline | Failed with field/row context; no successful verification result |
 | Save cancelled, disk unavailable, or active window switched | Failed; source hash check still recorded |
 
-Also inspect the sandbox's review table and colors visually; the automated JSON checks do not certify visual formatting. Check its warning list for formatting/date issues and preserved unmanaged resources.
+Also inspect the sandbox's review table and colors visually; the automated JSON checks do not certify visual formatting. Confirm the Summary bar spans Schedule Start/Finish, its intended shape/colors remain legible, and inactive reference rows do not affect primary scheduling. The bar-style API's success result is not a rendered-appearance check. Check the warning list for formatting/date issues and preserved unmanaged resources.
 
 ## Selective update measurements
 
@@ -96,9 +96,9 @@ Cascading Schedule Drivers, the complete date audit, and saved/reopened values r
 
 Repeat with Project initially set to automatic calculation and then manual
 calculation; each run must restore its original application setting while epic tasks
-remain Auto Scheduled, including inactive references. Only fixVersion summary
-headers containing references use Manual mode
-for date windows managed by j2p. On a disposable sandbox, interrupt with a controlled
+and summary headers remain Auto Scheduled, including inactive reference rows.
+Schedule Start/Finish display fields and Gantt summary bars derive from the final
+child schedule; native summary dates are never written to push children. On a disposable sandbox, interrupt with a controlled
 write/calculation exception and check that the calculation setting is restored.
 Measure identical-input and changed-input runs and retain their manifests; do
 not infer runtime improvement from portable checkpoint tests alone.

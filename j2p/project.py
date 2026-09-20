@@ -25,8 +25,9 @@ from .project_values import (
     project_dependency_review, value_metadata,
 )
 from .rollups import summary_id
-from .reference_dates import reference_rollup_ids, synchronize_reference_dates, verify_reference_dates
+from .reference_dates import synchronize_reference_dates, verify_reference_dates
 from .reference_formatting import format_reference_rows
+from .schedule_display import configure_schedule_display
 
 
 PROJECT_TASK_MANAGER_RESOLUTION = (
@@ -552,7 +553,7 @@ class MicrosoftProjectSession:
         started = time.monotonic()
         project_progress("Starting saved sandbox verification before close/reopen")
         self.require_saved_file()
-        self.verify_plan(plan, config)
+        self.verify_plan(plan, config, verification_stage="after save, before close")
         project_progress("Reading task snapshot before closing the saved sandbox")
         before = {key: asdict(value) for key, value in self.snapshot_tasks(
             config, progress_label="Before-close snapshot"
@@ -569,7 +570,7 @@ class MicrosoftProjectSession:
         persisted_hash = digest.hexdigest()
         project_progress("Reopening the saved sandbox for verification")
         self.open(path)
-        fields_verified = self.verify_plan(plan, config)
+        fields_verified = self.verify_plan(plan, config, verification_stage="after reopen")
         project_progress("Reading task snapshot after reopening the saved sandbox")
         after = {key: asdict(value) for key, value in self.snapshot_tasks(
             config, progress_label="After-reopen snapshot"
@@ -592,7 +593,9 @@ class MicrosoftProjectSession:
         }
         project_progress(f"Saved sandbox verification passed in {time.monotonic() - started:.1f}s")
 
-    def verify_plan(self, plan: RunPlan, config: Dict[str, Any]) -> int:
+    def verify_plan(
+        self, plan: RunPlan, config: Dict[str, Any], *, verification_stage: str = "verification",
+    ) -> int:
         project_progress("Indexing Project tasks for verification")
         self.assert_project_identity()
         task_list = self.iter_tasks(progress_label="Verification task scan")
@@ -670,7 +673,9 @@ class MicrosoftProjectSession:
                 verify_project_value(task, field, value, f"rollup={summary.key}")
                 count += 1
         if getattr(self, "_reference_dates_synchronized", False):
-            count += verify_reference_dates(self, plan, config, tasks, summaries)
+            count += verify_reference_dates(
+                self, plan, config, tasks, summaries, verification_stage=verification_stage,
+            )
         project_progress(f"Project data verification complete: {total_epics} epic(s), {total_summaries} summary row(s)")
         return count
 
@@ -893,15 +898,8 @@ class MicrosoftProjectSession:
         task_by_key = self.index_tasks_by_key(config, task_list)
         rollup_tasks = self.index_rollup_summaries(config, task_list)
         self._reference_dates_synchronized = False
-        manual_rollups = reference_rollup_ids(plan)
-        manual_identities = {
-            (summary.rollup_mode, summary.key.upper()) for key, summary in plan.summaries.items()
-            if key in manual_rollups
-        }
         project_progress("Setting Project scheduling modes")
-        self.set_auto_scheduled(task_list, {
-            id(task) for identity, task in rollup_tasks.items() if identity in manual_identities
-        })
+        self.set_auto_scheduled(task_list)
         project_progress("Ensuring rollup summary rows")
         # A new file is built in final outline order. Inserting every epic right
         # after its summary repeatedly shifts rows already written to Project.
@@ -1015,12 +1013,9 @@ class MicrosoftProjectSession:
         project_progress("Marking Project rows that no longer match Jira")
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
-    def set_auto_scheduled(
-        self, task_list: Optional[List[Any]] = None, manual_task_ids: Optional[set[int]] = None,
-    ) -> None:
-        manual_task_ids = manual_task_ids or set()
+    def set_auto_scheduled(self, task_list: Optional[List[Any]] = None) -> None:
         for task in self.iter_tasks() if task_list is None else task_list:
-            self.write_task_value(task, "Manual", id(task) in manual_task_ids, project_task_context(task))
+            self.write_task_value(task, "Manual", False, project_task_context(task))
 
     def iter_tasks(self, progress_label: Optional[str] = None) -> List[Any]:
         tasks = []
@@ -1120,8 +1115,7 @@ class MicrosoftProjectSession:
 
     def write_summary_values(self, task: Any, summary: Any, config: Dict[str, Any]) -> None:
         context = f"rollup={summary.key}"
-        manual = summary.rollup_mode == "fixVersion" and summary.reference_epic_count > 0
-        self.write_task_value(task, "Manual", manual, context)
+        self.write_task_value(task, "Manual", False, context)
         for field, value in summary_assignments(summary, config):
             self.write_task_value(task, field, value, context)
 
@@ -2119,8 +2113,7 @@ class MicrosoftProjectSession:
         if before is not None or plan.stats.get("project_run_mode") == "create":
             with project_phase(plan, "schedule_review"):
                 after = self.read_schedule_dates(plan, task_by_key)
-                self.add_schedule_review_items(plan, before or {}, config, after=after)
-            if reference_rollup_ids(plan):
+            if plan.epics:
                 with project_phase(plan, "reference_dates"):
                     cached = getattr(self, "_reference_summary_tasks", None)
                     summaries = (cached[1] if cached and cached[0] == id(plan)
@@ -2129,6 +2122,8 @@ class MicrosoftProjectSession:
                         synchronize_reference_dates(
                             self, plan, config, task_by_key, summaries, self._scheduled_native_dates,
                         )
+            with project_phase(plan, "schedule_review"):
+                self.add_schedule_review_items(plan, before or {}, config, after=after)
         with project_phase(plan, "review_duration"):
             self.add_one_day_schedule_reviews(plan, config, task_by_key)
 
@@ -2151,6 +2146,7 @@ class MicrosoftProjectSession:
             and item.field in {"Start", "Finish"} and item.old_value != item.new_value
         }
         formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
+        configured_columns = set(review_table_columns(config, []))
         with project_phase(plan, "review_candidates"):
             audit_items = list(plan.audit_items)
             progress = ProjectScanProgress("Review color candidates", len(audit_items), "audit item(s)", every=1000)
@@ -2161,11 +2157,18 @@ class MicrosoftProjectSession:
                     if task is not None:
                         column = project_column_for_audit_field(item.field, config)
                         if column:
+                            columns = [column]
+                            if item.field in {"Start", "Finish"}:
+                                logical = "schedule_start" if item.field == "Start" else "schedule_finish"
+                                display = config["project_fields"][logical]
+                                if display in configured_columns:
+                                    columns = [display] + ([column] if column in configured_columns else [])
                             # Confirmed date changes stay green even when the
                             # same cell also has a target-mismatch review note.
                             color_key = "changed_cell" if (lookup_key, item.field) in shifted_date_cells else item.color
                             color = config.get("colors", {}).get(color_key, color_key)
-                            formatting_items.append((item, task, column, color, selection_aliases(column)))
+                            for target_column in columns:
+                                formatting_items.append((item, task, target_column, color, selection_aliases(target_column)))
                 progress.update(index)
 
         project_progress("Resolving visible Project review columns")
@@ -2210,6 +2213,10 @@ class MicrosoftProjectSession:
                     ),
                 )
             )
+
+        if not table_errors and (before is not None or plan.stats.get("project_run_mode") == "create"):
+            with project_phase(plan, "schedule_display"):
+                configure_schedule_display(self, plan, config)
 
         column_positions = self.project_table_column_positions(J2P_REVIEW_TABLE_NAME, config)
         failed_columns: Dict[str, int] = {}
@@ -2933,6 +2940,8 @@ def review_table_standard_columns(config: Dict[str, Any]) -> List[Tuple[str, str
         ("jira_status", fields.get("jira_status", "Text9")),
         ("start", "Start"),
         ("finish", "Finish"),
+        ("schedule_start", fields.get("schedule_start", "Date3")),
+        ("schedule_finish", fields.get("schedule_finish", "Date4")),
         ("jira_target_start", fields.get("jira_target_start", "Date1")),
         ("jira_target_end", fields.get("jira_target_end", "Date2")),
         ("percent_complete", "% Complete"),

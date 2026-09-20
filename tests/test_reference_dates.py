@@ -6,7 +6,7 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, PropertyMock, patch
 
 from j2p.config import DEFAULT_CONFIG
 from j2p.models import PlanEpic, RunPlan
@@ -35,11 +35,23 @@ class DateTask:
 
     def __init__(self, start, finish, *, summary=False, active=True):
         self._start, self._finish = start, finish
+        self._custom_dates = {}
         self.Summary, self.Active, self.Manual = summary, active, False
         self.writes = []
         self.reads = {'Start': 0, 'Finish': 0}
         self.reject_field = None
         self.ignore_field = None
+
+    def __getattr__(self, field):
+        if field.startswith('Date') and field[4:].isdigit():
+            return self._custom_dates.get(field, 'NA')
+        raise AttributeError(field)
+
+    def __setattr__(self, field, value):
+        if field.startswith('Date') and field[4:].isdigit():
+            self.assign(field, value)
+        else:
+            object.__setattr__(self, field, value)
 
     @property
     def Start(self):
@@ -90,7 +102,9 @@ class DateTask:
         if field == self.ignore_field:
             return
         value = parsed(value)
-        if field.startswith('Start'):
+        if field.startswith('Date'):
+            self._custom_dates[field] = value
+        elif field.startswith('Start'):
             try:
                 duration = parsed(self._finish) - parsed(self._start)
             except (TypeError, ValueError):
@@ -147,34 +161,61 @@ def sync(session, plan, config, tasks, summaries, raw=None):
                                     raw_dates(plan, tasks) if raw is None else raw)
 
 
+def display_window(task, config):
+    fields = config['project_fields']
+    return tuple(getattr(task, fields[name]) for name in ('schedule_start', 'schedule_finish'))
+
+
 class ReferenceDateTests(unittest.TestCase):
     def test_reference_only_and_mixed_rollups_use_final_primary_windows(self):
         session, plan, config, tasks, summaries = fixture()
         before_epics, before_summaries = copy.deepcopy(plan.epics), copy.deepcopy(plan.summaries)
+        primary_windows = raw_dates(plan, tasks)
+        summary_windows = {key: (task._start, task._finish) for key, task in summaries.items()}
         sync(session, plan, config, tasks, summaries)
         for key, primary in (('R1', 'P1'), ('R2', 'P2'), ('R3', 'P1')):
             self.assertEqual((tasks[key].Start, tasks[key].Finish), (tasks[primary].Start, tasks[primary].Finish))
             self.assertFalse(tasks[key].Active)
             self.assertFalse(tasks[key].Manual)
-        self.assertEqual((summaries['fixVersion', 'B'].Start, summaries['fixVersion', 'B'].Finish),
+        self.assertEqual(display_window(summaries['fixVersion', 'B'], config),
                          (tasks['P2'].Start, tasks['P2'].Finish))
-        self.assertEqual((summaries['fixVersion', 'C'].Start, summaries['fixVersion', 'C'].Finish),
+        self.assertEqual(display_window(summaries['fixVersion', 'C'], config),
                          (tasks['P3'].Start, tasks['P1'].Finish))
-        self.assertFalse(summaries['fixVersion', 'A'].Manual)
-        self.assertEqual(summaries['fixVersion', 'A'].writes, [])
-        self.assertTrue(all(not tasks[key].writes for key in ('P1', 'P2', 'P3')))
+        self.assertEqual(display_window(summaries['fixVersion', 'A'], config),
+                         (tasks['P2'].Start, tasks['P2'].Finish))
+        for key, epic in plan.epics.items():
+            self.assertEqual(display_window(tasks[key], config), primary_windows[epic.primary_schedule_key])
+        self.assertTrue(all(not task.Manual for task in summaries.values()))
+        self.assertEqual({key: (task._start, task._finish) for key, task in summaries.items()}, summary_windows)
+        self.assertEqual(raw_dates(plan, tasks), primary_windows)
+        self.assertTrue(all({field for field, _ in tasks[key].writes} == {'Date3', 'Date4'}
+                            for key in ('P1', 'P2', 'P3')))
         self.assertEqual(plan.epics, before_epics)
         self.assertEqual(plan.summaries, before_summaries)
         self.assertEqual(plan.stats['project_reference_dates']['references'], 3)
-        self.assertEqual(plan.stats['project_reference_dates']['rollups'], 2)
+        self.assertEqual(plan.stats['project_reference_dates']['rollups'], 3)
+        self.assertEqual(plan.stats['project_reference_dates']['display_rows'], 6)
         self.assertTrue(session._reference_dates_synchronized)
 
-    def test_manual_summary_dates_use_text_fields_and_project_localized_time_format(self):
+    def test_summary_display_dates_never_call_native_summary_setters_or_move_children(self):
         session, plan, config, tasks, summaries = fixture()
+        primary_windows = raw_dates(plan, tasks)
+        for summary in summaries.values():
+            assign = summary.assign
+
+            def native_date_write_moves_child(field, value, assign=assign):
+                if field in ('StartText', 'FinishText', 'Start', 'Finish'):
+                    tasks['P1']._start -= timedelta(days=10)
+                    raise AssertionError('Summary scheduling inputs must never be written')
+                assign(field, value)
+
+            summary.assign = native_date_write_moves_child
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual({field for task in summaries.values() for field, _ in task.writes}, {'StartText', 'FinishText'})
-        self.assertTrue(all(call.args[1] == 2 for call in session.app.DateFormat.call_args_list))
-        self.assertEqual(summaries['fixVersion', 'C'].Finish, datetime(2026, 9, 3, 15, 45))
+        self.assertEqual({field for task in summaries.values() for field, _ in task.writes}, {'Date3', 'Date4'})
+        self.assertEqual(raw_dates(plan, tasks), primary_windows)
+        self.assertTrue(all(not task.Manual for task in summaries.values()))
+        session.app.DateFormat.assert_not_called()
+        self.assertEqual(summaries['fixVersion', 'C'].Date4, datetime(2026, 9, 3, 15, 45))
 
     def test_unchanged_rerun_writes_no_dates_and_does_not_consult_value_cache(self):
         session, plan, config, tasks, summaries = fixture()
@@ -184,16 +225,70 @@ class ReferenceDateTests(unittest.TestCase):
         session.app.DateFormat.reset_mock()
         sync(session, plan, config, tasks, summaries)
         self.assertEqual(plan.stats['project_reference_dates']['written'], 0)
-        self.assertEqual(plan.stats['project_reference_dates']['skipped'], 12)
+        self.assertEqual(plan.stats['project_reference_dates']['skipped'], 24)
         self.assertFalse(any(task.writes for task in [*tasks.values(), *summaries.values()]))
         session.app.DateFormat.assert_not_called()
         session.read_task_value.assert_not_called()
+
+    def test_display_date_fields_follow_configuration_without_changing_native_dates(self):
+        session, plan, config, tasks, summaries = fixture()
+        config['project_fields']['schedule_start'] = 'Date7'
+        config['project_fields']['schedule_finish'] = 'Date8'
+        primary_windows = raw_dates(plan, tasks)
+        sync(session, plan, config, tasks, summaries)
+        self.assertEqual(display_window(summaries['fixVersion', 'C'], config),
+                         (primary_windows['P3'][0], primary_windows['P1'][1]))
+        self.assertEqual(raw_dates(plan, tasks), primary_windows)
+        for task in [*tasks.values(), *summaries.values()]:
+            self.assertEqual((task.Date3, task.Date4), ('NA', 'NA'))
+            self.assertTrue({field for field, _ in task.writes} <= {'Start', 'Finish', 'Date7', 'Date8'})
+        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 33)
+
+    def test_every_primary_and_rollup_get_display_dates_without_references(self):
+        session, plan, config, tasks, summaries = fixture()
+        for key in ('R1', 'R2', 'R3'):
+            del plan.epics[key], tasks[key]
+        plan.epics['P3'].rollup_mode = 'initiative'
+        plan.epics['P3'].rollup_key = 'INIT-1'
+        plan.epics['P3'].rollup_name = 'An initiative'
+        plan.summaries = build_summaries(plan.epics, config)
+        initiative = summaries.pop(('fixVersion', 'C'))
+        summaries.pop(('fixVersion', 'B'))
+        summaries['initiative', 'INIT-1'] = initiative
+        primary_windows = raw_dates(plan, tasks)
+        self.assertEqual(reference_rollup_ids(plan), set())
+        sync(session, plan, config, tasks, summaries)
+        self.assertEqual(display_window(initiative, config), primary_windows['P3'])
+        self.assertEqual(display_window(summaries['fixVersion', 'A'], config), primary_windows['P2'])
+        for key, task in tasks.items():
+            self.assertEqual(display_window(task, config), primary_windows[key])
+            self.assertEqual({field for field, _ in task.writes}, {'Date3', 'Date4'})
+        self.assertEqual(raw_dates(plan, tasks), primary_windows)
+        self.assertEqual(plan.stats['project_reference_dates']['references'], 0)
+        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 12)
+
+    def test_manual_summary_is_rejected_before_display_synchronization_writes(self):
+        session, plan, config, tasks, summaries = fixture()
+        summaries['fixVersion', 'B'].Manual = True
+        with self.assertRaisesRegex(ProjectAutomationError, 'rollup=fixVersion:B'):
+            sync(session, plan, config, tasks, summaries)
+        self.assertTrue(summaries['fixVersion', 'B'].Manual)
+        self.assertFalse(any(task.writes for task in [*tasks.values(), *summaries.values()]))
+        self.assertFalse(session._reference_dates_synchronized)
+
+    def test_native_primary_read_failure_is_not_replaced_with_display_dates(self):
+        session, plan, config, tasks, summaries = fixture()
+        sync(session, plan, config, tasks, summaries)
+        with patch.object(DateTask, 'Start', new_callable=PropertyMock) as start:
+            start.side_effect = RuntimeError('Native schedule unavailable')
+            with self.assertRaisesRegex(ProjectAutomationError, 'Cannot read reference schedule: primary=.*field=Start'):
+                verify_reference_dates(session, plan, config, tasks, summaries)
 
     def test_finish_is_rechecked_after_start_moves_it(self):
         session, plan, config, tasks, summaries = fixture()
         tasks['R1']._finish = tasks['P1']._finish
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual([field for field, _ in tasks['R1'].writes], ['Start', 'Finish'])
+        self.assertEqual([field for field, _ in tasks['R1'].writes], ['Start', 'Finish', 'Date3', 'Date4'])
         self.assertEqual(tasks['R1'].Finish, tasks['P1'].Finish)
 
     def test_primary_change_updates_references_and_both_membership_rollups(self):
@@ -203,10 +298,11 @@ class ReferenceDateTests(unittest.TestCase):
         for task in [*tasks.values(), *summaries.values()]:
             task.writes.clear()
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual({key for key, task in tasks.items() if task.writes}, {'R1', 'R3'})
-        for release in ('B', 'C'):
-            self.assertEqual(summaries['fixVersion', release].Finish, tasks['P1'].Finish)
-        self.assertEqual(plan.stats['project_reference_dates']['written'], 4)
+        self.assertEqual({key for key, task in tasks.items() if task.writes}, {'P1', 'R1', 'R3'})
+        self.assertEqual(tasks['P1'].writes, [('Date4', tasks['P1'].Finish)])
+        for release in ('A', 'B', 'C'):
+            self.assertEqual(summaries['fixVersion', release].Date4, tasks['P1'].Finish)
+        self.assertEqual(plan.stats['project_reference_dates']['written'], 8)
 
     def test_missing_primary_or_date_readback_fails_before_any_date_writes(self):
         for missing in ('plan', 'task', 'dates'):
@@ -239,7 +335,7 @@ class ReferenceDateTests(unittest.TestCase):
         sync(session, plan, config, tasks, summaries)
         self.assertEqual(tasks['R1'].Start, datetime(2026, 9, 1, 9, 15))
         self.assertEqual(tasks['R1'].Finish, datetime(2026, 9, 3, 15, 45))
-        self.assertEqual(summaries['fixVersion', 'B'].Start, datetime(2026, 8, 28))
+        self.assertEqual(summaries['fixVersion', 'B'].Date3, datetime(2026, 8, 28))
 
     def test_reference_removal_changes_managed_rollup_eligibility(self):
         _, plan, _, _, _ = fixture()
@@ -250,7 +346,7 @@ class ReferenceDateTests(unittest.TestCase):
         self.assertEqual(reference_rollup_ids(plan), set())
 
     def test_rejected_reference_and_summary_writes_fail_instead_of_reporting_success(self):
-        for target, field in (('R1', 'Finish'), ('B', 'FinishText')):
+        for target, field in (('R1', 'Finish'), ('B', 'Date4'), ('P1', 'Date3')):
             session, plan, config, tasks, summaries = fixture()
             task = tasks[target] if target in tasks else summaries['fixVersion', target]
             task.reject_field = field
@@ -259,7 +355,7 @@ class ReferenceDateTests(unittest.TestCase):
             self.assertFalse(session._reference_dates_synchronized)
 
     def test_silent_write_failure_is_detected_by_native_pair_readback(self):
-        for target, field in (('R1', 'Finish'), ('B', 'FinishText')):
+        for target, field in (('R1', 'Finish'), ('B', 'Date4'), ('P1', 'Date3')):
             session, plan, config, tasks, summaries = fixture()
             task = tasks[target] if target in tasks else summaries['fixVersion', target]
             task.ignore_field = field
@@ -273,7 +369,7 @@ class ReferenceDateTests(unittest.TestCase):
         for task in [*tasks.values(), *summaries.values()]:
             task.writes.clear()
             task.reads = {'Start': 0, 'Finish': 0}
-        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 18)
+        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 33)
         for key in ('P1', 'P2', 'P3'):
             self.assertEqual(tasks[key].reads, {'Start': 1, 'Finish': 1})
         self.assertFalse(any(task.writes for task in [*tasks.values(), *summaries.values()]))
@@ -288,17 +384,10 @@ class ReferenceDateTests(unittest.TestCase):
         tasks['P3']._start = datetime(2026, 9, 2, 10, 10)
         tasks['P3']._finish = datetime(2026, 9, 2, 14, 35)
         summary = summaries['fixVersion', 'C']
-        assign = summary.assign
-
-        def move_child(field, value):
-            assign(field, value)
-            if field == 'StartText':
-                tasks['P3']._start += timedelta(hours=1)
-                tasks['P3']._finish += timedelta(hours=1)
-
-        summary.assign = move_child
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual((summary.Start, summary.Finish), (tasks['P1'].Start, tasks['P1'].Finish))
+        tasks['P3']._start += timedelta(hours=1)
+        tasks['P3']._finish += timedelta(hours=1)
+        self.assertEqual(display_window(summary, config), (tasks['P1'].Start, tasks['P1'].Finish))
         for task in [*tasks.values(), *summaries.values()]:
             task.reads = {'Start': 0, 'Finish': 0}
         with self.assertRaisesRegex(ProjectAutomationError, 'primary=P3'):
@@ -306,10 +395,79 @@ class ReferenceDateTests(unittest.TestCase):
         for key in ('P1', 'P2', 'P3'):
             self.assertEqual(tasks[key].reads, {'Start': 1, 'Finish': 1})
 
+    def test_primary_mismatch_reports_both_minute_changes_stage_rollup_and_parent_driver(self):
+        session, plan, config, tasks, summaries = fixture()
+        sync(session, plan, config, tasks, summaries)
+        tasks['P1']._start += timedelta(minutes=1)
+        tasks['P1']._finish += timedelta(minutes=2)
+        tasks['P1'].RecalcFlags = 128 | 8  # Parent and predecessor both drive the task.
+        for task in [*tasks.values(), *summaries.values()]:
+            task.writes.clear()
+            task.reads = {'Start': 0, 'Finish': 0}
+        with self.assertRaises(ProjectAutomationError) as error:
+            verify_reference_dates(
+                session, plan, config, tasks, summaries, verification_stage='after reopen',
+            )
+        message = str(error.exception)
+        for expected in (
+            'Primary schedule changed after reference date synchronization',
+            'stage=after reopen', 'primary=P1', 'rollup=fixVersion:A',
+            'Start: old=2026-09-01 09:15, new=2026-09-01 09:16',
+            'Finish: old=2026-09-03 15:45, new=2026-09-03 15:47',
+            'RecalcFlags=136, parent_driver=yes',
+            'The final autoscheduled primary dates must remain unchanged.',
+        ):
+            self.assertIn(expected, message)
+        self.assertFalse(any(task.writes for task in [*tasks.values(), *summaries.values()]))
+        for key in ('P1', 'P2', 'P3'):
+            self.assertEqual(tasks[key].reads, {'Start': 1, 'Finish': 1})
+
+    def test_single_minute_mismatch_reports_unchanged_endpoint_and_default_stage(self):
+        session, plan, config, tasks, summaries = fixture()
+        sync(session, plan, config, tasks, summaries)
+        tasks['P3']._finish += timedelta(minutes=1)
+        tasks['P3'].RecalcFlags = 8
+        with self.assertRaises(ProjectAutomationError) as error:
+            verify_reference_dates(session, plan, config, tasks, summaries)
+        message = str(error.exception)
+        self.assertIn('stage=verification, primary=P3, rollup=fixVersion:C', message)
+        self.assertIn('Start: old=2026-08-20 10:10, new=2026-08-20 10:10', message)
+        self.assertIn('Finish: old=2026-09-02 14:35, new=2026-09-02 14:36', message)
+        self.assertIn('RecalcFlags=8, parent_driver=no', message)
+
+    def test_unsupported_recalc_flags_do_not_hide_primary_mismatch(self):
+        for unavailable in (AttributeError('Unsupported property'), RuntimeError('COM read failed'), None, 'unknown'):
+            session, plan, config, tasks, summaries = fixture()
+            sync(session, plan, config, tasks, summaries)
+            tasks['P1']._finish += timedelta(minutes=1)
+            with self.subTest(unavailable=unavailable), patch.object(
+                DateTask, 'RecalcFlags', new_callable=PropertyMock, create=True,
+            ) as flags:
+                if isinstance(unavailable, Exception):
+                    flags.side_effect = unavailable
+                else:
+                    flags.return_value = unavailable
+                with self.assertRaises(ProjectAutomationError) as error:
+                    verify_reference_dates(session, plan, config, tasks, summaries)
+                flags.assert_called_once_with()
+            message = str(error.exception)
+            self.assertIn('Primary schedule changed after reference date synchronization', message)
+            self.assertIn('primary=P1, rollup=fixVersion:A', message)
+            self.assertIn('Finish: old=2026-09-03 15:45, new=2026-09-03 15:46', message)
+            self.assertIn('RecalcFlags=unavailable, parent_driver=unknown', message)
+
+    def test_unchanged_verification_does_not_read_optional_driver_flags(self):
+        session, plan, config, tasks, summaries = fixture()
+        sync(session, plan, config, tasks, summaries)
+        with patch.object(DateTask, 'RecalcFlags', new_callable=PropertyMock, create=True) as flags:
+            flags.side_effect = AssertionError('Healthy verification needs no additional COM reads')
+            self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 33)
+            flags.assert_not_called()
+
     def test_verification_without_sync_history_still_checks_live_relationships(self):
         session, plan, config, tasks, summaries = fixture()
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual(verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries), 18)
+        self.assertEqual(verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries), 33)
         tasks['R1']._finish += timedelta(minutes=1)
         with self.assertRaisesRegex(ProjectAutomationError, 'reference=R1'):
             verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries)
@@ -326,17 +484,19 @@ class ReferenceDateTests(unittest.TestCase):
         self.assertFalse(session._reference_dates_synchronized)
 
     def test_verification_detects_reopened_modes_and_summary_date_corruption(self):
-        for problem in ('active reference', 'manual reference', 'automatic summary', 'summary finish'):
+        for problem in ('active reference', 'manual reference', 'manual summary', 'summary finish', 'epic display finish'):
             session, plan, config, tasks, summaries = fixture()
             sync(session, plan, config, tasks, summaries)
             if problem == 'active reference':
                 tasks['R1'].Active = True
             elif problem == 'manual reference':
                 tasks['R1'].Manual = True
-            elif problem == 'automatic summary':
-                summaries['fixVersion', 'B'].Manual = False
+            elif problem == 'manual summary':
+                summaries['fixVersion', 'B'].Manual = True
+            elif problem == 'epic display finish':
+                tasks['P1'].Date4 += timedelta(hours=1)
             else:
-                summaries['fixVersion', 'B']._finish += timedelta(hours=1)
+                summaries['fixVersion', 'B'].Date4 += timedelta(hours=1)
             with self.subTest(problem=problem), self.assertRaises(ProjectAutomationError):
                 verify_reference_dates(session, plan, config, tasks, summaries)
 
