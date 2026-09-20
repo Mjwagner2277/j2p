@@ -75,6 +75,8 @@ only 3 to overall counted points under the reference policy. Separate completion
 point fields make this distinction visible. These per-version completion totals
 must not be summed as a portfolio total.
 
+After final scheduling, inactive references mirror their primary task's native Start/Finish. FixVersion summaries containing references use the earliest Start and latest Finish across all members, resolving references to primary schedules. This includes both all-reference and mixed groups. Only those summary headers use Manual mode for their j2p-managed date windows; all epic tasks, including inactive references, remain Auto Scheduled. The reference-date pass does not change Jira targets, primary task schedules, activation, dependencies, or completion math.
+
 For fixVersion rollups, j2p can hide stale completed releases from HTML manager reports without a release metadata file. A fixVersion is considered complete when every issue in the CSV that declares that fixVersion has a status in `done_statuses`. If every completed issue has a usable `Resolved` date and the latest `Resolved` date is older than the configured threshold, the rollup is hidden from HTML manager reports while remaining in detailed CSV outputs and the Project sandbox.
 
 ## Epic Identity
@@ -131,7 +133,7 @@ Circular dependencies are skipped and reported so the sandbox can still be gener
 
 Jira `Target start` and `Target end` map into Project custom date fields and are used to update sandbox schedule dates. Supported Jira export date values, including date-time values such as `17-SEP-26 12:00 AM`, are normalized to `YYYY-MM-DD` before Microsoft Project automation writes them.
 
-The sandbox is auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
+Driving tasks are auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
 
 - every changed Project Start/Finish cell is colored green, including cascade branch drivers
 - the HTML has one `Cascading Schedule Drivers` section for upstream Finish changes linked to downstream Start/Finish movement affecting unfinished work with Jira target dates; isolated changes, mismatches alone, and completed-only branches do not qualify
@@ -185,8 +187,10 @@ set to 100%; their story-point percentage remains in the custom completion
 field. Inactivation is not used to archive completed work. When configured,
 their Gantt bars are hidden where Project permits it. Reference rows are made
 inactive before progress writes and use only custom completion fields, avoiding
-native actuals on non-driving copies. Existing actuals are never erased to force
-inactivation. Summary progress is written only to custom fields, because writing
+native actuals on non-driving copies. The default review table labels them Reference;
+a dedicated formatting command removes strike-through when supported without
+reactivating the task. Cosmetic failures are audited and leave row-role labels
+available. Existing actuals are never erased to force inactivation. Summary progress is written only to custom fields, because writing
 native summary completion can change child-task actuals.
 
 ## Resource Groups

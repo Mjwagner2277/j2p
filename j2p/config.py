@@ -106,6 +106,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "exposed_columns": [
             "jira_key",
             "summary",
+            "row_role",
             "resource_group",
             "dependency_review",
             "jira_status",

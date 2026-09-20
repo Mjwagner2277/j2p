@@ -1378,6 +1378,7 @@ class J2PPlanningTests(unittest.TestCase):
             [
                 "Name",
                 "Text1",
+                "Text11",
                 "Resource Group",
                 "Text8",
                 "Text9",
@@ -1402,7 +1403,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertNotIn("Flag2", columns)
         self.assertNotIn("Flag3", columns)
         self.assertNotIn("Flag4", columns)
-        self.assertNotIn("Text11", columns)
+        self.assertIn("Text11", columns)
         self.assertNotIn("Text12", columns)
 
     def test_review_table_columns_can_be_pruned_by_config(self) -> None:
@@ -1488,7 +1489,8 @@ class J2PPlanningTests(unittest.TestCase):
         prepared_columns: List[str] = []
         colored_columns: List[str] = []
         session = object.__new__(MicrosoftProjectSession)
-        session.index_tasks_by_key = lambda _config, **_kwargs: {"CORE-1": task}
+        session.iter_tasks = lambda **_kwargs: [task]
+        session.index_tasks_by_key = lambda _config, _task_list=None, **_kwargs: {"CORE-1": task}
         session.project_selection_aliases = lambda column, _config: [column]
         session.prepare_formatting_view = lambda columns, _config: prepared_columns.extend(columns) or []
         session.project_table_column_positions = lambda _table, _config: {

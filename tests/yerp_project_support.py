@@ -1,4 +1,5 @@
 """Project object-model fake populated from the real yerp plan; never a live MPP."""
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -7,6 +8,7 @@ from j2p.core import build_run_plan
 from j2p.jira import read_csv_rows
 from j2p.project import MicrosoftProjectSession, managed_resource_marker, project_date_for_com, summary_assignments
 from j2p.project_values import epic_assignments
+from j2p.reference_dates import reference_rollup_ids
 from test_project_update_integration import RecordingTask
 from test_project_verification_scaling import CountedCollection
 
@@ -37,8 +39,51 @@ def changed_child_plan(config, baseline=None):
     return plan
 
 
-def project_from_yerp_plan(plan, config):
-    """Represent every real planned row, owned resource, outline, and FS link."""
+class SummaryDateTask(SimpleNamespace):
+    """Project summary native dates are read-only; editable text controls dates."""
+
+    def __init__(self, **values):
+        start, finish = values.pop('Start'), values.pop('Finish')
+        super().__init__(**values)
+        self._start_native, self._finish_native = start, finish
+
+    @property
+    def Start(self):
+        return self._start_native
+
+    @property
+    def Finish(self):
+        return self._finish_native
+
+    @property
+    def StartText(self):
+        return self.Start.strftime('%B %d, %Y %I:%M %p')
+
+    @StartText.setter
+    def StartText(self, value):
+        self._start_native = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+
+    @property
+    def FinishText(self):
+        return self.Finish.strftime('%B %d, %Y %I:%M %p')
+
+    @FinishText.setter
+    def FinishText(self, value):
+        self._finish_native = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+
+
+def project_date_format(value, format_code):
+    if format_code != 2:
+        raise AssertionError('Expected Project pjDate_mmm_dd_yyyy_hh_mmAM format')
+    return value.strftime('%B %d, %Y %I:%M %p')
+
+
+def project_from_yerp_plan(plan, config, scheduled_dates=False):
+    """Represent every real planned row, owned resource, outline, and FS link.
+
+    scheduled_dates models a completed native calculation with valid date
+    windows; Jira target fields and the source plan remain unchanged.
+    """
     groups = sorted({epic.resource_group for epic in plan.epics.values() if epic.resource_group})
     resources = {
         group: SimpleNamespace(ID=index, Name=group, Group=group, Notes=managed_resource_marker(group))
@@ -58,12 +103,15 @@ def project_from_yerp_plan(plan, config):
         values.setdefault('PercentComplete', 0)
         values.setdefault('Start', project_date_for_com('2026-09-17', 'Start'))
         values.setdefault('Finish', project_date_for_com('2026-09-17', 'Finish'))
-        task = RecordingTask(SimpleNamespace(**values))
+        native = SummaryDateTask(**values) if values.get('Summary') else SimpleNamespace(**values)
+        task = RecordingTask(native)
         tasks.append(task)
         return task
 
+    manual_rollups = reference_rollup_ids(plan)
     for summary in sorted(plan.summaries.values(), key=lambda item: item.summary_id):
-        task = row(Summary=True, **dict(summary_assignments(summary, config)))
+        task = row(Summary=True, Manual=summary.summary_id in manual_rollups,
+                   **dict(summary_assignments(summary, config)))
         summaries[summary.summary_id] = task
     for epic in sorted(plan.epics.values(), key=lambda item: item.key):
         resource = resources.get(epic.resource_group)
@@ -92,6 +140,27 @@ def project_from_yerp_plan(plan, config):
             setattr(dependency, 'From', predecessor)
             dependencies.append(dependency)
         task.task.TaskDependencies = CountedCollection(dependencies)
+    if scheduled_dates:
+        for epic in plan.epics.values():
+            task = epics[epic.key].task
+            if epic.drives_schedule and task.Start > task.Finish:
+                if not epic.target_start:
+                    task.Start = task.Finish.replace(hour=8, minute=0)
+                else:
+                    task.Finish = task.Start.replace(hour=17, minute=0)
+    for epic in plan.epics.values():
+        if not epic.drives_schedule:
+            primary = epics[epic.primary_schedule_key]
+            epics[epic.key].task.Start, epics[epic.key].task.Finish = primary.Start, primary.Finish
+    for summary in plan.summaries.values():
+        if summary.summary_id not in manual_rollups:
+            continue
+        members = [epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
+                   for epic in plan.epics.values()
+                   if epic.rollup_mode == summary.rollup_mode and epic.rollup_key == summary.key]
+        task = summaries[summary.summary_id].task
+        task._start_native = min(member.Start for member in members)
+        task._finish_native = max(member.Finish for member in members)
     session = object.__new__(MicrosoftProjectSession)
     session.project = SimpleNamespace(Tasks=CountedCollection(tasks), Resources=CountedCollection(resources.values()))
     session.app = SimpleNamespace(ActiveProject=session.project)
@@ -101,4 +170,5 @@ def project_from_yerp_plan(plan, config):
     session.app.FieldNameToFieldConstant = Mock(side_effect=lambda name: name)
     session.app.CustomFieldGetName = Mock(side_effect=lambda name: names.get(name, ''))
     session.app.CustomFieldRename = Mock()
+    session.app.DateFormat = Mock(side_effect=project_date_format)
     return session, epics, summaries

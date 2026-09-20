@@ -1,0 +1,258 @@
+"""Mirror final primary schedules into inactive references and their rollups."""
+
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import Any, Dict, Tuple
+
+from .rollups import summary_id
+
+
+def _key(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def reference_rollup_ids(plan) -> set[str]:
+    return {
+        summary_id(epic.rollup_mode, epic.rollup_key)
+        for epic in plan.epics.values()
+        if epic.rollup_mode == "fixVersion" and not epic.drives_schedule
+    }
+
+
+def _required_primary_keys(plan) -> set[str]:
+    rollups = reference_rollup_ids(plan)
+    return {
+        _key(epic.key if epic.drives_schedule else epic.primary_schedule_key)
+        for epic in plan.epics.values()
+        if not epic.drives_schedule or summary_id(epic.rollup_mode, epic.rollup_key) in rollups
+    }
+
+
+def _stamp(value: Any) -> Tuple[int, int, int, int, int]:
+    """Compare native dates at minute precision without replacing their times."""
+    parsed = value
+    if isinstance(parsed, str):
+        text = parsed.strip()
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            for pattern in (
+                "%m/%d/%Y %I:%M %p", "%m/%d/%y %I:%M %p",
+                "%m/%d/%Y %H:%M:%S", "%m/%d/%y %H:%M:%S",
+                "%m/%d/%Y %H:%M", "%m/%d/%y %H:%M",
+                "%m/%d/%Y", "%m/%d/%y",
+                "%B %d, %Y %I:%M %p", "%B %d, %Y %I:%M%p",
+            ):
+                try:
+                    parsed = datetime.strptime(text, pattern)
+                    break
+                except ValueError:
+                    continue
+            else:
+                raise ValueError("a native Project date is required") from None
+    if not isinstance(parsed, (datetime, date)):
+        raise ValueError("a native Project date is required")
+    return (parsed.year, parsed.month, parsed.day,
+            parsed.hour if isinstance(parsed, datetime) else 0,
+            parsed.minute if isinstance(parsed, datetime) else 0)
+
+
+def _read(task, field: str, context: str):
+    from .project import ProjectAutomationError
+    try:
+        return getattr(task, field)
+    except Exception as exc:
+        raise ProjectAutomationError(
+            f"Cannot read reference schedule: {context}, field={field}: {exc}"
+        ) from exc
+
+
+def _window(values, context: str):
+    from .project import ProjectAutomationError
+    try:
+        start, finish = values
+        start_stamp, finish_stamp = _stamp(start), _stamp(finish)
+    except (TypeError, ValueError) as exc:
+        raise ProjectAutomationError(
+            f"Cannot synchronize reference dates: {context} has missing or invalid Project Start/Finish dates."
+        ) from exc
+    if start_stamp > finish_stamp:
+        raise ProjectAutomationError(
+            f"Cannot synchronize reference dates: {context} has Project Start after Finish."
+        )
+    return (start, finish)
+
+
+def _targets(plan, task_by_key, summary_tasks, raw_dates):
+    """Resolve every source and destination before changing any Project values."""
+    from .project import ProjectAutomationError
+    epics = {_key(key): epic for key, epic in plan.epics.items()}
+    rollup_ids = reference_rollup_ids(plan)
+    references = {}
+    members: Dict[str, list] = {key: [] for key in rollup_ids}
+    source_windows = {}
+
+    def primary_window(epic):
+        primary = _key(epic.key if epic.drives_schedule else epic.primary_schedule_key)
+        source = epics.get(primary)
+        if source is None or not source.drives_schedule or primary not in task_by_key:
+            raise ProjectAutomationError(
+                f"Cannot synchronize reference dates: epic={epic.key}, missing driving primary={primary or '(blank)'}."
+            )
+        if primary not in source_windows:
+            if primary not in raw_dates:
+                raise ProjectAutomationError(
+                    f"Cannot synchronize reference dates: primary={primary} has no final scheduled date readback."
+                )
+            source_windows[primary] = _window(raw_dates[primary], f"primary={primary}")
+        return source_windows[primary]
+
+    for epic in plan.epics.values():
+        rollup = summary_id(epic.rollup_mode, epic.rollup_key)
+        if epic.drives_schedule and rollup not in rollup_ids:
+            continue
+        window = primary_window(epic)
+        if not epic.drives_schedule:
+            key = _key(epic.key)
+            if key not in task_by_key:
+                raise ProjectAutomationError(f"Cannot synchronize reference dates: missing reference epic={epic.key}.")
+            references[key] = window
+        if rollup in rollup_ids:
+            members[rollup].append(window)
+
+    rollups = {}
+    for rollup, windows in members.items():
+        summary = plan.summaries.get(rollup)
+        if summary is None:
+            raise ProjectAutomationError(f"Cannot synchronize reference dates: missing planned rollup={rollup}.")
+        identity = (summary.rollup_mode, _key(summary.key))
+        if identity not in summary_tasks:
+            raise ProjectAutomationError(f"Cannot synchronize reference dates: missing Project rollup={rollup}.")
+        rollups[identity] = (
+            min((window[0] for window in windows), key=_stamp),
+            max((window[1] for window in windows), key=_stamp),
+        )
+    return references, rollups
+
+
+def _matches(task, field: str, expected, context: str) -> bool:
+    try:
+        return _stamp(_read(task, field, context)) == _stamp(expected)
+    except ValueError:
+        return False
+
+
+def _verify_window(task, expected, context: str) -> None:
+    from .project import ProjectAutomationError
+    for field, value in zip(("Start", "Finish"), expected):
+        if not _matches(task, field, value, context):
+            raise ProjectAutomationError(
+                f"Microsoft Project did not retain synchronized reference dates: {context}, field={field}, expected={value!s}."
+            )
+
+
+def _write(task, field: str, value, context: str, stats) -> None:
+    from .project import ProjectAutomationError
+    try:
+        setattr(task, field, value)
+    except Exception as exc:
+        raise ProjectAutomationError(
+            f"Microsoft Project rejected reference schedule write: {context}, field={field}: {exc}"
+        ) from exc
+    stats["written"] += 1
+
+
+def _sync_window(session, task, expected, context: str, stats, manual_summary=False) -> None:
+    from .project import ProjectAutomationError
+    # Read each field immediately before its comparison. In particular a Start
+    # assignment can move Finish even when Finish matched before that write.
+    for field, value in zip(("Start", "Finish"), expected):
+        if _matches(task, field, value, context):
+            stats["skipped"] += 1
+            continue
+        if manual_summary:
+            try:
+                # pjDate_mmmm_dd_yyyy_hh_mmAM; use Project's locale, including
+                # time, rather than inventing 08:00/17:00 from a date-only value.
+                text = session.app.DateFormat(value, 2)
+                if not isinstance(text, str) or not text.strip():
+                    raise ValueError("Project returned an empty date representation")
+            except Exception as exc:
+                raise ProjectAutomationError(
+                    f"Cannot format reference rollup date: {context}, field={field}: {exc}"
+                ) from exc
+            _write(task, field + "Text", text, context, stats)
+        else:
+            _write(task, field, value, context, stats)
+    _verify_window(task, expected, context)
+
+
+def synchronize_reference_dates(session, plan, config, task_by_key, summary_tasks, raw_dates) -> None:
+    from .project import ProjectScanProgress, project_values_equal, verify_project_value
+    session._reference_dates_synchronized = False
+    session._reference_primary_date_stamps = None
+    references, rollups = _targets(plan, task_by_key, summary_tasks, raw_dates)
+    # Keep the pre-write source values. Relational checks alone would miss a
+    # primary moving inside a mixed rollup's unchanged overall date envelope.
+    primary_stamps = {
+        key: tuple(_stamp(value) for value in raw_dates[key])
+        for key in _required_primary_keys(plan)
+    }
+    stats = {"written": 0, "skipped": 0, "references": len(references), "rollups": len(rollups)}
+    plan.stats["project_reference_dates"] = stats
+    progress = ProjectScanProgress("Reference schedule dates", len(references) + len(rollups))
+    index = 0
+    for key, window in references.items():
+        task = task_by_key[key]
+        context = f"reference={key}"
+        verify_project_value(task, "Active", False, context)
+        verify_project_value(task, "Manual", False, context)
+        _sync_window(session, task, window, context, stats)
+        index += 1
+        progress.update(index)
+    for identity, window in rollups.items():
+        task = summary_tasks[identity]
+        context = f"rollup={identity[0]}:{identity[1]}"
+        if project_values_equal(_read(task, "Manual", context), True):
+            stats["skipped"] += 1
+        else:
+            _write(task, "Manual", True, context, stats)
+        verify_project_value(task, "Manual", True, context)
+        _sync_window(session, task, window, context, stats, manual_summary=True)
+        index += 1
+        progress.update(index)
+    session._reference_primary_date_stamps = (id(plan), primary_stamps)
+    session._reference_dates_synchronized = True
+
+
+def verify_reference_dates(session, plan, config, task_by_key, summary_tasks) -> int:
+    from .project import ProjectAutomationError, verify_project_value
+    # The existing verification pass supplies both indexes. Read each needed
+    # driving task's live dates once; no task collection scan or cached values.
+    raw_dates = {}
+    for primary in _required_primary_keys(plan):
+        task = task_by_key.get(primary)
+        if task is not None:
+            raw_dates[primary] = (_read(task, "Start", f"primary={primary}"),
+                                  _read(task, "Finish", f"primary={primary}"))
+    references, rollups = _targets(plan, task_by_key, summary_tasks, raw_dates)
+    cached = getattr(session, "_reference_primary_date_stamps", None)
+    if cached is not None and cached[0] == id(plan):
+        for primary, window in raw_dates.items():
+            if tuple(_stamp(value) for value in window) != cached[1].get(primary):
+                raise ProjectAutomationError(
+                    f"Primary schedule changed after reference date synchronization: primary={primary}. "
+                    "The final autoscheduled primary dates must remain unchanged."
+                )
+    for key, window in references.items():
+        task, context = task_by_key[key], f"reference={key}"
+        verify_project_value(task, "Active", False, context)
+        verify_project_value(task, "Manual", False, context)
+        _verify_window(task, window, context)
+    for identity, window in rollups.items():
+        task = summary_tasks[identity]
+        context = f"rollup={identity[0]}:{identity[1]}"
+        verify_project_value(task, "Manual", True, context)
+        _verify_window(task, window, context)
+    return len(references) * 4 + len(rollups) * 3

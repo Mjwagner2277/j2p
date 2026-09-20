@@ -25,6 +25,8 @@ from .project_values import (
     project_dependency_review, value_metadata,
 )
 from .rollups import summary_id
+from .reference_dates import reference_rollup_ids, synchronize_reference_dates, verify_reference_dates
+from .reference_formatting import format_reference_rows
 
 
 PROJECT_TASK_MANAGER_RESOLUTION = (
@@ -511,7 +513,7 @@ class MicrosoftProjectSession:
                 raise ProjectAutomationError(
                     f"Could not pause Microsoft Project automatic calculation: {exc}"
                 ) from exc
-            project_progress("Automatic calculation paused; tasks remain auto scheduled")
+            project_progress("Automatic calculation paused; epic tasks remain auto scheduled")
             yield
         finally:
             # Attempt restoration even if the setter partially succeeded before
@@ -667,6 +669,8 @@ class MicrosoftProjectSession:
                     continue  # Native summary completion is recalculated by Project from child durations.
                 verify_project_value(task, field, value, f"rollup={summary.key}")
                 count += 1
+        if getattr(self, "_reference_dates_synchronized", False):
+            count += verify_reference_dates(self, plan, config, tasks, summaries)
         project_progress(f"Project data verification complete: {total_epics} epic(s), {total_summaries} summary row(s)")
         return count
 
@@ -888,8 +892,16 @@ class MicrosoftProjectSession:
             raise ProjectAutomationError("Append-only creation requires an empty Project file.")
         task_by_key = self.index_tasks_by_key(config, task_list)
         rollup_tasks = self.index_rollup_summaries(config, task_list)
-        project_progress("Setting existing Project tasks to auto scheduled")
-        self.set_auto_scheduled(task_list)
+        self._reference_dates_synchronized = False
+        manual_rollups = reference_rollup_ids(plan)
+        manual_identities = {
+            (summary.rollup_mode, summary.key.upper()) for key, summary in plan.summaries.items()
+            if key in manual_rollups
+        }
+        project_progress("Setting Project scheduling modes")
+        self.set_auto_scheduled(task_list, {
+            id(task) for identity, task in rollup_tasks.items() if identity in manual_identities
+        })
         project_progress("Ensuring rollup summary rows")
         # A new file is built in final outline order. Inserting every epic right
         # after its summary repeatedly shifts rows already written to Project.
@@ -960,6 +972,12 @@ class MicrosoftProjectSession:
                         task = self.append_project_task(summary.name, 1, f"rollup={summary.key}")
                         self.write_summary_values(task, summary, config)
                         summary_tasks[key] = task
+        # Reuse known summary objects after scheduling; row IDs may change but
+        # their COM identities remain stable. Avoid another metadata scan.
+        self._reference_summary_tasks = (id(plan), {
+            (plan.summaries[key].rollup_mode, plan.summaries[key].key.upper()): task
+            for key, task in summary_tasks.items()
+        })
         timings = plan.stats["project_row_seconds"]
         timings["total"] = time.monotonic() - row_started
         if total_epics:
@@ -997,9 +1015,12 @@ class MicrosoftProjectSession:
         project_progress("Marking Project rows that no longer match Jira")
         self.mark_unmatched_tasks(plan, config, task_by_key)
 
-    def set_auto_scheduled(self, task_list: Optional[List[Any]] = None) -> None:
+    def set_auto_scheduled(
+        self, task_list: Optional[List[Any]] = None, manual_task_ids: Optional[set[int]] = None,
+    ) -> None:
+        manual_task_ids = manual_task_ids or set()
         for task in self.iter_tasks() if task_list is None else task_list:
-            self.write_task_value(task, "Manual", False, project_task_context(task))
+            self.write_task_value(task, "Manual", id(task) in manual_task_ids, project_task_context(task))
 
     def iter_tasks(self, progress_label: Optional[str] = None) -> List[Any]:
         tasks = []
@@ -1099,7 +1120,8 @@ class MicrosoftProjectSession:
 
     def write_summary_values(self, task: Any, summary: Any, config: Dict[str, Any]) -> None:
         context = f"rollup={summary.key}"
-        self.write_task_value(task, "Manual", False, context)
+        manual = summary.rollup_mode == "fixVersion" and summary.reference_epic_count > 0
+        self.write_task_value(task, "Manual", manual, context)
         for field, value in summary_assignments(summary, config):
             self.write_task_value(task, field, value, context)
 
@@ -1912,14 +1934,15 @@ class MicrosoftProjectSession:
         epics = [epic for epic in plan.epics.values() if epic.drives_schedule]
         progress = ProjectScanProgress("Scheduled date readback", len(epics))
         after = {}
+        self._scheduled_native_dates = {}
         for index, epic in enumerate(epics, start=1):
             task = task_by_key.get(epic.key.upper())
             if task is None:
                 raise ProjectAutomationError(f"Cannot review schedule dates: Project is missing epic {epic.key}.")
+            start, finish = safe_get(task, "Start"), safe_get(task, "Finish")
+            self._scheduled_native_dates[epic.key.upper()] = (start, finish)
             after[epic.key] = ProjectTaskSnapshot(
-                key=epic.key,
-                start=project_date_to_iso(safe_get(task, "Start")),
-                finish=project_date_to_iso(safe_get(task, "Finish")),
+                key=epic.key, start=project_date_to_iso(start), finish=project_date_to_iso(finish),
             )
             progress.update(index)
         return after
@@ -2090,12 +2113,22 @@ class MicrosoftProjectSession:
         self.assert_project_identity()
         project_progress("Indexing Project tasks for review formatting")
         with project_phase(plan, "review_index"):
-            task_by_key = self.index_tasks_by_key(config, progress_label="Review formatting")
+            task_list = self.iter_tasks(progress_label="Review formatting task scan")
+            task_by_key = self.index_tasks_by_key(config, task_list, progress_label="Review formatting")
         project_progress(f"Review formatting index complete: {len(task_by_key)} keyed task(s)")
         if before is not None or plan.stats.get("project_run_mode") == "create":
             with project_phase(plan, "schedule_review"):
                 after = self.read_schedule_dates(plan, task_by_key)
                 self.add_schedule_review_items(plan, before or {}, config, after=after)
+            if reference_rollup_ids(plan):
+                with project_phase(plan, "reference_dates"):
+                    cached = getattr(self, "_reference_summary_tasks", None)
+                    summaries = (cached[1] if cached and cached[0] == id(plan)
+                                 else self.index_rollup_summaries(config, task_list))
+                    with self.defer_automatic_calculation():
+                        synchronize_reference_dates(
+                            self, plan, config, task_by_key, summaries, self._scheduled_native_dates,
+                        )
         with project_phase(plan, "review_duration"):
             self.add_one_day_schedule_reviews(plan, config, task_by_key)
 
@@ -2218,6 +2251,9 @@ class MicrosoftProjectSession:
             )
         if visible_total:
             project_progress("Project cell coloring complete")
+        if before is not None or plan.stats.get("project_run_mode") == "create":
+            with project_phase(plan, "reference_formatting"):
+                format_reference_rows(self, plan, task_by_key)
 
     def project_column_is_visible_for_review(
         self,

@@ -539,6 +539,7 @@ review_table:
   exposed_columns:
     - jira_key
     - summary
+    - row_role
     - resource_group
     - dependency_review
     - jira_status
@@ -549,7 +550,7 @@ review_table:
   include_audit_columns: false
 ```
 
-The default table is intentionally manager-friendly. It hides internal matching keys, rollup categories, rollup mode, Jira key prefix, Jira issue type, Jira target dates, story point detail fields, logged-hours detail fields, row role, fixVersion, in-planning flags, and other flag-style review indicators. Those values are still written into the Project file and included in the HTML/CSV reports.
+The default table includes `row_role` so reference rows are explicitly labeled. It hides internal matching keys, rollup categories, rollup mode, Jira key prefix, Jira issue type, Jira target dates, story point detail fields, logged-hours detail fields, fixVersion, in-planning flags, and other flag-style review indicators. Those values are still written into the Project file and retained in CSV outputs.
 
 Use `all` when an administrator wants every standard j2p field visible in Project:
 

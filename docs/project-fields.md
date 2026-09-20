@@ -31,7 +31,8 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
 | `Resource Group` | Yes, through resource assignment | Yes | Team/resource-group ownership. j2p creates or reuses a Project resource, sets its `Group`, and assigns it to the task so Project's native `Resource Group` field is populated. |
-| `Active` | Required | Yes | Driving rows remain active, including completed work. Reference rows are inactive and carry progress in custom fields only. |
+| `Active` | Required | Yes | Driving rows remain active, including completed work. Reference rows are inactive and carry progress in custom fields only; removing their strike-through does not reactivate them. |
+| `Manual` | Required | Yes | All epic rows, including inactive references, remain Auto Scheduled. Only fixVersion summaries containing references are Manual so j2p can set its date window from all members' final primary schedules. |
 | `Summary` / outline parent | Yes, by creating/indenting rows | Yes | Initiative/fixVersion hierarchy. Used to place epics under the correct rollup and detect/move changed rollups. |
 
 ## Default Custom Fields
@@ -47,7 +48,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | `dependency_review` | `Text8` | `Dependency Review` | Epics | Stores human-readable dependency notes, such as missing targets, self-dependencies, circular skips, or reference-row notes. Cells using this field are colored light gray when dependency review is needed. |
 | `jira_status` | `Text9` | `Jira Status` | Epics | Stores the Jira epic status. Used for baseline comparison and completed-since-last-update reporting. Child story status is not written to Project rows. |
 | `j2p_key` | `Text10` | `j2p Unique Key` | Epics, generated secondary rows | Primary stable schedule row identity. Ordinary epics use the Jira key. Secondary reference/split rows use a generated key such as `PLAT-4028::FV::SHOP-DELIVERABLE-A::DE89D3A4`. This field prevents multi-fixVersion rows from overwriting one another. |
-| `row_role` | `Text11` | `j2p Row Role` | Epics, generated secondary rows | Shows `Scheduled`, `Primary`, `Reference`, or `Split`. Enables reviewer understanding of multi-fixVersion handling and helps developers reason about whether a row is a normal epic, a primary row, a non-driving reference, or a split row. |
+| `row_role` | `Text11` | `j2p Row Role` | Epics, generated secondary rows | Shows `Scheduled`, `Primary`, `Reference`, or `Split` in the default review table. Enables reviewer understanding of multi-fixVersion handling and helps developers reason about whether a row is a normal epic, a primary row, a non-driving reference, or a split row. |
 | `fix_version` | `Text12` | `Jira Fix Version` | fixVersion-mode rows | Stores the specific fixVersion represented by this row. Needed because one Jira epic may produce multiple Project rows when it has multiple fixVersions. |
 | `primary_schedule_key` | `Text13` | `Primary Schedule Key` | Reference/split rows | Points a secondary row back to its primary schedule key. Reference rows use this to show which driving row owns schedule logic. |
 | `total_story_points` | `Number1` | `Total Story Points` | Summary rows, epics | Stores total child story/task points. Used for percent-complete math, rollup weighting, baseline comparison, changed-cell coloring, and in-planning detection. |
@@ -94,6 +95,7 @@ Dependencies:
 - `dependency_review` stores notes for skipped or concerning dependencies.
 - `dependency_review_needed` is a filterable flag for those notes.
 - Reference rows should not receive schedule-driving dependencies because `drives_schedule` is `False`.
+- After scheduling, reference Start/Finish mirror their primary's final native dates. FixVersion summaries containing references use the earliest member Start and latest member Finish, resolving references to their primary; j2p manages these summary dates in Manual mode. Both all-reference and mixed summaries include every member. Primary schedules and Jira target fields are unchanged by this pass.
 
 Review coloring:
 
@@ -105,7 +107,8 @@ Review coloring:
 - Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields. A native date can be amber because it differs from the Jira target or a write was rejected, without any new date movement. The date audit compares native dates against the input Project file (or initial scheduling dates for new rows) and records differences from Jira separately. Only qualifying linked movement appears in `Cascading Schedule Drivers`. Confirmed native date changes stay green even when they also differ from Jira.
 - Light-gray dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
-- Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property and does not call Project font-formatting commands.
+- Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property.
+- Reference appearance uses [FontStrikethrough(False)](https://learn.microsoft.com/en-us/office/vba/api/project.application.fontstrikethrough) on selected rows only after checking their stable task identity. It checks that references remain inactive, leaves background colors unchanged, and aggregates cosmetic failures into `ProjectReferenceFormattingFailed`. A successful command is not verification of the rendered font; Project's Cell object has no documented strike-through readback.
 
 ## Adding Or Changing A Field
 
@@ -153,6 +156,9 @@ Confirm:
 - the `j2p Review` table includes every field needed for review/coloring
 - `j2p Unique Key` remains stable across update runs
 - multi-fixVersion reference rows do not overwrite primary rows
+- reference dates mirror final primary dates, including times, before and after save/reopen
+- all-reference and mixed fixVersion summaries span every member's final schedule
+- Reference row labels are visible and strike-through is removed while Active remains No
 - resource group appears in native `Resource Group`
 - changed cells are colored in the intended columns
 - Project predecessor IDs correspond to the Jira dependencies shown in the report

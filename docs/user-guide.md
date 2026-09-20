@@ -30,7 +30,7 @@ The source-of-truth Project file is protected:
 
 - The main `.mpp` is never edited directly.
 - Every `update` run creates a timestamped sandbox copy.
-- The sandbox is auto-scheduled.
+- Epic tasks, including inactive references, are Auto Scheduled. Only fixVersion headers containing references use Manual mode for their date windows managed by j2p.
 - Changed Project cells are colored for review.
 - Excluded and concerning Jira rows are reported.
 - The manager report is self-contained HTML.
@@ -305,7 +305,7 @@ Existing rows compare against the input `.mpp`; new rows and creation runs compa
 | Light gray | Dependency review marker. | Confirm blocker links or fix missing/circular dependencies in Jira. |
 | Gray/green-gray | In planning when that column is exposed. | Confirm the epic is intentionally unpointed or add planned child work in Jira. |
 
-j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. By default, the table shows only manager-facing columns such as Jira key, summary, resource group, dependency review, status, Project start/finish, percent complete, and predecessors. Rollup categories, row role, fixVersion, internal matching keys, story/hour detail fields, Jira target dates, and review flag fields are hidden unless a schedule owner exposes them with `review_table.exposed_columns` in YAML. Hidden fields are still written and reported, but they are not colored in the default Project review table.
+j2p applies sandbox colors through Project cell background formatting. During `create` and `update`, it creates and applies a Microsoft Project task table named `j2p Review` before coloring so the review columns are visible without the user manually adding columns. By default, the table shows only manager-facing columns such as Jira key, summary, row role, resource group, dependency review, status, Project start/finish, percent complete, and predecessors. Rollup categories, fixVersion, internal matching keys, story/hour detail fields, Jira target dates, and review flag fields are hidden unless a schedule owner exposes them with `review_table.exposed_columns` in YAML. Hidden fields are still written and reported, but they are not colored in the default Project review table.
 
 To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. Cell formatting appears in the left task sheet, not on the right-side Gantt bars. The HTML manager report has its own cascade diagram colors; red branch driver cards do not make the corresponding Project date cells red.
 
@@ -313,7 +313,7 @@ If Project rejects table setup or cell formatting, the run continues and records
 
 Project stores predecessor links as Project task row IDs, not Jira keys. The manager report and audit CSV show Jira keys such as `CORE-1001`, but the sandbox `Predecessors` column normally shows values such as `12FS`. That is expected.
 
-j2p does not use VBA macros or Project font-formatting commands for default coloring. Macros can be useful for a controlled engineering workstation, but they add Office macro security prompts and Trust Center settings that are not ideal for nontechnical handoff. Default highlighting is macro-free and avoids the Project Font dialog; if Project rejects both direct cell-color properties, the manager report calls that out explicitly.
+j2p does not use VBA macros. Default cell coloring uses direct color properties; reference-row appearance uses Project's dedicated strike-through command. Macros can be useful for a controlled engineering workstation, but they add Office macro security prompts and Trust Center settings that are not ideal for nontechnical handoff. Default highlighting is macro-free and avoids the Project Font dialog; if Project rejects both direct cell-color properties, the manager report calls that out explicitly.
 
 ## CSV Inputs
 
@@ -395,6 +395,10 @@ multi_fixversion_policy:
 ```
 
 Reference rows are useful when the same Jira epic should be visible in multiple business views without double-counting story points in schedule summaries. Split rows are useful only when the team truly wants the same Jira epic to drive schedule placement under each listed fixVersion.
+
+After scheduling, each reference row displays its primary task's final Project Start and Finish. A fixVersion containing references uses the earliest Start and latest Finish across all its members' final schedules, including primary schedules represented by references. This applies both to versions containing only references and to versions mixing references with driving rows. Only these fixVersion summary headers use Manual mode for their dates managed by j2p; all epic tasks, including inactive references, remain Auto Scheduled. References stay inactive and do not create duplicate dependencies or count extra overall story points. Jira target dates remain separate from these calculated dates.
+
+The default review table includes `j2p Row Role`, with `Reference` identifying secondary rows. j2p removes strike-through from reference rows when Project accepts the formatting command, while keeping them inactive. If formatting fails, the audit records one `ProjectReferenceFormattingFailed` warning; use the row-role label and check Project's inactive-task text style. Task names and review background colors are unchanged. Validate the visible result in Project because the automation interface does not expose a strike-through readback.
 
 ## Identity And Schedule Keys
 
@@ -511,7 +515,7 @@ Jira target dates are stored in Project custom fields:
 
 Jira exports may include dates with times or `DD-MON-YY` syntax, such as `17-SEP-26 12:00 AM`. j2p normalizes supported Jira target-date values to `YYYY-MM-DD` before writing them to Microsoft Project.
 
-The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `create` or `update` run:
+Epic tasks are Auto Scheduled; fixVersion headers containing references have date windows managed by j2p in Manual mode. During a Windows Microsoft Project `create` or `update` run:
 
 - Changed Jira target-date cells are colored green.
 - If Project auto-scheduling shifts Start or Finish, the changed Project date cells are green, including cascade branch drivers.
@@ -834,10 +838,10 @@ Do not mix baseline and updated snapshots in one run. See
 
 ### Scheduling during a Project write
 
-J2P keeps tasks Auto Scheduled and batches Project calculation while it writes.
+J2P keeps epic tasks Auto Scheduled and batches Project calculation while it writes.
 New-project creation appends each rollup and its epic rows in final outline order, avoiding repeated insertion above rows already written. Explicit outline levels and parent readback validate the hierarchy. Creation also caches the shared team resources while continuing to verify each task's actual resource assignments. Existing-project updates retain their current placement behavior.
 
-The report includes Project Creation Timing and Project Row Timing. The row breakdown separates placement/summary fields, epic values and resources, and quarter-point calculation time. Resource-assignment time is also shown as a subset of epic-value time; do not sum it twice. Saving, dependency writes, formatting, and close/reopen verification have separate phase timings. These measurements help distinguish slow Project automation calls from calculation time on the actual Windows machine.
+The run manifest records Project creation and row timings. The row breakdown separates placement/summary fields, epic values and resources, and quarter-point calculation time. Resource-assignment time is also shown as a subset of epic-value time; do not sum it twice. Saving, dependency writes, formatting, and close/reopen verification have separate phase timings. These measurements help distinguish slow Project automation calls from calculation time on the actual Windows machine.
 
 It recalculates after about 25%, 50%, 75%, and 100% of planned epic rows, counting
 reference rows and unchanged rows visited during updates. Progress logs show the

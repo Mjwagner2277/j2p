@@ -48,6 +48,8 @@ Run the harness on each supported Project version/edition with these fixture var
 | One task changes points, name, rollup, or owned resource group | Only differing managed values/relationships written; complete rollups and report detail retained |
 | Incomplete native completion differs from unchanged Jira completion | No repeated native percentage seed; exact custom completion and valid native completion verified |
 | Reordered Project row IDs, generated multi-fixVersion keys | Relationships resolve to the same schedule keys/UniqueIDs |
+| Reference-only or mixed fixVersion group | Inactive references mirror primary dates; the summary spans every member's final dates, including times, before and after reopening; updating the summary leaves every primary schedule unchanged |
+| Reference row appearance | Reference label visible; strike-through removed in the review view while Active remains No and existing review backgrounds remain intact |
 | Duplicate matching keys in the MPP | Failed before task mutation; useful duplicate-key error |
 | A managed resource group changed between runs | Previous owned assignment removed; new owned assignment retained |
 | Existing human resources with the same names as group labels | Human resource metadata/assignments retained; separate owned placeholder used |
@@ -93,8 +95,10 @@ also calculates before dependency writes following its initial save. Check that
 Cascading Schedule Drivers, the complete date audit, and saved/reopened values reflect the final linked schedule.
 
 Repeat with Project initially set to automatic calculation and then manual
-calculation; each run must restore its original application setting while tasks
-remain Auto Scheduled. On a disposable sandbox, interrupt with a controlled
+calculation; each run must restore its original application setting while epic tasks
+remain Auto Scheduled, including inactive references. Only fixVersion summary
+headers containing references use Manual mode
+for date windows managed by j2p. On a disposable sandbox, interrupt with a controlled
 write/calculation exception and check that the calculation setting is restored.
 Measure identical-input and changed-input runs and retain their manifests; do
 not infer runtime improvement from portable checkpoint tests alone.

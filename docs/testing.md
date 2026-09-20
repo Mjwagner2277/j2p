@@ -122,6 +122,9 @@ Review the generated sandbox `.mpp` and confirm:
 - isolated changes, Jira-target mismatches alone, completed-only branches, and drivers missing both Jira target dates are excluded; all date evidence remains in audit CSVs
 - resource-group reports include Cascading Schedule Drivers branches starting in that group and affected downstream issues from other groups
 - completed driving epics remain active at native 100%, with configured Gantt-bar hiding; reference rows remain inactive and show progress in Story Point Completion %
+- reference rows display `Reference` in the default row-role column; removing strike-through leaves native activation, numeric values, task names, and review backgrounds unchanged
+- wrong-task selection or rejected formatting produces one cosmetic warning without formatting another row or reactivating references
+- reference dates match final primary Start/Finish, including times, and all-reference/mixed fixVersion summary windows include every member after save/reopen
 - `reports\html\Manager-Review-Report.html`, resource-group HTML reports, and audit CSVs match visible sandbox changes
 - `reports\csv\by-project-key\<KEY>\*.csv` files are present for each Jira key prefix
 
