@@ -36,6 +36,27 @@ def project_dependency_review(text: str) -> str:
     return text[:255 - len(suffix)].rstrip() + suffix
 
 
+def missing_target_date_note(epic, one_day=False):
+    """Describe absent Jira targets; only observed Project durations get one-day wording."""
+    if epic.target_start and epic.target_end:
+        return ""
+    missing = "start/end" if not epic.target_start and not epic.target_end else (
+        "start" if not epic.target_start else "end"
+    )
+    note = f"Missing Jira target {missing}. "
+    if not epic.drives_schedule:
+        return note + f"Reference row; primary {epic.primary_schedule_key} drives the schedule."
+    if one_day and not epic.target_start and not epic.target_end:
+        return note + (
+            "Project currently schedules this task for one day; Jira supplied no dates. "
+            "Confirm the duration."
+        )
+    return note + (
+        "Project uses existing dates or the nearest available dates "
+        "allowed by dependencies and calendars."
+    )
+
+
 def epic_assignments(epic, config):
     fields = config["project_fields"]
     yield "Name", epic.summary

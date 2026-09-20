@@ -1465,7 +1465,7 @@ class J2PPlanningTests(unittest.TestCase):
         prepared_columns: List[str] = []
         colored_columns: List[str] = []
         session = object.__new__(MicrosoftProjectSession)
-        session.index_tasks_by_key = lambda _config: {"CORE-1": task}
+        session.index_tasks_by_key = lambda _config, **_kwargs: {"CORE-1": task}
         session.project_selection_aliases = lambda column, _config: [column]
         session.prepare_formatting_view = lambda columns, _config: prepared_columns.extend(columns) or []
         session.project_table_column_positions = lambda _table, _config: {

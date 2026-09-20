@@ -18,7 +18,7 @@ from .baseline import (
     compare_with_baseline,
     story_point_ratio_field_name,
 )
-from .project_values import validate_project_plan
+from .project_values import missing_target_date_note, validate_project_plan
 from .config import logical_columns, lowered
 from .dependencies import add_dependency_review, apply_dependencies, creates_cycle, primary_planned_key
 from .formatting import format_number, html_escape
@@ -362,6 +362,7 @@ def build_run_plan(
                 source_row=story.source_row, source_file=story.source_file,
             ))
 
+    add_missing_target_date_reviews(planned_epics, audit)
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(
         planned_epics, config,
@@ -475,6 +476,25 @@ def build_run_plan(
             item.source_file = source.source_file
     validate_project_plan(plan, config)
     return plan
+
+
+def add_missing_target_date_reviews(epics: Dict[str, PlanEpic], audit: List[AuditItem]) -> None:
+    """Explain schedule-derived dates without inventing missing Jira targets."""
+    for epic in epics.values():
+        if epic.target_start and epic.target_end:
+            continue
+        note = missing_target_date_note(epic)
+        # Keep the date provenance visible even when other review notes exceed
+        # Project's 255-character text field. The audit retains the full text.
+        epic.dependency_review = " ".join(filter(None, (note, epic.dependency_review)))
+        audit.append(AuditItem(
+            "Info", "MissingJiraTargetDates",
+            jira_key=epic.jira_key or epic.key, schedule_key=epic.key,
+            issue_type="Epic", summary=epic.summary, field="Dependency Review",
+            new_value=note, color="dependency_review", message=note,
+            reviewer_action="Confirm the Project schedule or supply the missing target dates in Jira.",
+            source_row=epic.source_row, source_file=epic.source_file,
+        ))
 
 
 def validate_aggregate_time_scope(stories: List[JiraIssue]) -> None:

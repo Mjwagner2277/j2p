@@ -174,7 +174,7 @@ class ProjectCreationOrderTests(unittest.TestCase):
         with patch('j2p.project.MicrosoftProjectSession', return_value=session), redirect_stdout(io.StringIO()):
             create_project_from_plan(Path('fresh-project.mpp'), plan, config)
         session.new.assert_called_once_with()
-        session.apply_plan.assert_called_once_with(plan, config, write_dependencies=False, append_only=True)
+        session.apply_plan.assert_called_once_with(plan, config, write_dependencies=False, append_only=True, defer_undated_reviews=True)
         session.verify_saved_plan.assert_called_once_with(plan, config)
 
     def test_creation_groups_modes_and_preserves_every_row_with_quarter_checkpoints(self):

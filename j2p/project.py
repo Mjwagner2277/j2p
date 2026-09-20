@@ -20,7 +20,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .models import AuditItem, PlanEpic, ProjectTaskSnapshot, RunPlan
 from .formatting import format_number
-from .project_values import epic_assignments, epic_context, value_metadata
+from .project_values import (
+    epic_assignments, epic_context, missing_target_date_note,
+    project_dependency_review, value_metadata,
+)
 from .rollups import summary_id
 
 
@@ -54,6 +57,25 @@ PROJECT_ENTRY_TABLE_COLUMNS = {
 
 def project_progress(message: str) -> None:
     print(f"[j2p] {datetime.now().strftime('%H:%M:%S')} {message}", flush=True)
+
+
+class ProjectScanProgress:
+    """Report completed work without extra Project reads or a background COM thread."""
+
+    def __init__(self, label: str, total: int, unit: str = "row(s)", every: int = 50) -> None:
+        self.label, self.total, self.unit, self.every = label, total, unit, every
+        self.started = self.last_reported = time.monotonic()
+        project_progress(f"{label}: 0/{total} {unit}")
+
+    def update(self, completed: int) -> None:
+        now = time.monotonic()
+        if completed == 1 or completed % self.every == 0 or completed == self.total or now - self.last_reported >= 10:
+            percent = completed / self.total * 100 if self.total else 100
+            project_progress(
+                f"{self.label}: {completed}/{self.total} {self.unit} "
+                f"({percent:.0f}%; elapsed {now - self.started:.1f}s)"
+            )
+            self.last_reported = now
 
 
 class ProjectAutomationError(RuntimeError):
@@ -142,7 +164,7 @@ def apply_plan_to_sandbox(
                 session.configure_custom_fields(config)
             project_progress("Applying changed Jira values to Project rows")
             with project_phase(plan, "apply_changes"):
-                session.apply_plan(plan, config, dependency_write_mode=dependency_write_mode)
+                session.apply_plan(plan, config, dependency_write_mode=dependency_write_mode, defer_undated_reviews=True)
             session.end_selective_update(plan)
             project_progress("Recalculating Project after Jira updates")
             with project_phase(plan, "recalculate"):
@@ -182,7 +204,7 @@ def create_project_from_plan(
                 session.configure_custom_fields(config)
             project_progress("Creating initial Project rows from Jira")
             with project_phase(plan, "apply_changes"):
-                session.apply_plan(plan, config, write_dependencies=False, append_only=True)
+                session.apply_plan(plan, config, write_dependencies=False, append_only=True, defer_undated_reviews=True)
             if not plan.epics:
                 project_progress("Recalculating initial Project schedule")
                 with project_phase(plan, "initial_recalculate"):
@@ -858,6 +880,7 @@ class MicrosoftProjectSession:
         write_dependencies: bool = True,
         dependency_write_mode: str = "fast",
         append_only: bool = False,
+        defer_undated_reviews: bool = False,
     ) -> None:
         self.assert_project_identity()
         task_list = getattr(self, "_update_task_list", None)
@@ -910,7 +933,10 @@ class MicrosoftProjectSession:
                 ) from None
             task_by_key[epic.key] = task
             with project_row_phase(plan, "values_and_resources"):
-                self.update_epic_task(task, epic, config, plan)
+                if defer_undated_reviews:
+                    self.update_epic_task(task, epic, config, plan, defer_undated_review=True)
+                else:
+                    self.update_epic_task(task, epic, config, plan)
             if index in checkpoints:
                 project_progress(
                     f"Recalculating after {index}/{total_epics} epic rows "
@@ -972,14 +998,14 @@ class MicrosoftProjectSession:
         if self.project is None:
             return tasks
         try:
-            total = int(self.project.Tasks.Count)
+            task_collection = self.project.Tasks
+            total = int(task_collection.Count)
         except Exception as exc:
             raise ProjectAutomationError(f"Could not read Project task collection count: {exc}") from exc
+        progress = ProjectScanProgress(progress_label, total) if progress_label else None
         for index in range(1, total + 1):
-            if progress_label and (index == 1 or index % 100 == 0 or index == total):
-                project_progress(f"{progress_label}: {index}/{total} row(s)")
             try:
-                task = self.project.Tasks(index)
+                task = task_collection(index)
             except Exception as exc:
                 raise ProjectAutomationError(
                     f"Could not read Project task row {index} of {total}"
@@ -987,13 +1013,22 @@ class MicrosoftProjectSession:
                 ) from exc
             if task is not None:
                 tasks.append(task)
+            if progress:
+                progress.update(index)
         return tasks
 
-    def index_tasks_by_key(self, config: Dict[str, Any], task_list: Optional[List[Any]] = None) -> Dict[str, Any]:
+    def index_tasks_by_key(
+        self, config: Dict[str, Any], task_list: Optional[List[Any]] = None,
+        progress_label: Optional[str] = None,
+    ) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
         key_field = config.get("project_fields", {}).get("jira_key", "Text1")
         j2p_key_field = config.get("project_fields", {}).get("j2p_key", "Text10")
-        for task in self.iter_tasks() if task_list is None else task_list:
+        if task_list is None:
+            task_list = (self.iter_tasks(progress_label=f"{progress_label} task scan")
+                         if progress_label else self.iter_tasks())
+        progress = ProjectScanProgress(f"{progress_label} key index", len(task_list)) if progress_label else None
+        for index, task in enumerate(task_list, start=1):
             key = safe_get(task, j2p_key_field) or safe_get(task, key_field)
             if key:
                 normalized = str(key).strip().upper()
@@ -1003,6 +1038,8 @@ class MicrosoftProjectSession:
                         f"{project_task_context(task)}. Resolve duplicate matching keys in the source schedule."
                     )
                 result[normalized] = task
+            if progress:
+                progress.update(index)
         return result
 
     def index_rollup_summaries(self, config: Dict[str, Any], task_list: List[Any]) -> Dict[Tuple[str, str], Any]:
@@ -1137,7 +1174,10 @@ class MicrosoftProjectSession:
                 f"Could not move {epic_context(epic)} under rollup {epic.rollup_key}: {exc}"
             ) from exc
 
-    def update_epic_task(self, task: Any, epic: PlanEpic, config: Dict[str, Any], plan: RunPlan) -> None:
+    def update_epic_task(
+        self, task: Any, epic: PlanEpic, config: Dict[str, Any], plan: RunPlan,
+        defer_undated_review: bool = False,
+    ) -> None:
         fields = config.get("project_fields", {})
         seed_completion = True
         source_dates_match = True
@@ -1164,6 +1204,9 @@ class MicrosoftProjectSession:
         for field, value in epic_assignments(epic, config):
             if field == "PercentComplete":
                 continue  # Seed native progress only after duration-changing date/resource writes.
+            if (defer_undated_review and epic.drives_schedule and not epic.target_start
+                    and not epic.target_end and field == fields.get("dependency_review", "Text8")):
+                continue  # Write the final observed-duration note once, after recalculation.
             self.write_task_value(task, field, value, epic_context(epic))
         try:
             with project_row_phase(plan, "resources_within_values"):
@@ -1929,34 +1972,137 @@ class MicrosoftProjectSession:
                 )
             )
 
+    def add_one_day_schedule_reviews(
+        self, plan: RunPlan, config: Dict[str, Any], task_by_key: Dict[str, Any],
+    ) -> None:
+        """Annotate observed one-day schedules without changing dates or duration."""
+        eligible = [epic for epic in plan.epics.values()
+                    if epic.drives_schedule and not epic.target_start and not epic.target_end]
+        if not eligible:
+            return
+        self.assert_project_identity()
+        hours = read_project_value(self.project, "HoursPerDay")
+        day_minutes = (hours * 60 if isinstance(hours, (int, float)) and not isinstance(hours, bool)
+                       and math.isfinite(hours) and hours > 0 else None)
+        fields = config.get("project_fields", {})
+        audits = {item.schedule_key: item for item in plan.audit_items
+                  if item.category == "MissingJiraTargetDates"}
+        progress = ProjectScanProgress("Undated Project duration review", len(eligible))
+        one_day_count = unknown_count = written_count = 0
+        counts = plan.stats.get("project_update_writes", {}).setdefault("task_fields", {})
+        for index, epic in enumerate(eligible, start=1):
+            task = task_by_key.get(epic.key.upper())
+            if task is None:
+                raise ProjectAutomationError(f"Cannot review duration: Project is missing epic {epic.key}.")
+            duration = read_project_value(task, "Duration") if day_minutes is not None else None
+            known = (isinstance(duration, (int, float)) and not isinstance(duration, bool)
+                     and math.isfinite(duration) and duration >= 0)
+            one_day = known and math.isclose(duration, day_minutes, rel_tol=1e-9, abs_tol=1e-6)
+            one_day_count += int(one_day)
+            unknown_count += int(not known)
+            note = missing_target_date_note(epic, one_day=one_day)
+            remaining = epic.dependency_review
+            for old_note in (missing_target_date_note(epic, one_day=True), missing_target_date_note(epic)):
+                if remaining.startswith(old_note):
+                    remaining = remaining[len(old_note):].lstrip()
+                    break
+            epic.dependency_review = " ".join(filter(None, (note, remaining)))
+            audit = audits.get(epic.key)
+            if audit is None:
+                audit = AuditItem(
+                    "Info", "MissingJiraTargetDates", jira_key=epic.jira_key or epic.key,
+                    schedule_key=epic.key, issue_type="Epic", summary=epic.summary,
+                    field="Dependency Review", color="dependency_review",
+                    source_row=epic.source_row, source_file=epic.source_file,
+                )
+                plan.audit_items.append(audit)
+                audits[epic.key] = audit
+            audit.new_value = audit.message = note
+            audit.reviewer_action = (
+                "Confirm the one-day duration in Project or supply the missing target dates in Jira."
+                if one_day else "Confirm the Project schedule or supply the missing target dates in Jira."
+            )
+            # The update cache has normally ended before final calculation. Read
+            # these two fields fresh and avoid replacing a correct note each run.
+            for field, value in (
+                (fields.get("dependency_review", "Text8"), project_dependency_review(epic.dependency_review)),
+                (fields.get("dependency_review_needed", "Flag3"), True),
+            ):
+                actual = read_project_value(task, field)
+                result = "skipped"
+                if not project_values_equal(actual, value):
+                    try:
+                        write_required_project_value(task, field, value, epic_context(epic))
+                    except ProjectAutomationError:
+                        if "project_update_writes" in plan.stats:
+                            counts["failed"] = counts.get("failed", 0) + 1
+                        raise
+                    result = "written"
+                    written_count += 1
+                if "project_update_writes" in plan.stats:
+                    counts[result] = counts.get(result, 0) + 1
+                cache = self.task_value_cache(task)
+                if cache is not None:
+                    cache[field] = value
+            progress.update(index)
+        project_progress(
+            f"Undated Project duration review complete: {one_day_count} one-day schedule(s), "
+            f"{unknown_count} duration(s) unconfirmed, {written_count} review field write(s)"
+        )
+
     def apply_review_formatting(self, plan: RunPlan, config: Dict[str, Any]) -> None:
         self.assert_project_identity()
         project_progress("Indexing Project tasks for review formatting")
-        task_by_key = self.index_tasks_by_key(config)
-        formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
-        for item in list(plan.audit_items):
-            if not item.jira_key or not item.color:
-                continue
-            lookup_key = (item.schedule_key or item.jira_key).upper()
-            task = task_by_key.get(lookup_key)
-            if task is None:
-                continue
-            column = project_column_for_audit_field(item.field, config)
-            if not column:
-                continue
-            color = config.get("colors", {}).get(item.color, item.color)
-            column_aliases = self.project_selection_aliases(column, config)
-            formatting_items.append((item, task, column, color, column_aliases))
+        with project_phase(plan, "review_index"):
+            task_by_key = self.index_tasks_by_key(config, progress_label="Review formatting")
+        project_progress(f"Review formatting index complete: {len(task_by_key)} keyed task(s)")
+        with project_phase(plan, "review_duration"):
+            self.add_one_day_schedule_reviews(plan, config, task_by_key)
 
-        review_columns = review_table_columns(
-            config,
-            [column for _item, _task, column, _color, _aliases in formatting_items],
-        )
-        visible_formatting_items = [
-            formatting_item
-            for formatting_item in formatting_items
-            if self.project_column_is_visible_for_review(formatting_item[4], review_columns, config)
-        ]
+        # These names are stable during one formatting pass. Resolving them via
+        # COM for every audit item, and every visible column for every item,
+        # can dominate preparation time on large plans. Do not cache across passes:
+        # field mappings or Project's custom field names may have changed.
+        aliases_by_column: Dict[str, List[str]] = {}
+
+        def selection_aliases(column: str) -> List[str]:
+            if column not in aliases_by_column:
+                aliases_by_column[column] = self.project_selection_aliases(column, config)
+            return aliases_by_column[column]
+
+        project_progress("Collecting Project review color candidates")
+        formatting_items: List[Tuple[AuditItem, Any, str, str, List[str]]] = []
+        with project_phase(plan, "review_candidates"):
+            audit_items = list(plan.audit_items)
+            progress = ProjectScanProgress("Review color candidates", len(audit_items), "audit item(s)", every=1000)
+            for index, item in enumerate(audit_items, start=1):
+                if item.jira_key and item.color:
+                    lookup_key = (item.schedule_key or item.jira_key).upper()
+                    task = task_by_key.get(lookup_key)
+                    if task is not None:
+                        column = project_column_for_audit_field(item.field, config)
+                        if column:
+                            color = config.get("colors", {}).get(item.color, item.color)
+                            formatting_items.append((item, task, column, color, selection_aliases(column)))
+                progress.update(index)
+
+        project_progress("Resolving visible Project review columns")
+        with project_phase(plan, "review_columns"):
+            review_columns = review_table_columns(
+                config,
+                [column for _item, _task, column, _color, _aliases in formatting_items],
+            )
+            visible_aliases = set()
+            progress = ProjectScanProgress("Review column resolution", len(review_columns), "column(s)")
+            for index, column in enumerate(review_columns, start=1):
+                visible_aliases.update(normalize_project_column_name(alias) for alias in selection_aliases(column))
+                progress.update(index)
+            # Preserve every item and its order, including multiple colors for
+            # the same cell; the last audit's color must still win.
+            visible_formatting_items = [
+                formatting_item for formatting_item in formatting_items
+                if any(normalize_project_column_name(alias) in visible_aliases for alias in formatting_item[4])
+            ]
         hidden_formatting_count = len(formatting_items) - len(visible_formatting_items)
         project_progress(f"Preparing to color {len(visible_formatting_items)} visible Project review cell(s)")
         if hidden_formatting_count:

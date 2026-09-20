@@ -39,7 +39,9 @@ class ProjectUpdateReportTests(unittest.TestCase):
                 "task_fields": {"written": 2, "skipped": 81, "failed": 0},
                 "dependency_sets": {"written": 0, "skipped": 2, "failed": 0},
             },
-            "project_update_seconds": {"apply_changes": 1.234, "total": 9.876},
+            "project_update_seconds": {"apply_changes": 1.234, "review_index": 0.5,
+                                       "review_duration": 0.1, "review_candidates": 0.1, "review_columns": 0.2,
+                                       "format_review": 2.0, "total": 9.876},
         })
         with tempfile.TemporaryDirectory() as tmp:
             paths = write_reports(plan, Path(tmp), deepcopy(DEFAULT_CONFIG))
@@ -52,6 +54,8 @@ class ProjectUpdateReportTests(unittest.TestCase):
                 self.assertIn("not unique fields or tasks", html)
                 self.assertIn("<td>81</td>", html)
                 self.assertIn("<td>9.876</td>", html)
+                for label in ("task indexing", "undated task durations", "color candidates", "visible columns"):
+                    self.assertIn(f"Format review: {label} (subset)", html)
                 self.assertIn("Apply changes includes the required recalculation", html)
             with paths["audit_detail"].open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
