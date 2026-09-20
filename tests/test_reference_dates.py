@@ -214,7 +214,7 @@ class ReferenceDateTests(unittest.TestCase):
         session, plan, config, tasks, summaries = fixture()
         config['project_fields'].update(schedule_start='Date7', schedule_finish='Date8')
         sync(session, plan, config, tasks, summaries)
-        self.assertTrue(all(field in {'Start', 'Finish'} for task in tasks.values() for field, _ in task.writes))
+        self.assertTrue(all(field in {'StartText', 'FinishText'} for task in tasks.values() for field, _ in task.writes))
         self.assertFalse(any(task.writes for task in summaries.values()))
         for task in [*tasks.values(), *summaries.values()]:
             self.assertEqual((task.Date3, task.Date4, task.Date7, task.Date8), ('NA',) * 4)
@@ -223,7 +223,7 @@ class ReferenceDateTests(unittest.TestCase):
         for field, value in (('Work', 1), ('ActualWork', 1), ('ActualDuration', 1),
                              ('Assignments', SimpleNamespace(Count=1)),
                              ('TaskDependencies', SimpleNamespace(Count=1)),
-                             ('Active', False), ('Manual', False)):
+                             ('Active', False), ('Manual', False), ('Summary', True)):
             session, plan, config, tasks, summaries = fixture()
             setattr(tasks['R3'], field, value)
             with self.subTest(field=field), self.assertRaises(ProjectAutomationError):
@@ -251,7 +251,7 @@ class ReferenceDateTests(unittest.TestCase):
         session, plan, config, tasks, summaries = fixture()
         tasks['R1']._finish = tasks['P1']._finish
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual([field for field, _ in tasks['R1'].writes], ['Start', 'Finish'])
+        self.assertEqual([field for field, _ in tasks['R1'].writes], ['StartText', 'FinishText'])
         self.assertEqual(tasks['R1'].Finish, tasks['P1'].Finish)
 
     def test_primary_change_updates_references_and_both_membership_rollups(self):
@@ -309,7 +309,7 @@ class ReferenceDateTests(unittest.TestCase):
         self.assertEqual(reference_rollup_ids(plan), set())
 
     def test_rejected_reference_and_summary_writes_fail_instead_of_reporting_success(self):
-        for target, field in (('R1', 'Finish'), ('R2', 'Start')):
+        for target, field in (('R1', 'FinishText'), ('R2', 'StartText')):
             session, plan, config, tasks, summaries = fixture()
             task = tasks[target] if target in tasks else summaries['fixVersion', target]
             task.reject_field = field
@@ -318,7 +318,7 @@ class ReferenceDateTests(unittest.TestCase):
             self.assertFalse(session._reference_dates_synchronized)
 
     def test_silent_write_failure_is_detected_by_native_pair_readback(self):
-        for target, field in (('R1', 'Finish'), ('R2', 'Start')):
+        for target, field in (('R1', 'FinishText'), ('R2', 'StartText')):
             session, plan, config, tasks, summaries = fixture()
             task = tasks[target] if target in tasks else summaries['fixVersion', target]
             task.ignore_field = field
@@ -440,7 +440,7 @@ class ReferenceDateTests(unittest.TestCase):
         sync(session, plan, config, tasks, summaries)
         self.assertIsNotNone(session._reference_primary_date_stamps)
         tasks['P1']._finish += timedelta(days=1)
-        tasks['R1'].reject_field = 'Finish'
+        tasks['R1'].reject_field = 'FinishText'
         with self.assertRaises(ProjectAutomationError):
             sync(session, plan, config, tasks, summaries)
         self.assertIsNone(session._reference_primary_date_stamps)

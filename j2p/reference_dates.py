@@ -141,19 +141,34 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
     return references, rollups
 
 
-def _matches(task, field: str, expected, context: str) -> bool:
+def _same_date(actual, expected) -> bool:
     try:
-        return _stamp(_read(task, field, context)) == _stamp(expected)
+        return _stamp(actual) == _stamp(expected)
     except ValueError:
         return False
 
 
-def _verify_window(task, expected, context: str, fields=("Start", "Finish")) -> None:
+def _matches(task, field: str, expected, context: str) -> bool:
+    return _same_date(_read(task, field, context), expected)
+
+
+def _verify_window(task, expected, context: str, *, verification_stage="verification") -> None:
     from .project import ProjectAutomationError
-    for field, value in zip(fields, expected):
-        if not _matches(task, field, value, context):
+    for field, value in zip(("Start", "Finish"), expected):
+        actual = _read(task, field, context)
+        if not _same_date(actual, value):
+            # Failure-only diagnostics: do not add COM reads to matching rows.
+            details = []
+            for diagnostic in ("StartText", "FinishText", "Duration", "DurationText", "Manual", "Active"):
+                try:
+                    detail = repr(getattr(task, diagnostic))[:160]
+                except Exception:
+                    detail = "unavailable"
+                details.append(f"{diagnostic}={detail}")
             raise ProjectAutomationError(
-                f"Microsoft Project did not retain synchronized reference dates: {context}, field={field}, expected={value!s}."
+                f"Microsoft Project did not retain synchronized reference dates: {context}, "
+                f"field={field}, expected={value!s}, actual={actual!s}, stage={verification_stage}. "
+                + "; ".join(details)
             )
 
 
@@ -168,17 +183,38 @@ def _write(task, field: str, value, context: str, stats) -> None:
     stats["written"] += 1
 
 
-def _sync_window(task, expected, context: str, stats, fields=("Start", "Finish")) -> None:
+def _manual_date_text(session, value, context, formatted_dates):
+    """Use Project's locale and a four-digit year with time, never its view format."""
+    from .project import ProjectAutomationError
+    stamp = _stamp(value)
+    if stamp not in formatted_dates:
+        try:
+            text = session.app.DateFormat(value, 2)  # pjDate_mmmm_dd_yyyy_hh_mmAM
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("DateFormat returned no date text")
+        except Exception as exc:
+            raise ProjectAutomationError(
+                f"Cannot format manual copy date: {context}, expected={value!s}: {exc}"
+            ) from exc
+        formatted_dates[stamp] = text
+    return formatted_dates[stamp]
+
+
+def _sync_window(session, task, expected, context: str, stats, formatted_dates) -> None:
     # Read each field immediately before its comparison. In particular a Start
     # assignment can move Finish even when Finish matched before that write.
+    # Copies are manual leaf tasks: write the documented manual-task properties,
+    # then verify native dates. These are the ordinary Start/Finish columns, not
+    # custom date fields. Never use this writer for primaries or summaries.
     written_before = stats["written"]
-    for field, value in zip(fields, expected):
+    for field, value in zip(("Start", "Finish"), expected):
         if _matches(task, field, value, context):
             stats["skipped"] += 1
             continue
-        _write(task, field, value, context, stats)
+        text = _manual_date_text(session, value, context, formatted_dates)
+        _write(task, field + "Text", text, context, stats)
     if stats["written"] != written_before:
-        _verify_window(task, expected, context, fields)
+        _verify_window(task, expected, context, verification_stage="after manual copy date writes")
 
 
 def verify_copy_isolation(task, context, *, assignments=True):
@@ -216,6 +252,7 @@ def synchronize_reference_dates(session, plan, config, task_by_key, summary_task
         task = task_by_key[key]
         verify_project_value(task, "Active", True, f"reference={key}")
         verify_project_value(task, "Manual", True, f"reference={key}")
+        verify_project_value(task, "Summary", False, f"reference={key}")
         verify_copy_isolation(task, f"reference={key}")
     # Keep the pre-write source values. Relational checks alone would miss a
     # primary moving inside a mixed rollup's unchanged overall date envelope.
@@ -226,9 +263,10 @@ def synchronize_reference_dates(session, plan, config, task_by_key, summary_task
     stats = {"written": 0, "skipped": 0, "references": len(references), "rollups": len(rollups)}
     plan.stats["project_reference_dates"] = stats
     progress = ProjectScanProgress("Active copy dates", len(references))
+    formatted_dates = {}
     for index, (key, window) in enumerate(references.items(), start=1):
         task = task_by_key[key]
-        _sync_window(task, window, f"reference={key}", stats)
+        _sync_window(session, task, window, f"reference={key}", stats, formatted_dates)
         progress.update(index)
     session._reference_primary_date_stamps = (id(plan), primary_stamps)
     session._reference_dates_synchronized = True
@@ -295,14 +333,14 @@ def verify_reference_dates(
         verify_project_value(task, "Active", True, context)
         verify_project_value(task, "Manual", True, context)
         verify_copy_isolation(task, context)
-        _verify_window(task, window, context)
+        _verify_window(task, window, context, verification_stage=verification_stage)
         index += 1
         progress.update(index)
     for identity, window in rollups.items():
         task = summary_tasks[identity]
         context = f"rollup={identity[0]}:{identity[1]}"
         verify_project_value(task, "Manual", False, context)
-        _verify_window(task, window, context)
+        _verify_window(task, window, context, verification_stage=verification_stage)
         index += 1
         progress.update(index)
     return len(references) * 9 + len(rollups) * 3

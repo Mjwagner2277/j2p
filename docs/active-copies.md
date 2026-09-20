@@ -31,6 +31,10 @@ across versions for a project or portfolio total.
 2. Finish primary scheduling and capture native Start/Finish, including times.
 3. Compare and write only changed copy endpoints. Never write a summary or primary
    date during this pass. Existing custom Date3/Date4 values are left untouched.
+   Manual leaf copies use Project's `StartText`/`FinishText` properties, formatted
+   by Project with a four-digit year and time. These update the ordinary native
+   Start/Finish columns. Readback still compares native dates to the primary;
+   a mismatch reports both expected and actual values plus the verification stage.
 4. Recalculate native summaries when copy dates changed. Verify after restoring
    the original application calculation mode: all copies match their primaries,
    headers span all planned members, and every captured primary stays unchanged.
@@ -47,6 +51,10 @@ The [TaskDependencies collection includes both predecessors and successors](http
 so requiring an empty collection checks both directions. Native [summary Start
 is read-only](https://learn.microsoft.com/en-us/office/vba/api/project.task.start);
 j2p lets Project calculate it.
+Microsoft documents [StartText](https://learn.microsoft.com/en-us/office/vba/api/project.task.starttext)
+and [FinishText](https://learn.microsoft.com/en-us/office/vba/api/project.task.finishtext)
+as the properties for manually scheduled task dates; j2p uses them only on copies
+confirmed to be leaf tasks, never on summary headers.
 
 ## Updating an older baseline
 

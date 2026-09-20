@@ -76,6 +76,30 @@ class SummaryDateTask(SimpleNamespace):
         self._finish_native = datetime.strptime(value, '%B %d, %Y %I:%M %p')
 
 
+class ManualCopyTask(SimpleNamespace):
+    """Expose manual-task setters separately, with native date readback."""
+
+    @property
+    def StartText(self):
+        return self.Start.strftime('%B %d, %Y %I:%M %p')
+
+    @StartText.setter
+    def StartText(self, value):
+        if not self.Manual or self.Summary:
+            raise AssertionError('Only manual leaf copies use StartText')
+        self.Start = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+
+    @property
+    def FinishText(self):
+        return self.Finish.strftime('%B %d, %Y %I:%M %p')
+
+    @FinishText.setter
+    def FinishText(self, value):
+        if not self.Manual or self.Summary:
+            raise AssertionError('Only manual leaf copies use FinishText')
+        self.Finish = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+
+
 def project_date_format(value, format_code):
     if format_code != 2:
         raise AssertionError('Expected Project pjDate_mmm_dd_yyyy_hh_mmAM format')
@@ -110,7 +134,8 @@ def project_from_yerp_plan(plan, config, scheduled_dates=False):
         values.setdefault('ActualDuration', 0)
         values.setdefault('Start', project_date_for_com('2026-09-17', 'Start'))
         values.setdefault('Finish', project_date_for_com('2026-09-17', 'Finish'))
-        native = SummaryDateTask(**values) if values.get('Summary') else SimpleNamespace(**values)
+        kind = SummaryDateTask if values.get('Summary') else ManualCopyTask if values['Manual'] else SimpleNamespace
+        native = kind(**values)
         task = RecordingTask(native)
         tasks.append(task)
         return task

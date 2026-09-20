@@ -106,6 +106,34 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertTrue(any(summary.driving_epic_count == 0 for summary in reference_summaries))
         self.assertTrue(any(summary.driving_epic_count > 0 for summary in reference_summaries))
 
+    def test_sswsw_10467_creation_copies_receive_january_primary_start_through_manual_properties(self):
+        primary = self.epics['SSWSW-10467']
+        copies = [epic for epic in self.plan.epics.values()
+                  if not epic.drives_schedule and epic.primary_schedule_key == 'SSWSW-10467']
+        self.assertEqual(len(copies), 4)
+        self.assertIn('SSWSW-10467::FV::PI-17::1C682DC7', {epic.key for epic in copies})
+        self.assertEqual(primary.Start.strftime('%Y-%m-%d'), '2026-01-07')
+        primary_dates = self.raw_dates()
+        protected = self.protected_values()
+        # Newly created manual copies still have their default one-day dates;
+        # the primary has completed its scheduling pass. Never change the CSV.
+        for epic in copies:
+            row = self.epics[epic.key].task
+            row.Start = primary.Start.replace(month=9, day=18)
+            row.Finish = row.Start.replace(hour=17)
+        self.synchronize()
+        self.assertEqual(self.raw_dates(), primary_dates)
+        self.assertEqual(self.protected_values(), protected)
+        for epic in copies:
+            row = self.epics[epic.key]
+            self.assertEqual((row.Start, row.Finish), (primary.Start, primary.Finish))
+            self.assertEqual([field for field, _ in row.writes], ['StartText', 'FinishText'])
+        self.assertFalse(primary.writes)
+        self.assertFalse(any(task.writes for task in self.summary_map.values()))
+        self.assertEqual(self.session.app.DateFormat.call_count, 2)
+        self.assert_reference_geometry()
+        self.assertGreater(self.verify(), 0)
+
     def test_final_primary_time_shifts_propagate_to_every_reference_membership_once(self):
         refs_by_primary = {}
         for epic in self.plan.epics.values():
@@ -138,10 +166,10 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual(self.epics[primary_key].writes, [])
         self.assertEqual({key for key, task in self.epics.items() if task.writes},
                          {epic.key for epic in reference_rows})
-        self.assertTrue(all(field in {'Start', 'Finish'}
+        self.assertTrue(all(field in {'StartText', 'FinishText'}
                             for task in self.epics.values() for field, _ in task.writes))
         self.assertFalse(any(task.writes for task in self.summaries.values()))
-        self.session.app.DateFormat.assert_not_called()
+        self.assertEqual(self.session.app.DateFormat.call_count, 2)
         self.assertEqual(self.protected_values(), protected)
         self.assertEqual({key: asdict(epic) for key, epic in self.plan.epics.items()}, source_epics)
         self.assertEqual({key: asdict(summary) for key, summary in self.plan.summaries.items()}, source_summaries)
