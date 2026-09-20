@@ -120,14 +120,7 @@ Open:
 review-output\Customer-Portal-Program\runs\j2p-run-baseline-review\reports\html\Manager-Review-Report.html
 ```
 
-Review these sections before creating or updating Project files:
-
-1. `Reviewer Action Needed By Planning Horizon`
-2. `Rollup Status`
-3. `Project Key Rollup Mapping`
-4. `Color Key`
-5. `CSV Column Mapping Used`
-6. `Detailed Review Sections`
+The report contains three sections, all initially collapsed: `Cascading Schedule Drivers`, `Rollup and Completion`, and `Items for Review`. Before creating or updating Project files, expand Items for Review to resolve grouped issues and Rollup and Completion to check scope and progress. Validation does not run Project scheduling, so no measured schedule drivers are available yet. Links within the sections provide complete audit and planned-row CSVs.
 
 Correct Jira or YAML configuration issues before proceeding. Common blockers include unknown Jira key prefixes, missing initiative parents, missing fixVersions, unrecognized date formats, and unexpected done statuses.
 
@@ -210,7 +203,7 @@ Then review:
 
 | Output | Who Uses It | What To Check |
 | --- | --- | --- |
-| `Manager-Review-Report.html` | Managers, schedule owners | Rollup health, changed values, exclusions, date cascades, decisions needed. |
+| `Manager-Review-Report.html` | Managers, schedule owners | Rollup health, schedule drivers, exclusions, decisions needed. |
 | Resource-group HTML reports | Team leads | Review items scoped to their resource group. |
 | Sandbox `.mpp` | Schedule owner | Colored cells, predecessors, dates, percent complete, resource group. |
 | `audit-detail.csv` | Detailed reviewers | Every warning, changed value, and manager-review item. |
@@ -223,7 +216,7 @@ For Project review:
 1. Open the sandbox `.mpp`, not the source-of-truth `.mpp`.
 2. Use the Gantt Chart view.
 3. Apply the `j2p Review` table if it is not already active.
-4. Review red cascade driver cards in the manager report first.
+4. Review Cascading Schedule Drivers in the manager report first.
 5. Review green changed cells.
 6. Review amber items requiring manager action.
 7. Review light-gray dependency review cells.

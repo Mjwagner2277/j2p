@@ -407,6 +407,7 @@ class J2PPlanningTests(unittest.TestCase):
             paths = write_reports(plan, Path(temp) / "reports", config)
             report = paths["manager_report"].read_text(encoding="utf-8")
             summary_csv = paths["summary_rollups"].read_text(encoding="utf-8")
+            audit_csv = paths["audit_detail"].read_text(encoding="utf-8")
 
         self.assertEqual(plan.stats["suppressed_completed_fixversion_rollups"], 1)
         self.assertIn("SuppressedCompletedFixVersion", {item.category for item in plan.audit_items})
@@ -415,7 +416,8 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertNotIn("Release 2024", report)
         self.assertNotIn("Old release epic", report)
         self.assertIn("Release 2026", report)
-        self.assertIn("Completed FixVersions Hidden", report)
+        self.assertIn("SuppressedCompletedFixVersion", audit_csv)
+        self.assertIn("summary-rollups.csv", report)
 
     def test_completed_fixversion_missing_resolved_stays_visible(self) -> None:
         rows = [
@@ -449,11 +451,13 @@ class J2PPlanningTests(unittest.TestCase):
             plan = build_run_plan(csv_path, config)
             paths = write_reports(plan, Path(temp) / "reports", config)
             report = paths["manager_report"].read_text(encoding="utf-8")
+            planned_csv = paths["planned_epics"].read_text(encoding="utf-8")
 
         self.assertEqual(plan.stats["suppressed_completed_fixversion_rollups"], 0)
         self.assertIn("CompletedFixVersionMissingResolvedDate", {item.category for item in plan.audit_items})
         self.assertIn("Release Missing", report)
-        self.assertIn("Missing resolved epic", report)
+        self.assertIn("Missing resolved story", report)
+        self.assertIn("Missing resolved epic", planned_csv)
 
     def test_fixversion_policy_can_split_multi_fixversion_epics(self) -> None:
         csv_text = "\n".join(
@@ -610,20 +614,19 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertTrue((csv_dir / "by-project-key" / "PLAT" / "summary-rollups.csv").exists())
             self.assertTrue((csv_dir / "by-project-key" / "UNK" / "audit-detail.csv").exists())
             report = manager_report.read_text(encoding="utf-8")
-            self.assertIn("Reviewer Action Needed", report)
-            self.assertIn("Decision Briefing", report)
-            self.assertIn("Rollup Status", report)
-            self.assertIn("Review Type Summary", report)
-            self.assertIn("Report Context", report)
-            self.assertIn("Logged Hours", report)
-            self.assertIn("Story Point Ratio", report)
-            self.assertIn("Color Key", report)
-            self.assertIn("Color Case Examples", report)
-            self.assertIn("Project Key Rollup Mapping", report)
+            self.assertIn("Cascading Schedule Drivers", report)
+            self.assertIn("Rollup and Completion", report)
+            self.assertIn("Items for Review", report)
+            self.assertIn("Highest Priority Fixes", report)
             self.assertIn("<details class=\"detail-block\">", report)
-            self.assertIn("Full Planned Epic Rows", report)
-            self.assertLess(report.index("Rollup Status"), report.index("Reviewer Action Needed"))
-            self.assertLess(report.index("Reviewer Action Needed"), report.index("Full Planned Epic Rows"))
+            self.assertLess(report.index("Cascading Schedule Drivers"), report.index("Rollup and Completion"))
+            self.assertLess(report.index("Rollup and Completion"), report.index("Items for Review"))
+            for removed in ("Decision Briefing", "Review Type Summary", "Report Context", "Color Key",
+                            "Color Case Examples", "Project Key Rollup Mapping", "Full Planned Epic Rows",
+                            "Full Review Audit", "Column Mapping"):
+                self.assertNotIn(removed, report)
+            for filename in ("audit-detail.csv", "planned-epics.csv", "summary-rollups.csv", "dependency-review.csv"):
+                self.assertIn(filename, report)
             self.assertIn("Unknown team epic", report)
             resource_report = (
                 html_dir / "resource-groups" / "Product_Delivery.html"
@@ -864,6 +867,8 @@ class J2PPlanningTests(unittest.TestCase):
             paths = write_reports(plan, Path(temp) / "reports", config)
             manager_report = paths["manager_report"].read_text(encoding="utf-8")
             audit_header = paths["audit_detail"].read_text(encoding="utf-8").splitlines()[0]
+            with paths["audit_detail"].open(newline="") as handle:
+                audit_rows = list(csv.DictReader(handle))
 
         planning_items = {
             item.jira_key: item
@@ -880,10 +885,14 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(planning_items["PLAT-1"].category, "InPlanning")
         self.assertEqual(planning_items["PLAT-1"].planning_date, "2026-02-01")
         self.assertEqual(planning_items["PLAT-1"].planning_bucket, "Immediate")
-        self.assertIn("Reviewer Action Needed By Planning Horizon", manager_report)
-        self.assertIn("Immediate Review Items", manager_report)
-        self.assertIn("6-12 Months Review Items", manager_report)
-        self.assertIn("12-18 Months Review Items", manager_report)
+        self.assertIn("Items for Review", manager_report)
+        self.assertIn("audit-detail.csv", manager_report)
+        self.assertNotIn("Reviewer Action Needed By Planning Horizon", manager_report)
+        written_planning = {row['jira_key']: row for row in audit_rows
+                            if row['category'] in {'InPlanning', 'FutureInPlanning'}}
+        for key, item in planning_items.items():
+            self.assertEqual(written_planning[key]['planning_bucket'], item.planning_bucket)
+            self.assertEqual(written_planning[key]['planning_date'], item.planning_date)
         self.assertIn("planning_bucket", audit_header)
 
     def test_manager_report_is_self_contained_and_field_mapping_includes_status(self) -> None:
@@ -900,9 +909,17 @@ class J2PPlanningTests(unittest.TestCase):
             self.assertNotIn("<script src=", report)
             self.assertNotIn("<link rel=", report)
             self.assertNotIn("https://", report)
-            self.assertIn("Story Point Ratio", report)
-            self.assertIn("Story Point Ratio By Resource Group", report)
-            self.assertIn("Resource Group Story Point Ratio", report)
+            self.assertIn("Rollup and Completion", report)
+            self.assertIn("summary-rollups.csv", report)
+            self.assertNotIn("Story Point Ratio By Resource Group", report)
+            with paths["summary_rollups"].open(newline="") as handle:
+                rollups = list(csv.DictReader(handle))
+            self.assertTrue(rollups)
+            for row in rollups:
+                summary = plan.summaries[f"{row['rollup_mode']}:{row['rollup_key']}"]
+                self.assertEqual(float(row['story_point_ratio']), summary.story_point_ratio)
+                self.assertEqual(float(row['logged_hours']), summary.logged_hours)
+                self.assertEqual(float(row['completed_logged_hours']), summary.completed_logged_hours)
             field_mapping = paths["field_mapping"].read_text(encoding="utf-8")
             self.assertIn("Native Project fields used by j2p", field_mapping)
             self.assertIn("| Resource Group | Resource Group |", field_mapping)
@@ -961,6 +978,8 @@ class J2PPlanningTests(unittest.TestCase):
             follow_on = build_run_plan(updated_csv, config, snapshots_from_state(state_path))
             paths = write_reports(follow_on, Path(temp) / "reports", config)
             manager_report = paths["manager_report"].read_text(encoding="utf-8")
+            audit_csv = paths["audit_detail"].read_text(encoding="utf-8")
+            planned_csv = paths["planned_epics"].read_text(encoding="utf-8")
 
         self.assertEqual(follow_on.rollup_mode, "mixed")
         self.assertIn("CORE-1980", follow_on.epics)
@@ -1005,9 +1024,11 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertTrue({"changed_cell", "review_needed", "dependency_review", "in_planning"}.issubset(colors))
         self.assertNotIn("PLAT-4026", manager_report)
         self.assertIn("PLAT-4027", manager_report)
-        self.assertIn("OPS-5018", manager_report)
-        self.assertIn("Historical Items Suppressed", manager_report)
-        self.assertIn("Completed FixVersions Hidden", manager_report)
+        self.assertIn(follow_on.epics["OPS-5018"].rollup_name, manager_report)
+        self.assertIn("OPS-5018", planned_csv)
+        self.assertIn("PLAT-4026", planned_csv)
+        self.assertIn("SuppressedHistoricalWarnings", audit_csv)
+        self.assertIn("SuppressedCompletedFixVersion", audit_csv)
 
     def test_schedule_review_keeps_changed_dates_green_and_identifies_branch_drivers(self) -> None:
         config = load_config(FIXTURES / "mixed-config.yaml")
@@ -1080,12 +1101,12 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertEqual(green_keys, {"TEAM-C", "TEAM-D", "TEAM-E"})
 
         html = render_schedule_cascade_review(plan, project_update_run=True)
-        self.assertIn("Schedule Cascade Review", html)
-        self.assertIn("Red Branch Drivers", html)
+        self.assertIn("Schedule Drivers", html)
+        self.assertIn("affected tasks", html)
         self.assertIn("TEAM-A", html)
         self.assertIn("TEAM-B", html)
         self.assertIn("Nested branch driver", html)
-        self.assertIn("Changed Downstream Successors", html)
+        self.assertIn("Finish:", html)
 
     def test_schedule_cascade_review_collapses_and_sorts_all_branches(self) -> None:
         def epic(key: str, summary: str, successors: list[str] | None = None) -> PlanEpic:
@@ -1163,7 +1184,7 @@ class J2PPlanningTests(unittest.TestCase):
         html = render_schedule_cascade_review(plan, project_update_run=True)
 
         self.assertEqual(html.count('<details class="cascade-branch">'), 2)
-        self.assertIn("6 downstream affected issues", html)
+        self.assertIn("6 affected tasks", html)
         self.assertLess(html.index("TEAM-A: TEAM-A summary"), html.index("TEAM-X: TEAM-X summary"))
 
     def test_schedule_cascade_review_filters_branch_roots_by_resource_group(self) -> None:
@@ -1235,7 +1256,7 @@ class J2PPlanningTests(unittest.TestCase):
         self.assertIn("TEAM-B", html)
         self.assertIn("TEAM-C", html)
         self.assertNotIn("TEAM-X", html)
-        self.assertIn("TEAM-Y", html)  # Team-local leaf remains in date details.
+        self.assertNotIn("TEAM-Y", html)  # An isolated local leaf is not a driver branch.
         diagram = html.split('<div class="cascade-flow">', 1)[1].split('</section>', 1)[0]
         self.assertNotIn("TEAM-Y", diagram)  # Its branch starts in another team.
 

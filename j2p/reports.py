@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from .formatting import format_number, html_escape
-from .cascade import CascadeGraph, CascadeProjection
+from .cascade import CascadeProjection
+from .schedule_drivers import build_schedule_drivers
 from .metrics import calculate_story_point_ratio
 from .models import AuditItem, RunPlan
 from .review_focus import build_review_focus
@@ -576,7 +577,7 @@ def write_field_mapping(path: Path, config: Dict[str, Any]) -> None:
             "Color key:",
             "",
             "- Green: changed cell, including autoscheduled Start/Finish",
-            "- Red: cascade branch driver cards in the report diagram only; Project date cells remain green",
+            "- Red: schedule driver cards in the report diagram only; Project date cells remain green",
             "- Yellow/amber: unmatched or manager review needed",
             "- Light gray: dependency review marker",
             "- Gray/green-gray: in planning",
@@ -608,383 +609,135 @@ def write_manager_html(
     cascade_root_resource_group: Optional[str] = None,
     by_project_key_path: Optional[Path] = None,
 ) -> None:
+    # Completed upstream work can still explain unfinished successor movement.
+    cascade_display_plan = cascade_plan or plan
     plan = completed_fixversion_report_plan(plan)
-    cascade_display_plan = completed_fixversion_report_plan(cascade_plan or plan)
     review_settings = config.get("report_review", {})
     focus_days = int(review_settings.get("focus_days", 90))
     focus = build_review_focus(plan, days=focus_days, dependency_plan=cascade_plan or plan)
+    html_dir = path.parent.parent if path.parent.name == "resource-groups" else path.parent
+    csv_dir = by_project_key_path.parent if by_project_key_path else html_dir.parent / "csv"
 
-    detail_sections = [
-        ("Changed Names", by_category(plan.audit_items, "ChangedName")),
-        ("Added Epics", by_category(plan.audit_items, "AddedEpic")),
-        (
-            "Multi-FixVersion Epics",
-            [item for item in plan.audit_items if item.category.startswith("MultiFixVersion")],
-        ),
-        ("Parent Or Rollup Moves", by_category(plan.audit_items, "RollupMove")),
-        ("Completed Since Last Update", by_category(plan.audit_items, "CompletedSinceLastUpdate")),
-        (
-            "In Planning",
-            [
-                item
-                for item in plan.audit_items
-                if item.category in {"InPlanning", "FutureInPlanning"}
-            ],
-        ),
-        (
-            "Dependency Review",
-            [
-                item
-                for item in plan.audit_items
-                if "Dependency" in item.category or item.field == "Dependency Review"
-            ],
-        ),
-        (
-            "Date Review",
-            [
-                item
-                for item in plan.audit_items
-                if item.field in {"Jira Target Start", "Jira Target End", "Start", "Finish"}
-                or "Date" in item.category
-            ],
-        ),
-        ("Unmatched Project Tasks", by_category(plan.audit_items, "UnmatchedProjectTask")),
-        (
-            "Excluded Items",
-            [
-                item
-                for item in plan.audit_items
-                if item.category.startswith("Excluded") or item.category == "CsvRowMissingJiraKey"
-            ],
-        ),
-    ]
-    cascade_section = render_schedule_cascade_review(
+    drivers = render_schedule_cascade_review(
         cascade_display_plan,
         project_update_run=sandbox_path is not None,
         root_resource_group=cascade_root_resource_group,
+        include_heading=False,
     )
-    report_context_section = render_report_context(
-        plan,
-        sandbox_path,
-        state_path,
-        by_project_key_path or path.parent.parent / "by-project-key",
-        report_scope,
+    rollups = render_completion_summary(plan) + render_rollup_status(plan, compact=True)
+    rollups += render_csv_links(path, csv_dir, [
+        ("summary-rollups.csv", "Full rollup CSV"),
+        ("planned-epics.csv", "Planned epic CSV"),
+    ])
+    reviews = render_review_focus(focus, focus_days, int(review_settings.get("max_focus_items", 25)))
+    reviews += render_csv_links(path, csv_dir, [
+        ("audit-detail.csv", "Full audit CSV"),
+        ("dependency-review.csv", "Dependency review CSV"),
+    ])
+    sections = (
+        render_collapsible("Cascading Schedule Drivers", drivers)
+        + render_collapsible("Rollup and Completion", rollups)
+        + render_collapsible("Items for Review", reviews,
+                             f"{focus['focus_count']} priority fixes; {focus['grouped_count']} grouped items total")
     )
-
+    styles = f""":root {{
+      --changed: {html_escape(config['colors']['changed_cell'])};
+      --cascade: {html_escape(config['colors']['cascade_root'])};
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --section: #f6f8fa;
+    }}""" + """
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: white;
+           font: 14px/1.5 Arial, Helvetica, sans-serif; }
+    header, main { max-width: 1200px; margin: auto; padding: 20px 24px; }
+    header { padding-bottom: 0; }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 16px 0 8px; font-size: 16px; }
+    p { margin: 8px 0; }
+    a { color: #245b92; }
+    .muted, .empty, .summary-note, .cascade-help,
+    .cascade-reference, .cascade-limit, .cascade-node-dates,
+    .cascade-branch-count { color: var(--muted); }
+    .summary-note, .cascade-node-dates, .cascade-branch-count { font-size: 12px; font-weight: normal; }
+    .summary-note { display: block; margin-top: 3px; }
+    details { min-width: 0; border: 1px solid var(--border); border-radius: 6px;
+              margin: 12px 0; background: white; }
+    summary { cursor: pointer; padding: 12px 14px; font-weight: bold;
+              background: var(--section); overflow-wrap: anywhere; }
+    summary:focus-visible { outline: 2px solid #245b92; outline-offset: 2px; }
+    details[open] > summary { border-bottom: 1px solid var(--border); }
+    .detail-body, .cascade-branch-body { padding: 0 14px 14px; min-width: 0; }
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 13px; }
+    th, td { border: 1px solid var(--border); padding: 7px 8px; text-align: left;
+             vertical-align: top; overflow-wrap: anywhere; }
+    th { background: var(--section); }
+    .completion-summary { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 14px 0; }
+    .completion-summary p { margin: 0; }
+    .completion-summary strong { display: block; font-size: 20px; }
+    .csv-links { font-size: 12px; }
+    .cascade-flow { overflow-x: auto; }
+    .cascade-branch-count { display: block; }
+    .cascade-branch-body { padding-top: 12px; }
+    .cascade-node { min-width: 180px; padding: 8px 10px; border: 1px solid var(--border);
+                    border-left: 4px solid var(--changed); border-radius: 4px; }
+    .cascade-node.driver { border-left-color: var(--cascade); }
+    .cascade-node-title { font-weight: bold; overflow-wrap: anywhere; }
+    .cascade-node-title span { color: var(--muted); font-size: 12px; font-weight: normal; }
+    .cascade-node-summary { overflow-wrap: anywhere; }
+    .cascade-children { border-left: 1px solid var(--border); margin: 8px 0 0 8px;
+                        padding-left: 8px; display: grid; gap: 8px; }
+    @media (max-width: 600px) {
+      header, main { padding-left: 12px; padding-right: 12px; }
+      .detail-body, .cascade-branch-body { padding-left: 8px; padding-right: 8px; }
+      th, td { padding: 6px; }
+    }
+    """
     html_text = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>j2p Manager Review Report</title>
-  <style>
-    :root {{
-      --changed: {html_escape(config["colors"]["changed_cell"])};
-      --cascade: {html_escape(config["colors"]["cascade_root"])};
-      --review: {html_escape(config["colors"]["review_needed"])};
-      --dependency: {html_escape(config["colors"]["dependency_review"])};
-      --planning: {html_escape(config["colors"]["in_planning"])};
-      --border: #d0d7de;
-      --text: #1f2328;
-      --muted: #59636e;
-      --bg: #ffffff;
-      --section: #f6f8fa;
-      --accent: #2f6f5e;
-    }}
-    body {{
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      color: var(--text);
-      background: var(--bg);
-      line-height: 1.4;
-    }}
-    header {{
-      padding: 22px 32px;
-      border-bottom: 1px solid var(--border);
-      background: #ffffff;
-    }}
-    main {{
-      padding: 24px 32px 40px;
-      max-width: 1440px;
-      margin: 0 auto;
-    }}
-    h1 {{
-      margin: 0 0 6px;
-      font-size: 26px;
-      font-weight: 700;
-    }}
-    h2 {{
-      margin: 28px 0 10px;
-      font-size: 18px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
-    }}
-    h3 {{
-      margin: 18px 0 8px;
-      font-size: 16px;
-    }}
-    p {{
-      margin: 6px 0;
-    }}
-    .muted {{
-      color: var(--muted);
-    }}
-    .headline {{
-      display: flex;
-      justify-content: space-between;
-      gap: 24px;
-      align-items: flex-start;
-      max-width: 1440px;
-      margin: 0 auto;
-    }}
-    .headline-meta {{
-      text-align: right;
-      color: var(--muted);
-      font-size: 13px;
-    }}
-    .briefing-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 10px;
-      margin: 12px 0 18px;
-    }}
-    .briefing-item {{
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
-      padding: 10px 12px;
-      background: #ffffff;
-    }}
-    .briefing-item strong {{
-      display: block;
-      font-size: 22px;
-      margin-top: 2px;
-    }}
-    .briefing-item span {{
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0;
-    }}
-    .cascade-review {{
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--cascade);
-      padding: 12px 14px;
-      background: #ffffff;
-      margin-bottom: 18px;
-    }}
-    .cascade-help {{
-      margin: 0 0 12px;
-      color: var(--muted);
-    }}
-    .cascade-flow {{
-      display: grid;
-      gap: 12px;
-      margin: 12px 0;
-    }}
-    .cascade-branch {{
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px;
-      background: #ffffff;
-    }}
-    details.cascade-branch {{
-      padding: 0;
-    }}
-    details.cascade-branch > summary {{
-      cursor: pointer;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: space-between;
-      padding: 10px;
-      font-weight: 600;
-    }}
-    details.cascade-branch > summary::-webkit-details-marker {{
-      display: none;
-    }}
-    details.cascade-branch > summary::before {{
-      content: "+";
-      color: var(--cascade);
-      margin-right: 2px;
-    }}
-    details.cascade-branch[open] > summary::before {{
-      content: "-";
-    }}
-    .cascade-branch-body {{
-      border-top: 1px solid var(--border);
-      padding: 10px;
-    }}
-    .cascade-branch-count {{
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: normal;
-    }}
-    .cascade-node {{
-      border: 1px solid var(--border);
-      border-left: 5px solid var(--changed);
-      border-radius: 6px;
-      padding: 9px 10px;
-      background: #ffffff;
-      min-width: 220px;
-    }}
-    .cascade-node.driver {{
-      border-left-color: var(--cascade);
-      background: #fffafa;
-    }}
-    .cascade-node.changed {{
-      border-left-color: var(--changed);
-      background: #fbfffb;
-    }}
-    .cascade-node-title {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: baseline;
-      justify-content: space-between;
-      font-weight: 600;
-    }}
-    .cascade-node-title span {{
-      color: var(--muted);
-      font-weight: normal;
-      font-size: 12px;
-    }}
-    .cascade-node-summary {{
-      margin-top: 4px;
-      font-size: 13px;
-    }}
-    .cascade-node-dates {{
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 5px;
-    }}
-    .cascade-children {{
-      border-left: 2px solid var(--border);
-      margin: 8px 0 0 16px;
-      padding-left: 14px;
-      display: grid;
-      gap: 8px;
-    }}
-    .cascade-reference, .cascade-limit {{
-      color: var(--muted);
-      font-size: 13px;
-      margin: 4px 0;
-    }}
-    .table-wrap {{
-      width: 100%;
-      overflow-x: auto;
-    }}
-    table {{
-      width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0 18px;
-      font-size: 13px;
-    }}
-    th, td {{
-      border: 1px solid var(--border);
-      padding: 7px 8px;
-      text-align: left;
-      vertical-align: top;
-    }}
-    th {{
-      background: var(--section);
-      font-weight: 600;
-    }}
-    .priority-table tbody tr:first-child td {{
-      border-top: 2px solid var(--accent);
-    }}
-    .empty {{
-      color: var(--muted);
-      font-style: italic;
-      margin: 8px 0 18px;
-    }}
-    .swatches {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 8px;
-      margin-top: 8px;
-    }}
-    .swatch {{
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px;
-    }}
-    .dot {{
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 1px solid #8c959f;
-      margin-right: 6px;
-      vertical-align: -2px;
-    }}
-    .changed {{ background: var(--changed); }}
-    .cascade {{ background: var(--cascade); }}
-    .review {{ background: var(--review); }}
-    .dependency {{ background: var(--dependency); }}
-    .planning {{ background: var(--planning); }}
-    details.detail-block {{
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      margin: 20px 0;
-      background: white;
-    }}
-    details.detail-block > summary {{
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 14px;
-      background: var(--section);
-      font-weight: bold;
-    }}
-    details.detail-block[open] > summary {{
-      border-bottom: 1px solid var(--border);
-    }}
-    .detail-body {{
-      padding: 0 14px 14px;
-    }}
-    .summary-note {{
-      font-size: 12px;
-      font-weight: normal;
-      color: var(--muted);
-    }}
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html_escape(report_title(report_scope))}</title>
+  <style>{styles}</style>
 </head>
 <body>
   <header>
-    <div class="headline">
-      <div>
-        <h1>{html_escape(report_title(report_scope))}</h1>
-        <p class="muted">Jira-to-Project sandbox review packet</p>
-      </div>
-      <div class="headline-meta">
-        <p>Generated {html_escape(plan.generated_at)}</p>
-        <p>Rollup mode: {html_escape(plan.rollup_mode)}</p>
-        <p>Scope: {html_escape(report_scope)}</p>
-      </div>
-    </div>
+    <h1>{html_escape(report_title(report_scope))}</h1>
+    <p class="muted">Generated {html_escape(plan.generated_at)} · Scope: {html_escape(report_scope)}</p>
   </header>
-  <main>
-    {render_manifest_link(path)}
-    {decision_briefing(plan, focus)}
-    {render_review_focus(focus, focus_days, int(review_settings.get("max_focus_items", 25)))}
-    {render_story_point_ratio_breakdown(plan)}
-    {render_rollup_status(plan)}
-    {cascade_section}
-    <div id="review-audit">
-    {render_collapsible("Full Review Audit", render_review_type_summary(plan) + render_planning_horizon_review(plan), "All review entries, including later work and historical cleanup.")}
-    </div>
-    {render_prefix_rollup_map(plan, config)}
-    {report_context_section}
-    {color_key()}
-    {render_color_examples(plan)}
-    {render_collapsible("Detailed Review Sections", render_sections(detail_sections), detail_summary(detail_sections))}
-    {render_planned_epics(plan, collapsible=True)}
-    {render_column_map(plan, collapsible=True)}
-  </main>
+  <main>{sections}</main>
 </body>
 </html>
 """
     path.write_text(html_text, encoding="utf-8")
+
+
+def render_csv_links(report_path: Path, csv_dir: Path, files: Sequence[tuple[str, str]]) -> str:
+    links = []
+    for filename, label in files:
+        relative = Path(os.path.relpath(csv_dir / filename, report_path.parent)).as_posix()
+        links.append(f'<a href="{html_escape(relative)}">{html_escape(label)}</a>')
+    return '<p class="csv-links">' + ' · '.join(links) + '</p>'
+
+
+def render_completion_summary(plan: RunPlan) -> str:
+    # Count each scheduled row once; reference membership remains in rollups.
+    epics = [epic for epic in plan.epics.values() if epic.drives_schedule]
+    total = round(sum(epic.total_story_points for epic in epics), 2)
+    done = round(sum(epic.completed_story_points for epic in epics), 2)
+    completion = f"{format_number(round(100 * done / total, 1))}%" if total else "Not estimated"
+    completed = sum(epic.completed for epic in epics)
+    return (
+        '<div class="completion-summary">'
+        f'<p>Completed / Total Points<strong>{format_number(done)} / {format_number(total)}</strong></p>'
+        f'<p>Point Completion<strong>{html_escape(completion)}</strong></p>'
+        f'<p>Completed / Total Epics<strong>{completed} / {len(epics)}</strong></p>'
+        '</div><p class="muted">Visible scheduled work; reference rows are excluded from these totals. '
+        'Each rollup includes completion credit from all its members.</p>'
+    )
 
 
 def report_title(report_scope: str) -> str:
@@ -1043,17 +796,9 @@ def render_review_focus(focus: Dict[str, Any], days: int, limit: int) -> str:
     unscheduled = [group for group in groups if group["tier"] == "Unscheduled"]
     window = f"the next {days} days" if days else "all dated unfinished work"
     intro = (
-        '<section><h2>Focus Now</h2><p>Start with these grouped fixes. '
-        f'This view covers {html_escape(window)}, overdue unfinished work, '
-        'and serious dependency or data errors on dated work. Report-wide errors also remain visible. '
-        'Work without Jira target dates is kept in Unscheduled Work, including its dependency and error details. '
-        'Project auto-scheduled dates do not promote it into this priority list. '
-        'Repeated reference rows and child warnings '
-        'with the same missing or excluded parent are grouped into one action.</p>'
-        '<p class="muted">Ranking uses error severity, dependency reach, dates, and affected issues; '
-        'it is not a calculated Project critical path. Completed work is historical only when '
-        'there is no known unfinished scope or downstream impact. '
-        '<a href="#review-audit">Open the full review audit</a> for every underlying entry.</p></section>'
+        f'<p class="muted">Prioritized fixes for {html_escape(window)}, overdue work, '
+        'and serious errors. Undated work stays in Unscheduled Work; Project auto-scheduled '
+        'dates do not promote it into this priority list.</p>'
     )
     parts = [intro, render_focus_group_table("Highest Priority Fixes", current[:limit])]
     if len(current) > limit:
@@ -1081,16 +826,13 @@ def render_review_focus(focus: Dict[str, Any], days: int, limit: int) -> str:
 
 def render_focus_group_table(title: str, groups: Sequence[Dict[str, Any]]) -> str:
     rows = [[
-        index, group["tier"], group["key"], group["summary"],
-        group["resource_group"] or "Unassigned", "; ".join(group["reasons"]),
-        group["target_end"] or "Not set", group["downstream_count"],
-        group["issue_count"], group["audit_count"], "; ".join(group["categories"]),
-        " ".join(group["actions"]),
-    ] for index, group in enumerate(groups, start=1)]
+        group["key"], group["summary"], group["target_end"] or "Not set",
+        group["downstream_count"], "; ".join(group["reasons"]), " ".join(group["actions"]),
+    ] for group in groups]
     return render_table(title, [
-        "Order", "Priority", "Fix At", "Summary", "Team", "Why It Matters", "Target End",
-        "Unfinished Downstream", "Affected Issues", "Audit Entries", "Categories", "Next Action",
+        "Item", "Summary", "Target End", "Downstream Tasks", "Why Review", "Next Action",
     ], rows)
+
 
 def render_metric_cards(metrics: Sequence[Sequence[Any]]) -> str:
     cards = "\n".join(
@@ -1110,348 +852,103 @@ def render_schedule_cascade_review(
     plan: RunPlan,
     project_update_run: bool = False,
     root_resource_group: Optional[str] = None,
+    include_heading: bool = True,
 ) -> str:
-    cascade_items = schedule_cascade_change_items(plan)
-    changed_keys = set(cascade_items)
-    driver_keys = {
-        key for key, item in cascade_items.items() if item.category == "CascadeBranchDriver"
-    }
-    graph = CascadeGraph({key: changed_successors(plan, key, changed_keys) for key in changed_keys})
-    downstream_counts = graph.downstream_counts
-    branch_roots = [
-        key for key in graph.roots if key in driver_keys or changed_successors(plan, key, changed_keys)
-    ]
-    date_categories = {"ScheduledStartChange", "CascadeBranchDriver", "CascadingDateChange", "ScheduledDateMismatch"}
-    date_items = [item for item in plan.audit_items if item.category in date_categories]
-    if root_resource_group:
-        branch_roots = [
-            key for key in branch_roots if epic_resource_group(plan, key) == root_resource_group
-        ]
-        # The diagram follows team-owned branches. Counts and date tables must
-        # also retain the team's independent changes and leaves of other teams.
-        visible_keys = graph.reachable(branch_roots)
-        date_items = [
-            item for item in date_items
-            if (item.schedule_key or item.jira_key).upper() in visible_keys
-            or audit_item_resource_group(plan, item) == root_resource_group
-        ]
-        visible_keys.update((item.schedule_key or item.jira_key).upper() for item in date_items)
-        cascade_items = {key: item for key, item in cascade_items.items() if key in visible_keys}
-        changed_keys = set(cascade_items)
-        driver_keys &= changed_keys
-    branch_roots = sorted(branch_roots, key=lambda key: (-downstream_counts.get(key, 0), key))
-    leaf_keys = changed_keys - driver_keys
-    comparison = render_schedule_date_comparison(plan, date_items, project_update_run)
-    heading = '<section><h2>Schedule Cascade Review</h2>'
-    if not cascade_items:
-        if project_update_run or date_items:
-            baseline = "initial scheduling dates" if plan.stats.get("project_run_mode") == "create" else "input Project baseline or initial dates for new rows"
-            message = f"No new Project Finish changes were detected relative to the {baseline}."
+    """One driver view; general date comparisons remain in the CSV audit."""
+    model = build_schedule_drivers(plan, root_resource_group)
+    heading = '<section>' + ('<h2>Schedule Drivers</h2>' if include_heading else '')
+    if not model["roots"]:
+        if project_update_run or model["changes"]:
+            message = "No changed schedule drivers affecting unfinished dated work were found in this run."
         else:
-            message = (
-                "No Project date changes or Jira target differences were evaluated in this report. "
-                "This comparison is populated during create/update runs after Microsoft Project recalculates the sandbox."
-            )
-        return heading + comparison + f'<p class="empty">{html_escape(message)}</p></section>'
+            message = "Schedule drivers are evaluated after Project scheduling during create/update runs."
+        return heading + f'<p class="empty">{html_escape(message)}</p></section>'
 
-    metrics = [
-        ("Red Branch Drivers", len(driver_keys), "Changed rows with changed downstream successors"),
-        ("Green Finish Changes", len(leaf_keys), "Changed leaves or independent rows"),
-    ]
-    projection = CascadeProjection(graph)
+    projection = CascadeProjection(model["graph"])
     branches = []
-    for root_key in branch_roots:
+    for root in model["roots"]:
         if projection.entries >= projection.max_entries:
             projection.entry_limited = True
             break
-        branches.append(render_cascade_branch(plan, cascade_items, root_key, downstream_counts, projection))
-    branch_html = "".join(branches)
-    if not branch_html:
-        branch_html = '<p class="empty">' + html_escape(cascade_empty_message(root_resource_group)) + '</p>'
-    detail_table = render_collapsible(
-        "Schedule Cascade Detail",
-        render_schedule_cascade_table(plan, cascade_items),
-        f"{len(changed_keys)} finish-date change(s). Open for old/new dates and changed downstream successors.",
-    )
+        branches.append(render_schedule_driver_branch(plan, model, root, projection))
     limit_notice = ""
     if projection.entry_limited or projection.depth_limited:
         limit_notice = (
             '<p class="cascade-limit">Visual tree shortened to keep this report responsive. '
-            'Review the complete detail table or audit-detail.csv for omitted branches.</p>'
+            'All date evidence remains in audit-detail.csv, linked under Items for Review.</p>'
         )
     return (
-        heading + comparison
-        + '<div class="cascade-review">'
-        + f'<div class="briefing-grid">{render_metric_cards(metrics)}</div>'
-        + '<p class="cascade-help">'
-        "Red cards are changed finish dates that also have changed downstream successors. "
-        "Green cards are changed finish dates with no changed downstream successor. "
-        "These diagram colors describe branch roles; all changed Project Start/Finish cells are green. "
-        "Branches are collapsed and ordered from most downstream affected issues to least. "
-        "Nested branches follow the Jira dependency links written to Project as predecessor relationships. "
-        "Shared downstream issues are shown once, with references on other paths. "
-        f"The visual tree is limited to {projection.max_entries} cards/references and {projection.max_depth} levels. "
-        "The complete Schedule Cascade Detail table and audit-detail.csv retain all finish changes."
-        "</p>"
-        f"{limit_notice}"
-        f'<div class="cascade-flow">{branch_html}</div>'
-        "</div></section>"
-        f"{detail_table}"
+        heading
+        + '<p class="cascade-help">Finish changes linked to changed successor dates, '
+        'ordered by affected unfinished tasks with Jira dates. Expand a driver to review the dependency chain. '
+        'Linked changes identify possible schedule impact; they do not prove causation.</p>'
+        + f'{limit_notice}<div class="cascade-flow">'
+        + "".join(branches)
+        + '</div></section>'
     )
 
 
-def render_schedule_date_comparison(
-    plan: RunPlan, items: Sequence[AuditItem], evaluated: bool,
+def render_schedule_driver_branch(
+    plan: RunPlan, model: Dict[str, Any], root: str, projection: CascadeProjection,
 ) -> str:
-    """Explain native date movement separately from Jira/Project disagreement."""
-    if not evaluated and not items:
-        return ""
-    changes = {}
-    mismatches = {}
-    for item in items:
-        key = (item.schedule_key or item.jira_key).upper()
-        if item.category == "ScheduledDateMismatch":
-            mismatches[(key, item.field)] = item
-        else:
-            field = "Start" if item.category == "ScheduledStartChange" else "Finish"
-            changes[(key, field)] = item
-    creating = plan.stats.get("project_run_mode") == "create"
-    baseline = "initial scheduling dates" if creating else "input Project baseline or initial dates for new rows"
-    metrics = [
-        ("Start Changes", sum(field == "Start" for _, field in changes), f"Compared with {baseline}"),
-        ("Finish Changes", sum(field == "Finish" for _, field in changes), f"Compared with {baseline}"),
-        ("Jira Target Differences", len(mismatches), "Date cells where Project differs from Jira; may already exist in the baseline"),
-    ]
-    parts = [
-        f'<div class="briefing-grid">{render_metric_cards(metrics)}</div>',
-        '<p class="muted">Green date cells mark recorded Start/Finish changes. '
-        'Yellow date cells can flag a Jira target mismatch or a rejected date write; '
-        'yellow does not necessarily mean the date changed during this run. '
-        f'Date changes are compared with the {baseline}; Jira target differences compare '
-        'the current Project date with Jira. A target difference alone does not establish a cascade.</p>',
-    ]
-    if changes:
-        rows = [[
-            item.jira_key or key, item.schedule_key or key, item.summary, field,
-            item.old_value, item.new_value,
-        ] for (key, field), item in sorted(changes.items())]
-        parts.append(render_collapsible(
-            "Project Date Changes",
-            render_table("Project Date Changes", [
-                "Jira Key", "Schedule Key", "Summary", "Field",
-                "Initial Scheduling Date" if creating else "Previous / Initial Date", "Current Project Date",
-            ], rows),
-            f"{len(changes)} Start/Finish change(s), including independent and start-only changes.",
-        ))
-    if mismatches:
-        rows = [[
-            item.jira_key or key, item.schedule_key or key, item.summary, field,
-            item.old_value, item.new_value,
-            "Changed this run" if (key, field) in changes else "No new change recorded",
-        ] for (key, field), item in sorted(mismatches.items())]
-        parts.append(render_collapsible(
-            "Jira Target Differences",
-            render_table("Jira Target Differences", [
-                "Jira Key", "Schedule Key", "Summary", "Field", "Jira Target",
-                "Current Project Date", "Change This Run",
-            ], rows),
-            f"{len(mismatches)} Jira/Project date difference(s); these are not necessarily new changes.",
-        ))
-    return "".join(parts)
-
-
-def schedule_cascade_change_items(plan: RunPlan) -> Dict[str, AuditItem]:
-    items: Dict[str, AuditItem] = {}
-    for item in plan.audit_items:
-        if item.category not in {"CascadeBranchDriver", "CascadingDateChange"}:
-            continue
-        key = (item.schedule_key or item.jira_key).upper()
-        if key:
-            items[key] = item
-    return items
-
-
-def cascade_root_keys(plan: RunPlan, changed_keys: set[str]) -> List[str]:
-    changed_with_changed_predecessor: set[str] = set()
-    for key in changed_keys:
-        epic = plan.epics.get(key)
-        if not epic:
-            continue
-        for successor_key in epic.successors:
-            if successor_key in changed_keys:
-                changed_with_changed_predecessor.add(successor_key)
-    return sorted(changed_keys - changed_with_changed_predecessor)
-
-
-def changed_successors(plan: RunPlan, key: str, changed_keys: set[str]) -> List[str]:
-    epic = plan.epics.get(key)
-    if not epic:
-        return []
-    return sorted(successor_key for successor_key in epic.successors if successor_key in changed_keys)
-
-
-def cascade_empty_message(root_resource_group: Optional[str] = None) -> str:
-    if root_resource_group:
-        return (
-            "No cascade branches were detected that start with an issue attached to "
-            f"{root_resource_group}. Finish changes may be independent, leaf-only, or started by another resource group."
-        )
-    return "No cascade branches were detected. Finish changes appear independent or leaf-only."
-
-
-def cascade_branch_keys(plan: RunPlan, branch_roots: Sequence[str], changed_keys: set[str]) -> set[str]:
-    visible_keys: set[str] = set()
-    for root_key in branch_roots:
-        visible_keys.add(root_key)
-        visible_keys.update(cascade_downstream_keys(plan, root_key, changed_keys))
-    return visible_keys
-
-
-def cascade_downstream_counts(plan: RunPlan, changed_keys: set[str]) -> Dict[str, int]:
-    return CascadeGraph({key: changed_successors(plan, key, changed_keys) for key in changed_keys}).downstream_counts
-
-
-def cascade_downstream_keys(plan: RunPlan, key: str, changed_keys: set[str]) -> set[str]:
-    downstream: set[str] = set()
-    stack = list(changed_successors(plan, key, changed_keys))
-    while stack:
-        successor_key = stack.pop()
-        if successor_key == key or successor_key in downstream:
-            continue
-        downstream.add(successor_key)
-        stack.extend(changed_successors(plan, successor_key, changed_keys))
-    return downstream
-
-
-def sorted_changed_successors(
-    plan: RunPlan,
-    key: str,
-    changed_keys: set[str],
-    downstream_counts: Dict[str, int],
-) -> List[str]:
-    return sorted(
-        changed_successors(plan, key, changed_keys),
-        key=lambda successor_key: (-downstream_counts.get(successor_key, 0), successor_key),
-    )
-
-
-def render_cascade_branch(
-    plan: RunPlan,
-    cascade_items: Dict[str, AuditItem],
-    root_key: str,
-    downstream_counts: Dict[str, int],
-    projection: Optional[CascadeProjection] = None,
-) -> str:
-    downstream_count = downstream_counts.get(root_key, 0)
-    branch_body = render_cascade_node(plan, cascade_items, root_key, set(), downstream_counts, projection)
-    item = cascade_items[root_key]
-    epic = plan.epics.get(root_key)
-    jira_key = item.jira_key or (epic.jira_key if epic else "") or root_key
+    item = model["changes"][root]["Finish"]
+    epic = epic_for_key(plan, root)
+    jira_key = item.jira_key or (epic.jira_key if epic else "") or root
     summary = item.summary or (epic.summary if epic else "")
+    count = model["graph"].downstream_counts[root]
     return (
-        "<details class=\"cascade-branch\">"
-        "<summary>"
-        f"<span>{html_escape(jira_key)}: {html_escape(summary)}</span>"
-        f"<span class=\"cascade-branch-count\">"
-        f"{html_escape(pluralize(downstream_count, 'downstream affected issue'))}"
-        "</span>"
-        "</summary>"
-        f"<div class=\"cascade-branch-body\">{branch_body}</div>"
-        "</details>"
+        '<details class="cascade-branch"><summary>'
+        f'<span>{html_escape(jira_key)}: {html_escape(summary)}'
+        f'<br><span class="cascade-node-dates">Finish: {html_escape(item.old_value)} '
+        f'&rarr; {html_escape(item.new_value)}</span></span>'
+        f'<span class="cascade-branch-count">{html_escape(pluralize(count, "affected task"))}</span>'
+        '</summary><div class="cascade-branch-body">'
+        + render_schedule_driver_nodes(plan, model, root, projection)
+        + '</div></details>'
     )
 
 
-def epic_resource_group(plan: RunPlan, key: str) -> str:
-    epic = epic_for_key(plan, key)
-    return epic.resource_group if epic else ""
-
-
-def render_cascade_node(
-    plan: RunPlan,
-    cascade_items: Dict[str, AuditItem],
-    key: str,
-    path: set[str],
-    downstream_counts: Dict[str, int],
-    projection: Optional[CascadeProjection] = None,
+def render_schedule_driver_nodes(
+    plan: RunPlan, model: Dict[str, Any], root: str, projection: CascadeProjection,
 ) -> str:
-    if projection is None:
-        changed_keys = set(cascade_items)
-        projection = CascadeProjection(CascadeGraph({
-            current: changed_successors(plan, current, changed_keys) for current in changed_keys
-        }), seen=set(path))
     fragments = []
-    for action, current in projection.events(key):
+    for action, key in projection.events(root):
         if action == "open":
             fragments.append('<div class="cascade-children">')
             continue
         if action == "close":
-            fragments.append("</div>")
+            fragments.append('</div>')
             continue
         if action in {"limit", "depth"}:
-            fragments.append('<p class="cascade-limit">Further branches are listed in the complete detail table and audit-detail.csv.</p>')
+            fragments.append('<p class="cascade-limit">Further date evidence remains in audit-detail.csv.</p>')
             continue
-        item = cascade_items[current]
-        epic = plan.epics.get(current)
-        jira_key = item.jira_key or (epic.jira_key if epic else "") or current
+        changes = model["changes"][key]
+        item = changes.get("Finish") or changes["Start"]
+        epic = epic_for_key(plan, key)
+        jira_key = item.jira_key or (epic.jira_key if epic else "") or key
         if action == "reference":
-            fragments.append(f'<p class="cascade-reference">Shared issue {html_escape(jira_key)}: already shown above; see the complete detail table for its finish change.</p>')
+            fragments.append(f'<p class="cascade-reference">Shared task {html_escape(jira_key)}: already shown above.</p>')
             continue
-        is_driver = item.category == "CascadeBranchDriver"
-        schedule_key = item.schedule_key or current
+        is_driver = key in model["driver_keys"]
+        is_context = epic and (epic.completed or not (epic.target_start or epic.target_end))
+        label = "Driver" if is_driver else "Context" if is_context else "Affected"
         summary = item.summary or (epic.summary if epic else "")
-        label = "Driver" if is_driver else "Changed"
-        node_html = (
-            f"<div class=\"cascade-node {'driver' if is_driver else 'changed'}\">"
-            "<div class=\"cascade-node-title\">"
-            f"{html_escape(jira_key)} <span>{html_escape(label)}</span>"
-            "</div>"
-            f"<div class=\"cascade-node-summary\">{html_escape(summary)}</div>"
-            f"<div class=\"cascade-node-dates\">Finish: {html_escape(item.old_value or 'blank')} -> {html_escape(item.new_value or 'blank')}</div>"
+        node = (
+            f'<div class="cascade-node {"driver" if is_driver else "changed"}">'
+            f'<div class="cascade-node-title">{html_escape(jira_key)} <span>{label}</span></div>'
+            f'<div class="cascade-node-summary">{html_escape(summary)}</div>'
         )
-        if schedule_key != jira_key:
-            node_html += f"<div class=\"cascade-node-dates\">Schedule row: {html_escape(schedule_key)}</div>"
-        fragments.append(node_html + "</div>")
+        for field in ("Start", "Finish"):
+            change = changes.get(field)
+            if change:
+                node += (
+                    f'<div class="cascade-node-dates">{field}: {html_escape(change.old_value)} '
+                    f'&rarr; {html_escape(change.new_value)}</div>'
+                )
+        if is_context and not is_driver:
+            node += '<div class="cascade-node-dates">Context only; excluded from the affected-task count.</div>'
+        fragments.append(node + '</div>')
     return "".join(fragments)
-
-
-def render_schedule_cascade_table(plan: RunPlan, cascade_items: Dict[str, AuditItem]) -> str:
-    changed_keys = set(cascade_items)
-    rows = []
-    for key, item in sorted(
-        cascade_items.items(),
-        key=lambda entry: (entry[1].category != "CascadeBranchDriver", entry[1].new_value, entry[0]),
-    ):
-        epic = plan.epics.get(key)
-        successor_labels = [
-            cascade_items[successor_key].jira_key or successor_key
-            for successor_key in changed_successors(plan, key, changed_keys)
-        ]
-        rows.append(
-            [
-                "Red" if item.category == "CascadeBranchDriver" else "Green",
-                item.jira_key or (epic.jira_key if epic else "") or key,
-                item.schedule_key or key,
-                item.summary or (epic.summary if epic else ""),
-                item.old_value,
-                item.new_value,
-                ", ".join(successor_labels),
-                item.reviewer_action,
-            ]
-        )
-    return render_table(
-        "Schedule Cascade Detail",
-        [
-            "Diagram Color",
-            "Jira Key",
-            "Schedule Key",
-            "Summary",
-            "Old Finish",
-            "New Finish",
-            "Changed Downstream Successors",
-            "Reviewer Action",
-        ],
-        rows,
-    )
 
 
 def render_story_point_ratio_breakdown(plan: RunPlan) -> str:
@@ -1723,7 +1220,7 @@ def render_project_update_metrics(plan: RunPlan) -> str:
     return "".join(parts)
 
 
-def render_rollup_status(plan: RunPlan) -> str:
+def render_rollup_status(plan: RunPlan, compact: bool = False) -> str:
     rows = []
     # Tie the assessment to the report run, so reopening an HTML report does
     # not silently change its due-date interpretation.
@@ -1757,6 +1254,12 @@ def render_rollup_status(plan: RunPlan) -> str:
                 summary.child_epic_count,
             ]
         )
+    if compact:
+        columns = [0, 1, 3, 4, 5, 6, 7, 8]
+        return render_table("Rollup Status", [
+            "Rollup", "Rollup Key", "Mode", "Status", "Target End", "Due Status",
+            "% Complete", "Completion Points (Done / Total)",
+        ], [[row[index] for index in columns] for row in rows])
     return render_table(
         "Rollup Status",
         [
@@ -1854,7 +1357,7 @@ def color_key() -> str:
   <h2>Color Key</h2>
   <div class="swatches">
     <div class="swatch"><span class="dot changed"></span>Green: changed cell, including autoscheduled Start/Finish</div>
-    <div class="swatch"><span class="dot cascade"></span>Red: cascade branch driver cards in the report diagram only; Project date cells remain green</div>
+    <div class="swatch"><span class="dot cascade"></span>Red: schedule driver cards in the report diagram only; Project date cells remain green</div>
     <div class="swatch"><span class="dot review"></span>Yellow/amber: unmatched or manager review needed</div>
     <div class="swatch"><span class="dot dependency"></span>Light gray: dependency review marker</div>
     <div class="swatch"><span class="dot planning"></span>Gray/green-gray: in planning</div>
@@ -1873,8 +1376,8 @@ def render_color_examples(plan: RunPlan) -> str:
         (
             "cascade_root",
             "Red",
-            "Cascade branch driver card (report diagram only)",
-            "Project run only. Appears when a changed Project finish also has changed downstream successors; the Project Finish cell remains green.",
+            "Schedule driver card (report diagram only)",
+            "Project run only. Appears for a finish change linked to changed dates on unfinished dated successors; the Project Finish cell remains green.",
         ),
         (
             "review_needed",
@@ -1916,7 +1419,7 @@ def render_color_examples(plan: RunPlan) -> str:
             example = (
                 "Validate mode cannot identify red report diagram cards. This kind of Jira target-end change "
                 "becomes a red diagram example only after Microsoft Project auto-scheduling identifies it "
-                "as a changed finish date with changed downstream successors. The Project Finish cell remains green."
+                "as a changed finish linked to date movement on unfinished dated successors. The Project Finish cell remains green."
             )
         else:
             jira_key = ""

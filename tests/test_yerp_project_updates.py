@@ -6,10 +6,12 @@ Project edition behavior, or persistence of a real .mpp file.
 import csv
 import hashlib
 import io
+import json
 import tempfile
 import unittest
 from collections import Counter
 from contextlib import redirect_stdout
+from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from j2p.config import load_config
 from j2p.core import build_run_plan
 from j2p.project import ProjectAutomationError
 from j2p.reports import write_reports
+from j2p.run_lifecycle import RunTransaction
 from yerp_project_support import FILES, YERP, changed_child_plan, project_from_yerp_plan
 
 
@@ -86,7 +89,11 @@ class YerpProjectUpdateTests(unittest.TestCase):
         self.assertTrue(all(field.startswith('Number') or field == 'PercentComplete'
                             for task in self.session.project.Tasks.items for field, _ in task.writes))
         self.assertEqual([asdict(item) for item in plan.audit_items], original_audit)
+        original_stats = deepcopy(plan.stats)
         with tempfile.TemporaryDirectory(prefix='j2p-yerp-report-test-') as tmp:
+            transaction = RunTransaction({'run_dir': Path(tmp)}, None)
+            transaction.manifest = {'timings_seconds': {}}
+            transaction.record_plan(plan)
             paths = write_reports(plan, Path(tmp), self.config)
             with paths['planned_epics'].open(newline='') as handle:
                 rows = list(csv.DictReader(handle))
@@ -98,8 +105,19 @@ class YerpProjectUpdateTests(unittest.TestCase):
                 report_audit = list(csv.DictReader(handle))
             self.assertEqual(len(report_audit), len(plan.audit_items))
             self.assertEqual(Counter(row['category'] for row in report_audit), Counter(a.category for a in plan.audit_items))
-            self.assertIn('Project Update Operations (Entire Run)', paths['manager_report'].read_text())
-            self.assertTrue(list(paths['resource_group_reports'].glob('*.html')))
+            groups = list(paths['resource_group_reports'].glob('*.html'))
+            self.assertTrue(groups)
+            for report in [paths['manager_report'], *groups]:
+                html = report.read_text()
+                self.assertNotIn('Project Update Operations', html)
+                self.assertNotIn('Project Row Timing', html)
+                self.assertNotIn('Report Context', html)
+                self.assertIn('audit-detail.csv', html)
+            recorded_stats = json.loads(transaction.manifest_path.read_text())['stats']
+            for metric in ('project_update_writes', 'project_row_seconds', 'project_row_calculation_checkpoints'):
+                self.assertEqual(recorded_stats[metric], original_stats[metric])
+            self.assertIn('href="../../run-manifest.json"', paths['html_report_index'].read_text())
+        self.assertEqual(plan.stats, original_stats)
 
     def test_actual_cyber_epic_keeps_six_percent_custom_value_when_native_recalculates(self):
         task = self.epics['SSWCYBER-3219']

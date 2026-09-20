@@ -137,29 +137,19 @@ def run_smoke(output_dir: Path) -> int:
     assert_report_contains(
         updated_html_dir / "Manager-Review-Report.html",
         [
-            "Decision Briefing",
-            "Rollup Status",
-            "Reviewer Action Needed By Planning Horizon",
-            "Immediate Review Items",
-            "6-12 Months Review Items",
-            "Review Type Summary",
-            "Report Context",
-            "Logged Hours",
-            "Story Point Ratio",
-            "Story Point Ratio By Resource Group",
-            "Color Case Examples",
-            "Project run only",
-            "Full Planned Epic Rows",
+            "Cascading Schedule Drivers",
+            "Rollup and Completion",
+            "Items for Review",
+            "Highest Priority Fixes",
+            "audit-detail.csv",
+            "planned-epics.csv",
+            "summary-rollups.csv",
+            "dependency-review.csv",
             "<details class=\"detail-block\">",
             "CORE-1000",
-            "CORE-1004",
-            "CORE-1980",
             "WEB-2010",
             "DATA-3009",
             "PLAT-4027",
-            "OPS-5018",
-            "Historical Items Suppressed",
-            "Completed FixVersions Hidden",
         ],
     )
     assert_resource_group_reports(
@@ -305,6 +295,8 @@ def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path:
 
     with audit_path.open("r", encoding="utf-8", newline="") as handle:
         audit_rows = list(csv.DictReader(handle))
+    with (audit_path.parent / "planned-epics.csv").open("r", encoding="utf-8", newline="") as handle:
+        planned_rows = list(csv.DictReader(handle))
     report_text = report_path.read_text(encoding="utf-8")
 
     missing = []
@@ -312,16 +304,24 @@ def assert_expected_review_cases(case_path: Path, audit_path: Path, report_path:
         jira_key = case["jira_key"]
         category = case["expected_category"]
         if category == "ReportPresence":
-            if jira_key not in report_text:
-                missing.append(f"{jira_key}/{category} should be visible in the report")
+            # The compact manager view displays completion by rollup. Epic
+            # rows remain in the linked planned-epics.csv, rather than HTML.
+            rollups = {row["rollup_name"] for row in planned_rows if row["jira_key"] == jira_key}
+            if not rollups or not any(name in report_text for name in rollups):
+                missing.append(f"{jira_key}/{category} completion rollup should be visible in the report")
             continue
         if category == "ReportHidden":
             if jira_key in report_text:
                 missing.append(f"{jira_key}/{category} should be hidden from the report")
             continue
         if category in project_only:
-            if jira_key not in report_text:
-                missing.append(f"{jira_key}/{category} should be described in the report")
+            # CSV validation does not observe native Project date movement.
+            # Keep the planned source row ready for the separate COM-backed
+            # scheduling tests; do not invent a driver in the manager report.
+            if not any(row["jira_key"] == jira_key for row in planned_rows):
+                missing.append(f"{jira_key}/{category} should remain in planned-epics.csv")
+            if any(row["category"] == category for row in audit_rows):
+                missing.append(f"{category} should require observed Project date movement")
             continue
         if category in category_only:
             if not any(row["category"] == category for row in audit_rows):

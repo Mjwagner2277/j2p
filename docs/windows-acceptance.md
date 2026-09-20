@@ -44,7 +44,7 @@ Run the harness on each supported Project version/edition with these fixture var
 | Existing SS/FF/SF dependency or nonzero lag | Link changed to FS with zero lag and verified after reopening |
 | Identical dependency set on a second update | Dependency set skipped; no dependency-change audit noise; same relationships |
 | Settled source with identical complete export | Unchanged managed writes skipped; no new native date/completion seeds; full comparisons and verification retained |
-| One Jira target date changes | Target window reapplied; any resulting downstream schedule changes appear in full cascade review |
+| One Jira target date changes | Target window reapplied; linked changes affecting unfinished dated work appear in Cascading Schedule Drivers, with complete dates retained in audit CSVs |
 | One task changes points, name, rollup, or owned resource group | Only differing managed values/relationships written; complete rollups and report detail retained |
 | Incomplete native completion differs from unchanged Jira completion | No repeated native percentage seed; exact custom completion and valid native completion verified |
 | Reordered Project row IDs, generated multi-fixVersion keys | Relationships resolve to the same schedule keys/UniqueIDs |
@@ -60,8 +60,8 @@ Also inspect the sandbox's review table and colors visually; the automated JSON 
 
 Run the identical-export and small-change sequence in [performance.md](performance.md).
 Retain `run-manifest.json` and the manager HTML alongside the acceptance result.
-In **Report Context**, inspect written/skipped/failed operations and phase seconds;
-these measurements cover the entire run even inside a resource-group report.
+In `run-manifest.json`, inspect written/skipped/failed operations and phase seconds;
+these measurements cover the entire run.
 Counts describe operation decisions, not unique fields. Confirm the default
 `main` baseline still reports the complete before/after comparison and that
 save/reopen verification covers unchanged rows as well as changed rows. Check
@@ -90,7 +90,7 @@ Run both creation and update with a representative plan. Check progress logs for
 rounded-up 25%, 50%, 75%, and 100% epic-row checkpoints (504, 1008, 1512, 2016 for
 the current yerp plan), then the final calculation after dependencies. Creation
 also calculates before dependency writes following its initial save. Check that
-full cascade reports and saved/reopened values reflect the final linked schedule.
+Cascading Schedule Drivers, the complete date audit, and saved/reopened values reflect the final linked schedule.
 
 Repeat with Project initially set to automatic calculation and then manual
 calculation; each run must restore its original application setting while tasks

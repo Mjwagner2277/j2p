@@ -1,56 +1,54 @@
-"""Keep Project date colors and the HTML schedule review mutually explainable."""
+"""Surface schedule drivers while keeping every native-date audit and cell color."""
 
 import copy
+import csv
 import hashlib
 import html as html_lib
 import io
 import re
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from dataclasses import asdict
+from pathlib import Path
 
 import test_project_formatting_scaling as formatting
+from test_minimal_report import assert_minimal_report
 from j2p.config import load_config
 from j2p.core import build_run_plan
-from j2p.reports import render_schedule_cascade_review, schedule_cascade_change_items
+from j2p.reports import (
+    render_schedule_cascade_review, write_audit_csv, write_manager_html,
+)
 from test_project_schedule_colors import (
     date_changes, dates, review, review_session, schedule_plan,
 )
 from yerp_project_support import FILES, YERP
 
 
-def metric(rendered, label):
-    found = re.search(
-        r'<span>' + re.escape(html_lib.escape(label)) + r'</span>\s*<strong>(\d+)</strong>',
-        rendered,
-    )
-    if found is None:
-        raise AssertionError(f'Missing metric {label!r} in schedule review')
-    return int(found.group(1))
+def text_content(rendered):
+    return html_lib.unescape(re.sub(r'<[^>]*>', ' ', rendered))
 
 
-def table_rows(rendered, title):
-    """Read actual visible table cells, independent of column positions."""
-    section = re.search(
-        r'<section><h2>' + re.escape(html_lib.escape(title)) + r'</h2>(.*?)</section>',
-        rendered, re.S,
-    )
-    if section is None:
-        raise AssertionError(f'Missing detail table {title!r}')
-    return [
-        [html_lib.unescape(re.sub(r'<[^>]*>', '', cell))
-         for cell in re.findall(r'<td>(.*?)</td>', row, re.S)]
-        for row in re.findall(r'<tr>(.*?)</tr>', section.group(1), re.S)
-        if '<td>' in row
-    ]
+def branches(rendered):
+    return re.findall(r'<details class="cascade-branch">(.*?)</details>', rendered, re.S)
 
 
-def assert_collapsed(test, rendered, title):
-    test.assertRegex(
-        rendered,
-        r'<details class="detail-block"><summary><span>'
-        + re.escape(html_lib.escape(title)) + r'</span>',
-    )
+def branch_summary(branch):
+    return text_content(branch.split('</summary>', 1)[0])
+
+
+def dated_plan(count=3):
+    plan, config = schedule_plan(count)
+    for key, epic in plan.epics.items():
+        epic.completed = False
+        epic.in_planning = False
+        epic.summary = f'Scheduled work {key}'
+    return plan, config
+
+
+def connect(plan, predecessor, successor):
+    plan.epics[predecessor].successors.append(successor)
+    plan.epics[successor].predecessors.append(predecessor)
 
 
 def color_and_render(plan, config, before, after):
@@ -70,194 +68,334 @@ def color_and_render(plan, config, before, after):
 
 
 class ScheduleDateReportTests(unittest.TestCase):
-    def test_yellow_existing_jira_differences_are_explained_without_inventing_changes(self):
-        plan, config = schedule_plan(1)
+    def assert_driver_section_only(self, rendered):
+        self.assertEqual(re.findall(r'<h2>(.*?)</h2>', rendered), ['Schedule Drivers'])
+        for redundant in ('Project Date Changes', 'Jira Target Differences',
+                          'Schedule Cascade Detail', 'Red Branch Drivers',
+                          'Green Finish Changes', 'Start Changes', 'Finish Changes'):
+            self.assertNotIn(redundant, rendered)
+        self.assertNotIn('briefing-item', rendered)
+
+    def test_existing_jira_mismatches_stay_yellow_without_a_schedule_driver(self):
+        plan, config = dated_plan(1)
         before = {'TEAM-1': dates('TEAM-1', '2026-09-08', '2026-09-11')}
         rendered, colors = color_and_render(plan, config, before, copy.deepcopy(before))
-        self.assertEqual(metric(rendered, 'Start Changes'), 0)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 0)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 2)
+        self.assert_driver_section_only(rendered)
+        self.assertEqual(branches(rendered), [])
         self.assertEqual(date_changes(plan), [])
-        self.assertEqual(schedule_cascade_change_items(plan), {})
+        self.assertEqual({item.field for item in plan.audit_items
+                          if item.category == 'ScheduledDateMismatch'}, {'Start', 'Finish'})
         self.assertEqual(colors[(1, 'Start')], config['colors']['review_needed'])
         self.assertEqual(colors[(1, 'Finish')], config['colors']['review_needed'])
-        rows = table_rows(rendered, 'Jira Target Differences')
-        self.assertEqual(len(rows), 2)
-        self.assertTrue(any({'Start', '2026-09-01', '2026-09-08'} <= set(row) for row in rows))
-        self.assertTrue(any({'Finish', '2026-09-04', '2026-09-11'} <= set(row) for row in rows))
-        self.assertTrue(all('No new change recorded' in row for row in rows))
-        assert_collapsed(self, rendered, 'Jira Target Differences')
-        self.assertIn('baseline', rendered.lower())
         self.assertNotIn('<div class="cascade-node ', rendered)
 
-    def test_start_only_shift_is_green_and_visible_without_a_finish_cascade(self):
-        plan, config = schedule_plan(1)
-        before = {'TEAM-1': dates('TEAM-1')}
-        after = {'TEAM-1': dates('TEAM-1', start='2026-09-02')}
-        rendered, colors = color_and_render(plan, config, before, after)
-        self.assertEqual(metric(rendered, 'Start Changes'), 1)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 0)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 1)
-        self.assertEqual(colors[(1, 'Start')], config['colors']['changed_cell'])
-        self.assertEqual(schedule_cascade_change_items(plan), {})
-        native_rows = table_rows(rendered, 'Project Date Changes')
-        self.assertEqual(len(native_rows), 1)
-        self.assertTrue({'TEAM-1', 'Start', '2026-09-01', '2026-09-02'} <= set(native_rows[0]))
-        self.assertEqual(len(table_rows(rendered, 'Jira Target Differences')), 1)
-        self.assertIn('Changed this run', table_rows(rendered, 'Jira Target Differences')[0])
-        assert_collapsed(self, rendered, 'Project Date Changes')
-        self.assertNotIn('<div class="cascade-node ', rendered)
-        self.assertNotIn('No Project date changes', rendered)
-
-    def test_mixed_changes_and_existing_differences_use_field_specific_status(self):
-        plan, config = schedule_plan(3)
-        plan.epics['TEAM-1'].successors = ['TEAM-2']
-        plan.epics['TEAM-2'].predecessors = ['TEAM-1']
+    def test_independent_start_and_finish_changes_stay_green_but_are_not_drivers(self):
+        plan, config = dated_plan(2)
         before = {key: dates(key) for key in plan.epics}
-        before['TEAM-1'] = dates('TEAM-1', start='2026-09-02')
-        before['TEAM-3'] = dates('TEAM-3', finish='2026-09-11')
-        after = copy.deepcopy(before)
-        after['TEAM-1'] = dates('TEAM-1', '2026-09-02', '2026-09-07')
-        after['TEAM-2'] = dates('TEAM-2', '2026-09-02', '2026-09-07')
+        after = {'TEAM-1': dates('TEAM-1', start='2026-09-02'),
+                 'TEAM-2': dates('TEAM-2', finish='2026-09-07')}
+        rendered, colors = color_and_render(plan, config, before, after)
+        self.assert_driver_section_only(rendered)
+        self.assertEqual(branches(rendered), [])
+        self.assertEqual({(item.schedule_key, item.field) for item in date_changes(plan)},
+                         {('TEAM-1', 'Start'), ('TEAM-2', 'Finish')})
+        self.assertEqual(colors[(1, 'Start')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(2, 'Finish')], config['colors']['changed_cell'])
+
+    def test_finish_driver_includes_start_only_downstream_impact_and_summary_dates(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        before = {key: dates(key) for key in plan.epics}
+        after = {'TEAM-1': dates('TEAM-1', finish='2026-09-07'),
+                 'TEAM-2': dates('TEAM-2', start='2026-09-08')}
+        rendered, colors = color_and_render(plan, config, before, after)
+        self.assert_driver_section_only(rendered)
+        self.assertEqual(len(branches(rendered)), 1)
+        summary = branch_summary(branches(rendered)[0])
+        for expected in ('TEAM-1', plan.epics['TEAM-1'].summary, 'Finish',
+                         '2026-09-04', '2026-09-07', '1 affected task'):
+            self.assertIn(expected, summary)
+        self.assertNotRegex(rendered, r'<details[^>]*\bopen\b')
+        self.assertIn('TEAM-2', branches(rendered)[0])
+        self.assertRegex(text_content(branches(rendered)[0]), r'Start:\s*2026-09-01\s*(?:->|→)\s*2026-09-08')
+        self.assertEqual(colors[(1, 'Finish')], config['colors']['changed_cell'])
+        self.assertEqual(colors[(2, 'Start')], config['colors']['changed_cell'])
+
+    def test_nodes_show_both_changed_dates_without_duplicate_branches(self):
+        plan, config = dated_plan(3)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        connect(plan, 'TEAM-2', 'TEAM-3')
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, '2026-09-02', '2026-09-07') for key in plan.epics}
         review(review_session(), plan, before, config, after)
-        rendered = render_schedule_cascade_review(plan, project_update_run=True)
-        self.assertEqual(metric(rendered, 'Start Changes'), 1)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 2)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 5)
-        self.assertEqual(len(table_rows(rendered, 'Project Date Changes')), 3)
-        rows = table_rows(rendered, 'Jira Target Differences')
-        self.assertEqual(sum('Changed this run' in row for row in rows), 3)
-        self.assertEqual(sum('No new change recorded' in row for row in rows), 2)
-        for row in rows:
-            if 'TEAM-1' in row and 'Start' in row:
-                self.assertIn('No new change recorded', row)
-            if 'TEAM-1' in row and 'Finish' in row:
-                self.assertIn('Changed this run', row)
-        self.assertEqual(rendered.count('<details class="cascade-branch">'), 1)
-        self.assertIn('TEAM-1', rendered)
-        self.assertIn('TEAM-2', rendered)
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertEqual(len(branches(rendered)), 1)
+        self.assertIn('2 affected tasks', branch_summary(branches(rendered)[0]))
+        self.assertEqual(len(re.findall(r'Start:\s*2026-09-01\s*(?:->|→)\s*2026-09-02', text_content(rendered))), 3)
+        self.assertEqual(rendered.count('<div class="cascade-node '), 3)
+        for key in plan.epics:
+            self.assertIn(key, branches(rendered)[0])
 
-    def test_undated_new_row_shift_is_a_project_change_without_a_jira_target_difference(self):
-        plan, config = schedule_plan(1)
+    def test_link_alone_does_not_make_a_changed_finish_a_driver(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        before = {key: dates(key) for key in plan.epics}
+        after = copy.deepcopy(before)
+        after['TEAM-1'].finish = '2026-09-07'
+        review(review_session(), plan, before, config, after)
+        self.assertEqual(branches(render_schedule_cascade_review(plan, True)), [])
+        self.assertEqual(len(date_changes(plan)), 1)
+
+    def test_start_only_upstream_shift_is_not_a_finish_driver(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        before = {key: dates(key) for key in plan.epics}
+        after = {'TEAM-1': dates('TEAM-1', start='2026-09-02'),
+                 'TEAM-2': dates('TEAM-2', finish='2026-09-07')}
+        review(review_session(), plan, before, config, after)
+        self.assertEqual(branches(render_schedule_cascade_review(plan, True)), [])
+        self.assertEqual(len(date_changes(plan)), 2)
+
+    def test_undated_root_is_not_promoted_to_a_driver(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
         plan.epics['TEAM-1'].target_start = plan.epics['TEAM-1'].target_end = ''
-        session = review_session()
-        session._new_task_schedule_dates = {'TEAM-1': dates('TEAM-1', '2026-09-19', '2026-09-19')}
-        review(session, plan, {}, config, {'TEAM-1': dates('TEAM-1', '2026-09-22', '2026-09-22')})
-        rendered = render_schedule_cascade_review(plan, project_update_run=True)
-        self.assertEqual(metric(rendered, 'Start Changes'), 1)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 1)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 0)
-        rows = table_rows(rendered, 'Project Date Changes')
-        self.assertEqual(len(rows), 2)
-        self.assertTrue(all({'2026-09-19', '2026-09-22'} <= set(row) for row in rows))
-        self.assertFalse(any(item.category == 'ScheduledDateMismatch' for item in plan.audit_items))
-        self.assertIn('Previous / Initial Date', rendered)
-        self.assertIn('initial dates for new rows', rendered)
-        plan.stats['project_run_mode'] = 'create'
-        creating = render_schedule_cascade_review(plan, project_update_run=True)
-        self.assertIn('Initial Scheduling Date', creating)
-        self.assertNotIn('input Project baseline', creating)
-
-    def test_validation_without_project_does_not_claim_a_completed_date_comparison(self):
-        plan, _ = schedule_plan(1)
-        rendered = render_schedule_cascade_review(plan, project_update_run=False)
-        text = html_lib.unescape(re.sub(r'<[^>]*>', ' ', rendered)).lower()
-        self.assertRegex(text, r'(not|no .*?)\s.*evaluated')
-        self.assertIn('create/update', text)
-        self.assertNotIn('were detected in this update run', text)
-        self.assertNotIn('no new change recorded', text)
-
-    def test_resource_date_details_include_owned_leaves_and_owned_branch_downstream(self):
-        plan, config = schedule_plan(7)
-        # Alpha owns a branch (1->2), an external branch leaf (4), and independent rows (5, 7).
-        for key, group in {
-            'TEAM-1': 'Alpha', 'TEAM-2': 'Beta', 'TEAM-3': 'Beta',
-            'TEAM-4': 'Alpha', 'TEAM-5': 'Alpha', 'TEAM-6': 'Beta', 'TEAM-7': 'Alpha',
-        }.items():
-            plan.epics[key].resource_group = group
-        plan.epics['TEAM-1'].successors = ['TEAM-2']
-        plan.epics['TEAM-2'].predecessors = ['TEAM-1']
-        plan.epics['TEAM-3'].successors = ['TEAM-4']
-        plan.epics['TEAM-4'].predecessors = ['TEAM-3']
         before = {key: dates(key) for key in plan.epics}
         after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
-        after['TEAM-7'] = dates('TEAM-7', start='2026-09-02')
+        review(review_session(), plan, before, config, after)
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertEqual(branches(rendered), [])
+        self.assertEqual(len(date_changes(plan)), 2)
+
+    def test_completed_upstream_finish_can_still_impact_unfinished_dated_work(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        plan.epics['TEAM-1'].completed = True
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
+        review(review_session(), plan, before, config, after)
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertEqual(len(branches(rendered)), 1)
+        self.assertIn('TEAM-1', branch_summary(branches(rendered)[0]))
+        self.assertIn('1 affected task', branch_summary(branches(rendered)[0]))
+        self.assertIn('TEAM-2', branches(rendered)[0])
+
+    def test_undated_or_completed_only_descendants_do_not_create_a_driver(self):
+        for excluded in ('undated', 'completed'):
+            with self.subTest(excluded=excluded):
+                plan, config = dated_plan(2)
+                connect(plan, 'TEAM-1', 'TEAM-2')
+                if excluded == 'undated':
+                    plan.epics['TEAM-2'].target_start = plan.epics['TEAM-2'].target_end = ''
+                else:
+                    plan.epics['TEAM-2'].completed = True
+                before = {key: dates(key) for key in plan.epics}
+                after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
+                review(review_session(), plan, before, config, after)
+                self.assertEqual(branches(render_schedule_cascade_review(plan, True)), [])
+
+    def test_context_nodes_remain_visible_but_only_dated_unfinished_tasks_count(self):
+        plan, config = dated_plan(4)
+        connect(plan, 'TEAM-1', 'TEAM-3')
+        connect(plan, 'TEAM-3', 'TEAM-4')
+        connect(plan, 'TEAM-4', 'TEAM-2')
+        plan.epics['TEAM-3'].completed = True
+        plan.epics['TEAM-4'].target_start = plan.epics['TEAM-4'].target_end = ''
+        # One Jira target is sufficient; no requirement to have both dates.
+        plan.epics['TEAM-1'].target_start = ''
+        plan.epics['TEAM-2'].target_end = ''
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
+        review(review_session(), plan, before, config, after)
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertEqual(len(branches(rendered)), 1)
+        self.assertIn('1 affected task', branch_summary(branches(rendered)[0]))
+        for key in plan.epics:
+            self.assertIn(key, branches(rendered)[0])
+
+    def test_completed_and_undated_dead_end_siblings_do_not_clutter_the_driver(self):
+        plan, config = dated_plan(4)
+        for successor in ('TEAM-2', 'TEAM-3', 'TEAM-4'):
+            connect(plan, 'TEAM-1', successor)
+        plan.epics['TEAM-3'].completed = True
+        plan.epics['TEAM-4'].target_start = plan.epics['TEAM-4'].target_end = ''
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
+        review(review_session(), plan, before, config, after)
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertEqual(len(branches(rendered)), 1)
+        self.assertIn('1 affected task', branch_summary(branches(rendered)[0]))
+        self.assertIn('TEAM-2', rendered)
+        self.assertNotIn('TEAM-3', rendered)
+        self.assertNotIn('TEAM-4', rendered)
+        self.assertEqual(len(date_changes(plan)), 4)
+
+    def test_resource_report_starts_at_its_topmost_driver_and_includes_cross_team_impact(self):
+        plan, config = dated_plan(5)
+        for key, group in {'TEAM-1': 'Beta', 'TEAM-2': 'Alpha', 'TEAM-3': 'Beta',
+                           'TEAM-4': 'Alpha', 'TEAM-5': 'Alpha'}.items():
+            plan.epics[key].resource_group = group
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        connect(plan, 'TEAM-2', 'TEAM-3')
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, finish='2026-09-07') for key in plan.epics}
+        after['TEAM-5'] = dates('TEAM-5', start='2026-09-02')
         review(review_session(), plan, before, config, after)
         rendered = render_schedule_cascade_review(plan, True, root_resource_group='Alpha')
-        self.assertEqual(metric(rendered, 'Start Changes'), 1)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 4)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 5)
-        native_rows = table_rows(rendered, 'Project Date Changes')
-        jira_rows = table_rows(rendered, 'Jira Target Differences')
-        for rows in (native_rows, jira_rows):
-            self.assertEqual(len(rows), 5)
-            self.assertEqual({key for key in plan.epics if any(key in row for row in rows)},
-                             {'TEAM-1', 'TEAM-2', 'TEAM-4', 'TEAM-5', 'TEAM-7'})
-        self.assertEqual(rendered.count('<details class="cascade-branch">'), 1)
-        graph = rendered.split('<div class="cascade-flow">', 1)[1].split('</section>', 1)[0]
-        self.assertIn('TEAM-1', graph)
-        self.assertIn('TEAM-2', graph)
-        for key in ('TEAM-3', 'TEAM-4', 'TEAM-5', 'TEAM-6', 'TEAM-7'):
-            self.assertNotIn(key, graph)
+        self.assert_driver_section_only(rendered)
+        self.assertEqual(len(branches(rendered)), 1)
+        self.assertIn('TEAM-2', branch_summary(branches(rendered)[0]))
+        self.assertIn('1 affected task', branch_summary(branches(rendered)[0]))
+        self.assertIn('TEAM-3', rendered)
+        for key in ('TEAM-1', 'TEAM-4', 'TEAM-5'):
+            self.assertNotIn(key, rendered)
 
-    def test_resource_start_only_and_existing_target_difference_are_not_filtered_out(self):
-        plan, config = schedule_plan(2)
-        plan.epics['TEAM-1'].resource_group = 'Alpha'
-        plan.epics['TEAM-2'].resource_group = 'Beta'
-        before = {'TEAM-1': dates('TEAM-1', finish='2026-09-11'), 'TEAM-2': dates('TEAM-2')}
-        after = {'TEAM-1': dates('TEAM-1', '2026-09-02', '2026-09-11'),
-                 'TEAM-2': dates('TEAM-2', '2026-09-08', '2026-09-11')}
+    def test_validation_without_project_does_not_claim_a_completed_schedule_comparison(self):
+        plan, _ = dated_plan(1)
+        rendered = render_schedule_cascade_review(plan, project_update_run=False)
+        self.assert_driver_section_only(rendered)
+        text = text_content(rendered).lower()
+        self.assertIn('evaluated after project scheduling', text)
+        self.assertIn('create/update', text)
+        self.assertEqual(branches(rendered), [])
+
+    def test_report_escapes_driver_and_affected_names_without_mutating_plan(self):
+        plan, config = dated_plan(2)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        for epic in plan.epics.values():
+            epic.summary = '<script>alert("unsafe")</script> & dates'
+        before = {key: dates(key) for key in plan.epics}
+        after = {key: dates(key, '2026-09-02', '2026-09-07') for key in plan.epics}
         review(review_session(), plan, before, config, after)
-        rendered = render_schedule_cascade_review(plan, True, root_resource_group='Alpha')
-        self.assertEqual(metric(rendered, 'Start Changes'), 1)
-        self.assertEqual(metric(rendered, 'Finish Changes'), 0)
-        self.assertEqual(metric(rendered, 'Jira Target Differences'), 2)
-        self.assertEqual(len(table_rows(rendered, 'Project Date Changes')), 1)
-        self.assertEqual(len(table_rows(rendered, 'Jira Target Differences')), 2)
-        self.assertNotIn('TEAM-2', rendered)
-
-    def test_new_date_details_escape_text_and_never_mutate_plan(self):
-        plan, config = schedule_plan(1)
-        plan.epics['TEAM-1'].summary = '<script>alert("unsafe")</script> & dates'
-        review(review_session(), plan, {'TEAM-1': dates('TEAM-1')}, config,
-               {'TEAM-1': dates('TEAM-1', '2026-09-02', '2026-09-07')})
         original = copy.deepcopy(plan)
-        rendered = render_schedule_cascade_review(plan, project_update_run=True)
+        rendered = render_schedule_cascade_review(plan, True)
         self.assertEqual(plan, original)
+        self.assertEqual(len(branches(rendered)), 1)
         self.assertNotIn('<script>', rendered)
         self.assertIn('&lt;script&gt;', rendered)
-        for title in ('Project Date Changes', 'Jira Target Differences'):
-            self.assertTrue(all(plan.epics['TEAM-1'].summary in row
-                                for row in table_rows(rendered, title)))
-            assert_collapsed(self, rendered, title)
+        self.assertIn('&amp; dates', rendered)
+
+    def test_minimal_html_omits_raw_date_tables_and_csv_retains_all_details(self):
+        plan, config = dated_plan(4)
+        connect(plan, 'TEAM-1', 'TEAM-2')
+        before = {key: dates(key) for key in plan.epics}
+        before['TEAM-4'] = dates('TEAM-4', '2026-09-08', '2026-09-11')
+        after = copy.deepcopy(before)
+        after['TEAM-1'].finish = '2026-09-07'
+        after['TEAM-2'].start = '2026-09-08'
+        after['TEAM-3'].start = '2026-09-02'
+        review(review_session(), plan, before, config, after)
+        before_render = copy.deepcopy(plan)
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            report = output / 'review.html'
+            audit = output / 'audit-detail.csv'
+            write_manager_html(report, plan, config, output / 'sandbox.mpp', None)
+            write_audit_csv(audit, plan.audit_items)
+            rendered = report.read_text(encoding='utf-8')
+            with audit.open(encoding='utf-8', newline='') as handle:
+                csv_rows = list(csv.DictReader(handle))
+        self.assertEqual(plan, before_render)
+        document = assert_minimal_report(self, rendered)
+        self.assertNotIn('<h2>Date Review</h2>', rendered)
+        self.assertEqual(len(csv_rows), len(plan.audit_items))
+        for item in plan.audit_items:
+            self.assertTrue(any(row['category'] == item.category
+                                and row['schedule_key'] == item.schedule_key
+                                and row['field'] == item.field
+                                and row['old_value'] == item.old_value
+                                and row['new_value'] == item.new_value for row in csv_rows))
+        driver_fragment = document.sections[0].html
+        self.assertEqual(len(branches(driver_fragment)), 1)
+        self.assertNotIn('TEAM-3', driver_fragment)
+        self.assertNotIn('TEAM-4', driver_fragment)
+
+    def test_suppressed_completed_release_can_still_drive_visible_unfinished_work(self):
+        rows = [
+            ['Issue key', 'Issue id', 'Issue Type', 'Summary', 'Epic Link', 'Fix versions',
+             'Story Points', 'Status', 'Resolution', 'Resolved', 'Target start', 'Target end',
+             'Outward issue link (Blocks)', 'Inward issue link (Blocks)'],
+            ['TEAM-1', '1', 'Epic', 'Old completed driver', '', 'Old Driver Release', '',
+             'Done', 'Done', '2026-01-01', '2025-12-01', '2026-01-05', 'TEAM-2', ''],
+            ['TEAM-11', '11', 'Story', 'Completed child', 'TEAM-1', 'Old Driver Release', '5',
+             'Done', 'Done', '2026-01-05', '', '', '', ''],
+            ['TEAM-2', '2', 'Epic', 'Current affected work', '', 'Current Release', '',
+             'In Progress', '', '', '2026-09-01', '2026-09-04', '', 'TEAM-1'],
+            ['TEAM-21', '21', 'Story', 'Open child', 'TEAM-2', 'Current Release', '3',
+             'In Progress', '', '', '', '', '', ''],
+            ['TEAM-3', '3', 'Epic', 'Old independent completed work', '', 'Old Hidden Release', '',
+             'Done', 'Done', '2026-01-01', '2025-12-01', '2026-01-05', '', ''],
+            ['TEAM-31', '31', 'Story', 'Other completed child', 'TEAM-3', 'Old Hidden Release', '2',
+             'Done', 'Done', '2026-01-05', '', '', '', ''],
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            source = output / 'synthetic-suppressed-release.csv'
+            with source.open('w', encoding='utf-8', newline='') as handle:
+                csv.writer(handle).writerows(rows)
+            config = load_config(Path(__file__).parent / 'fixtures' / 'fixversion-config.yaml',
+                                 {'fixversion_completion_suppression': {'as_of_date': '2026-09-17'}})
+            plan = build_run_plan(source, config)
+            self.assertEqual(set(plan.stats['suppressed_completed_fixversion_summary_ids']),
+                             {'fixVersion:Old Driver Release', 'fixVersion:Old Hidden Release'})
+            self.assertEqual(plan.epics['TEAM-1'].successors, ['TEAM-2'])
+            before = {key: dates(key, epic.target_start, epic.target_end)
+                      for key, epic in plan.epics.items()}
+            after = copy.deepcopy(before)
+            after['TEAM-1'].finish = '2026-09-07'
+            after['TEAM-2'].start = '2026-09-08'
+            after['TEAM-3'].finish = '2026-09-07'
+            review(review_session(), plan, before, config, after)
+            original = copy.deepcopy(plan)
+            report = output / 'review.html'
+            write_manager_html(report, plan, config, output / 'sandbox.mpp', None)
+            rendered = report.read_text(encoding='utf-8')
+        self.assertEqual(plan, original)
+        document = assert_minimal_report(self, rendered)
+        driver_fragment = document.sections[0].html
+        self.assertEqual(len(branches(driver_fragment)), 1)
+        self.assertIn('TEAM-1', branch_summary(branches(driver_fragment)[0]))
+        self.assertIn('1 affected task', branch_summary(branches(driver_fragment)[0]))
+        self.assertIn('Old completed driver', driver_fragment)
+        self.assertIn('Current affected work', driver_fragment)
+        self.assertNotIn('TEAM-3', driver_fragment)
+        outside_driver = rendered.replace(driver_fragment, '')
+        for hidden in ('Old completed driver', 'Old independent completed work',
+                       'Old Driver Release', 'Old Hidden Release'):
+            self.assertNotIn(hidden, outside_driver)
+        self.assertIn('Current Release', outside_driver)
 
     @unittest.skipUnless(len(FILES) == 9 and (YERP / 'ssn-812-config.yaml').exists(),
                          'Requires the nine private yerp CSV exports')
-    def test_real_yerp_preserves_reference_exclusion_and_source_csvs_in_date_summary(self):
+    def test_real_yerp_uses_actual_dependency_links_without_mutating_plan_or_csvs(self):
         hashes = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in FILES}
         try:
             config = load_config(YERP / 'ssn-812-config.yaml')
             plan = build_run_plan(FILES, config)
-            self.assertEqual(len(plan.epics), 2016)
             original_epics = {key: asdict(epic) for key, epic in plan.epics.items()}
+            eligible = {key for key, epic in plan.epics.items()
+                        if epic.drives_schedule and not epic.completed
+                        and (epic.target_start or epic.target_end)}
+            pairs = [(key, successor) for key in sorted(eligible)
+                     for successor in plan.epics[key].successors if successor in eligible]
+            self.assertTrue(pairs, 'Expected an actual yerp dependency with dated unfinished work')
+            driver, affected = pairs[0]
             before = {key: dates(key, epic.target_start or '2035-03-01',
                                  epic.target_end or '2035-03-02') for key, epic in plan.epics.items()}
-            dated = [key for key, epic in plan.epics.items()
-                     if epic.drives_schedule and epic.target_start and epic.target_end]
-            changed_key, existing_difference = dated[:2]
-            before[existing_difference] = dates(existing_difference, '2035-02-01', '2035-02-02')
             after = copy.deepcopy(before)
-            after[changed_key].start = '2035-01-01'
+            after[driver].finish = '2035-04-03'
+            after[affected].start = '2035-04-04'
             reference = next(key for key, epic in plan.epics.items() if not epic.drives_schedule)
-            after[reference] = dates(reference, '2035-04-01', '2035-04-02')
+            after[reference] = dates(reference, '2035-05-01', '2035-05-02')
             review(review_session(), plan, before, config, after)
-            rendered = render_schedule_cascade_review(plan, project_update_run=True)
-            self.assertEqual(metric(rendered, 'Start Changes'), 1)
-            self.assertEqual(metric(rendered, 'Finish Changes'), 0)
-            self.assertEqual(metric(rendered, 'Jira Target Differences'), 3)
-            self.assertEqual(len(table_rows(rendered, 'Project Date Changes')), 1)
-            self.assertEqual(len(table_rows(rendered, 'Jira Target Differences')), 3)
-            self.assertEqual({item.schedule_key for item in date_changes(plan)}, {changed_key})
+            rendered = render_schedule_cascade_review(plan, True)
+            self.assert_driver_section_only(rendered)
+            self.assertEqual(len(branches(rendered)), 1)
+            self.assertIn(driver, branch_summary(branches(rendered)[0]))
+            self.assertIn('1 affected task', branch_summary(branches(rendered)[0]))
+            self.assertIn(affected, branches(rendered)[0])
+            self.assertNotIn(reference, rendered)
+            self.assertEqual({item.schedule_key for item in date_changes(plan)}, {driver, affected})
             self.assertEqual({key: asdict(epic) for key, epic in plan.epics.items()}, original_epics)
         finally:
             self.assertEqual({path: hashlib.sha256(path.read_bytes()).hexdigest() for path in FILES}, hashes)

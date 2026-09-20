@@ -12,7 +12,7 @@ from j2p.reports import (
     color_label,
     render_color_examples,
     render_project_update_metrics,
-    render_schedule_cascade_table,
+    render_schedule_cascade_review,
     write_field_mapping,
 )
 
@@ -52,16 +52,17 @@ class ReviewPaletteTests(unittest.TestCase):
         self.assertNotIn("Project run only", red_row)
         self.assertEqual(item.color, "changed_cell")
 
-    def test_cascade_detail_labels_diagram_colors_and_preserves_dates(self):
-        item = AuditItem(
-            "Review", "CascadeBranchDriver", jira_key="TEAM-1", schedule_key="TEAM-1",
-            field="Finish", old_value="2026-09-18", new_value="2026-09-21", color="changed_cell",
-        )
-        rendered = render_schedule_cascade_table(review_plan([item]), {"TEAM-1": item})
-        self.assertIn("Diagram Color", rendered)
-        self.assertIn("Red", rendered)
-        self.assertIn("2026-09-18", rendered)
-        self.assertIn("2026-09-21", rendered)
+    def test_driver_cards_preserve_dates_and_green_project_audit_colors(self):
+        from test_report_scaling import graph_plan
+        plan = graph_plan({"TEAM-1": ["TEAM-2"], "TEAM-2": []})
+        for item in plan.audit_items:
+            item.color = "changed_cell"
+        rendered = render_schedule_cascade_review(plan, True)
+        self.assertIn('class="cascade-node driver"', rendered)
+        self.assertIn('class="cascade-node changed"', rendered)
+        self.assertIn("2026-01-01", rendered)
+        self.assertIn("2026-02-01", rendered)
+        self.assertTrue(all(item.color == "changed_cell" for item in plan.audit_items))
 
     def test_validation_example_does_not_claim_red_project_cells(self):
         rendered = render_color_examples(review_plan())

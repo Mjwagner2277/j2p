@@ -1,6 +1,7 @@
 """Update measurements retain their scope without reducing report detail."""
 
 import csv
+import json
 import tempfile
 import unittest
 from copy import deepcopy
@@ -9,6 +10,7 @@ from pathlib import Path
 from j2p.config import DEFAULT_CONFIG
 from j2p.models import AuditItem, PlanEpic, RunPlan
 from j2p.reports import render_report_context, write_reports
+from j2p.run_lifecycle import RunTransaction
 
 
 class ProjectUpdateReportTests(unittest.TestCase):
@@ -43,23 +45,31 @@ class ProjectUpdateReportTests(unittest.TestCase):
                                        "review_duration": 0.1, "review_candidates": 0.1, "review_columns": 0.2,
                                        "format_review": 2.0, "total": 9.876},
         })
+        original_stats = deepcopy(plan.stats)
         with tempfile.TemporaryDirectory() as tmp:
+            transaction = RunTransaction({"run_dir": Path(tmp)}, None)
+            transaction.manifest = {"timings_seconds": {}}
+            transaction.record_plan(plan)
             paths = write_reports(plan, Path(tmp), deepcopy(DEFAULT_CONFIG))
             reports = [paths["manager_report"], *paths["resource_group_reports"].glob("*.html")]
             self.assertEqual(len(reports), 3)
             for path in reports:
                 html = path.read_text()
-                self.assertIn("Project Update Operations (Entire Run)", html)
-                self.assertIn("including in filtered resource-group reports", html)
-                self.assertIn("not unique fields or tasks", html)
-                self.assertIn("<td>81</td>", html)
-                self.assertIn("<td>9.876</td>", html)
-                for label in ("task indexing", "undated task durations", "color candidates", "visible columns"):
-                    self.assertIn(f"Format review: {label} (subset)", html)
-                self.assertIn("Apply changes includes the required recalculation", html)
+                self.assertNotIn("Project Update Operations", html)
+                self.assertNotIn("Project Update Timing", html)
+                self.assertNotIn("Report Context", html)
+                self.assertIn("audit-detail.csv", html)
+            manifest = json.loads(transaction.manifest_path.read_text())
+            self.assertEqual(manifest["stats"], original_stats)
+            self.assertEqual(manifest["stats"]["project_update_writes"]["task_fields"]["skipped"], 81)
+            self.assertEqual(manifest["stats"]["project_update_seconds"]["total"], 9.876)
+            self.assertIn('href="../../run-manifest.json"', paths["html_report_index"].read_text())
             with paths["audit_detail"].open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual([row["jira_key"] for row in rows], ["TEAM-1", "TEAM-2"])
+            self.assertEqual([(row["field"], row["old_value"], row["new_value"]) for row in rows],
+                             [(item.field, item.old_value, item.new_value) for item in plan.audit_items])
+        self.assertEqual(plan.stats, original_stats)
 
     def test_report_without_project_measurements_does_not_imply_zero_cost(self):
         html = render_report_context(self.make_plan(), None, None, Path("reports"))

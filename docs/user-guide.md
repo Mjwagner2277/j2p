@@ -216,16 +216,14 @@ target window so Project can reschedule. Unchanged Jira completion does not
 reseed Project's duration-based percentage; completed driving rows still require
 native 100%, and custom story-point completion is verified exactly.
 
-The report retains the complete comparisons, audit details, point rollups, and
-schedule cascade review. Recalculation, formatting, saving, and verification
-before and after reopening still run, including checks for schedule effects on
-rows that received no direct edit.
+The CSV outputs retain complete comparisons, audit details, and point rollups;
+the compact HTML presents schedule impact, completion, and grouped review work.
+Recalculation, formatting, saving, and verification before and after reopening
+still run, including checks for schedule effects on rows receiving no direct edit.
 
-Open **Report Context** in the manager HTML report to see Project update
-operations written/skipped/failed and timings by phase. The same measurements
-appear in resource-group reports, where they still describe the entire run.
-Counts measure operations, not unique tasks or fields. Detailed statistics are
-also retained in `run-manifest.json`. See [performance.md](performance.md) for
+Open `run-manifest.json` to inspect Project operations written/skipped/failed
+and timings by phase. These measurements describe the entire run. Counts measure
+operations, not unique tasks or fields. See [performance.md](performance.md) for
 how to compare repeated updates; runtime savings depend on the Project file and
 Windows installation.
 
@@ -279,31 +277,23 @@ The state file lets future report-only validation compare against the last saved
 
 Open `reports\html\index.html` first, or open `reports\html\Manager-Review-Report.html` directly when you only need the overall manager view.
 
-1. Review `Decision Briefing`.
-2. Review `Story Point Ratio`.
-3. Expand `Story Point Ratio By Resource Group` when you need the active-work split by team/resource group.
-4. Review `Rollup Status` for initiative/fixVersion progress. Rollups with no completion points (In Planning) are omitted from this HTML section, including resource-group reports. The complete plan, Project rows, state, and CSV audit retain them. All rollups with completion points show their actual progress status and percentage, including versions whose epic rows are all references. Completion includes every member; reference rows affect scheduling placement and do not reduce version completion credit. Rollups sort by Target End, earliest first, with missing dates last. Initiatives use their own Jira target end; fixVersions use the latest target end among their member epic tasks, including references. Resource-group views retain the whole rollup’s target date. Due Status marks dates before the report generation date as Past due (independently of completion), the same date as Due today, and later dates as Upcoming. Missing dates show Not set. Summary CSV and state outputs also retain the target end.
-5. Review `Schedule Cascade Review` for date-change branches after Microsoft Project recalculates the sandbox.
-6. Start remediation with `Focus Now` and its first 25 grouped fixes. Warnings from reference rows and missing/excluded parents are consolidated so the same underlying fix appears once. Each action explains its priority, affected issues, unfinished downstream issues, target end, and next action. Expand `More Current Fixes`, `Later Work`, `Unscheduled Work`, or `Historical Cleanup` as needed.
-7. Expand `Full Review Audit` for `Review Type Summary` and `Reviewer Action Needed By Planning Horizon`. These retain every underlying review entry; the focus view does not remove data from the CSV audit or alter Project calculations.
-8. Review `Project Key Rollup Mapping`.
-9. Review `Color Key` and `Color Case Examples`.
-10. Expand `Detailed Review Sections` only when you need category-level detail such as changed names, added epics, dependencies, or exclusions.
-11. Expand `Full Planned Epic Rows` only when you need the full row-level planned schedule table.
-12. Expand `CSV Column Mapping Used` when verifying how Jira headers were interpreted.
-13. Open the sandbox `.mpp` and compare colored cells with the report.
+The manager report and each resource-group report contain only three sections, all collapsed by default:
 
-`report_review.focus_days` defaults to 90 days from report generation; set it to `0` for all dated unfinished work. `report_review.max_focus_items` defaults to 25. Overdue unfinished work and serious errors on dated work remain visible. Work with neither Jira target date stays out of Focus Now and Highest Priority Fixes, even when it has dependency impact or errors. Its grouped actions and full evidence remain in the collapsed Unscheduled Work section, with a count in Decision Briefing. A usable target start or end is enough to follow the normal ranking, and a grouped action with dated affected work remains eligible. Invalid supplied dates still require date-error review; report-wide errors remain eligible. Project auto-scheduled dates do not substitute for Jira target dates in this ranking, and `focus_days: 0` does not promote undated work. Completed work is moved to Historical Cleanup only when no known open parent/child scope or downstream dependency is affected. Completion follows configured `done_statuses`; Cancelled is not silently reclassified. These are report priorities, not a calculated Microsoft Project critical path. The older planning-horizon buckets remain available for audit and do not decide the focus ranking.
+1. **Cascading Schedule Drivers** — linked date changes affecting unfinished dated work, ordered by affected issue count. Expand a branch for its changed Start/Finish dates.
+2. **Rollup and Completion** — initiative/fixVersion progress, sorted by Target End with missing dates last. In Planning rollups are omitted. Initiatives use their own Jira target end; fixVersions use the latest target end among member epics, including references. Past dates are marked Past due, today is Due today, and later dates are Upcoming. Completion credits every member of a fixVersion, including reference rows.
+3. **Items for Review** — grouped fixes, with the highest-priority actions first and nested `More Current Fixes`, `Later Work`, `Unscheduled Work`, and `Historical Cleanup` lists. Repeated warnings for the same underlying issue are consolidated. The compact rows identify the issue, impact, target date, and next action.
 
-Epics missing a Jira target start or end have a note at the beginning of the Project Dependency Review column (Text8 by default). It names the missing field and explains that Project uses existing dates or the nearest available dates allowed by dependencies and calendars. Reference rows identify which primary row drives the schedule. Jira target dates remain blank, and existing dependency notes are retained. The date note clears automatically when both Jira targets are supplied in a later export. These notes are informational and do not add warnings to Focus Now.
+The header shows only title, generation time, and scope. Links inside the sections open the complete audit, rollup, and planned-epic CSVs. Context tables, color legends, point-efficiency views, raw audit tables, and full planned rows are omitted from HTML. Their removal does not change calculations or CSV detail. Open the sandbox `.mpp` to compare the reported changes with Project.
+
+`report_review.focus_days` defaults to 90 days from report generation; set it to `0` for all dated unfinished work. `report_review.max_focus_items` defaults to 25. Overdue unfinished work and serious errors on dated work remain visible. Work with neither Jira target date stays out of the highest-priority fixes, even when it has dependency impact or errors. Its grouped actions remain under Items for Review → Unscheduled Work, with full evidence in the audit CSV. A usable target start or end is enough to follow the normal ranking, and a grouped action with dated affected work remains eligible. Invalid supplied dates still require date-error review; report-wide errors remain eligible. Project auto-scheduled dates do not substitute for Jira target dates in this ranking, and `focus_days: 0` does not promote undated work. Completed work is moved to Historical Cleanup only when no known open parent/child scope or downstream dependency is affected. Completion follows configured `done_statuses`; Cancelled is not silently reclassified. These are report priorities, not a calculated Microsoft Project critical path. The older planning-horizon buckets remain in the CSV audit and do not decide the focus ranking.
+
+Epics missing a Jira target start or end have a note at the beginning of the Project Dependency Review column (Text8 by default). It names the missing field and explains that Project uses existing dates or the nearest available dates allowed by dependencies and calendars. Reference rows identify which primary row drives the schedule. Jira target dates remain blank, and existing dependency notes are retained. The date note clears automatically when both Jira targets are supplied in a later export. These notes are informational and do not add high-priority warnings.
 
 After the final Project recalculation, a driving epic with both Jira target dates missing gets a more specific note when its actual duration is one Project day: “Missing Jira target start/end. Project currently schedules this task for one day; Jira supplied no dates. Confirm the duration.” The check compares [Task.Duration in minutes](https://learn.microsoft.com/en-us/office/vba/api/project.task.duration) with the project’s configured [HoursPerDay](https://learn.microsoft.com/en-us/office/vba/api/project.project.hoursperday), so it does not assume an eight-hour day or infer duration from calendar dates. It reuses the formatting task index, updates only the review text/flag, and leaves Start, Finish, and Duration untouched. References retain their primary-row explanation. Partial dates, longer/zero durations, and unreadable durations retain the general missing-date note; validation without Project cannot confirm a duration. Updates write the final review note only when needed, and the one-day wording clears when the duration changes or Jira dates arrive.
 
-The manager report intentionally keeps project-wide Story Point Ratio, rollup status, and review-required items at the top. Large detail tables are collapsed so a manager does not have to scroll through hundreds of planned epic rows before seeing the decisions that matter.
+`Cascading Schedule Drivers` is the single schedule-impact section. It lists changed upstream finishes linked to downstream Start or Finish changes on unfinished work with Jira target dates, ordered by the number of unique affected issues. Each collapsed branch shows the driver's key and name, previous/current Finish, and affected count. Expand it to inspect linked Start/Finish changes. Isolated date changes, Jira/Project mismatches without movement, and branches affecting only completed work stay out of this section. Work with both Jira target dates missing is not promoted as a driver, but can appear as context within a branch.
 
-`Schedule Cascade Review` separates date movement from differences against Jira. `Start Changes` and `Finish Changes` count recorded native Project date changes, and `Project Date Changes` lists the old/new dates, including start-only changes and independent tasks. Existing rows compare against the input `.mpp`; newly added rows and creation runs compare against the dates initially supplied or captured before scheduling. `Jira Target Differences` separately compares Jira targets with the current Project dates and indicates whether each date changed during this run or no new change was recorded. An amber date cell can indicate an existing Jira/Project mismatch or a rejected write; its color alone does not mean the schedule moved during this run. For example, a Project finish that already differed from Jira in the input file can stay amber even when the update leaves it unchanged. Recorded native date changes are green.
-
-The branch diagram explains changed finish dates linked by dependencies. Red cards are branch drivers: changed finishes with changed downstream successors. Green cards are other changed finishes in those branches. These colors describe report diagram roles; all changed Project Start/Finish cells remain green. Branches are collapsed by default and ordered by downstream impact. Resource-group reports include that group's start/finish changes and Jira target differences even when those issues do not start a cascade branch. Their diagrams show branches starting in that group and retain downstream affected issues from other groups. The nested view follows the same Jira blocker links that j2p writes to Project as predecessors, and the collapsible detail tables retain the exact dates.
+Existing rows compare against the input `.mpp`; new rows and creation runs compare against dates initially supplied or captured before scheduling. Red cards identify drivers and green cards identify affected changes; all changed Project Start/Finish cells remain green. The branches follow the Jira blocker links written as Project predecessors. They show related changes, not proof of causation or a calculated critical path. Resource-group reports show branches starting in that group, including affected downstream work in other groups. Complete date-change and Jira-target-mismatch evidence remains in `audit-detail.csv`. An amber date cell can reflect an existing Jira/Project mismatch or a rejected write without any new schedule movement.
 
 ## Color Key
 
@@ -319,7 +309,7 @@ j2p applies sandbox colors through Project cell background formatting. During `c
 
 To view colored cells, open the generated sandbox `.mpp`, use the Gantt Chart task grid, and apply the `j2p Review` task table from Project's table menu if it is not already active. Cell formatting appears in the left task sheet, not on the right-side Gantt bars. The HTML manager report has its own cascade diagram colors; red branch driver cards do not make the corresponding Project date cells red.
 
-If Project rejects table setup or cell formatting, the run continues and adds `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` to the manager report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check the manager report for those warning categories. Current j2p versions try exact RGB cell coloring first and then Project's built-in direct `CellColor` palette as a fallback.
+If Project rejects table setup or cell formatting, the run continues and records `ProjectReviewTableSetupFailed` or `ProjectCellColoringFailed` in the audit, with grouped review actions in the report. The underlying task data is still written where Project accepted it. If a sandbox has no visible colors, open the sandbox, choose the `j2p Review` table if it is not already active, and check `audit-detail.csv` for those warning categories. Current j2p versions try exact RGB cell coloring first and then Project's built-in direct `CellColor` palette as a fallback.
 
 Project stores predecessor links as Project task row IDs, not Jira keys. The manager report and audit CSV show Jira keys such as `CORE-1001`, but the sandbox `Predecessors` column normally shows values such as `12FS`. That is expected.
 
@@ -495,7 +485,7 @@ Interpretation:
 
 By default, this is written to the Microsoft Project custom number field `Number4` and shown with the display name `Story Point Ratio`. Incomplete child work can still contribute to the total `Logged Hours` field, but it does not affect this metric until the child work is in a done status.
 
-The row-level value is available on each included epic row and in `planned-epics.csv` as `story_point_ratio`. The manager report's `Story Point Ratio` and `Story Point Ratio By Resource Group` sections intentionally use only active scheduled epic rows: rows that drive the schedule and have `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
+The row-level value is available on each included epic row and in `planned-epics.csv` as `story_point_ratio`. Rollup values remain in `summary-rollups.csv`. Point-efficiency tables are omitted from the compact HTML reports.
 
 ## Dependencies
 
@@ -525,10 +515,9 @@ The sandbox Project file is auto-scheduled. During a Windows Microsoft Project `
 
 - Changed Jira target-date cells are colored green.
 - If Project auto-scheduling shifts Start or Finish, the changed Project date cells are green, including cascade branch drivers.
-- Red branch driver cards appear only in the HTML report diagram when a changed finish also has changed downstream successors.
-- The `Project Date Changes` table lists recorded native Start/Finish movement from the input Project file (or initial scheduling dates for new rows), including changes without a cascade.
-- `Jira Target Differences` lists scheduled dates that differ from Jira, distinguishing dates changed this run from those with no new change recorded. A mismatch can remain amber without any new schedule movement.
-- The `Schedule Cascade Review` diagram groups linked finish changes into dependency branches; the absence of a branch does not rule out start-only or independent changes.
+- `Cascading Schedule Drivers` groups changed upstream finishes linked to downstream Start/Finish changes on unfinished dated work. Branch summaries show previous/current Finish and the affected count; expand them for the linked dates.
+- Red driver cards and green affected cards describe roles within the HTML branch view, without changing Project date-cell colors.
+- `audit-detail.csv` retains all native date movement and Jira-target differences, including isolated changes. A mismatch can remain amber without new movement and does not by itself qualify as schedule impact.
 
 Project accepts only supported calendar dates in schedule fields. j2p converts Jira dates to Project date values before automation writes them. If Project still rejects a date because of range, calendar, or schedule constraints, j2p adds an amber review item instead of stopping the whole run.
 
@@ -539,8 +528,8 @@ Validate mode does not open Microsoft Project, so it cannot detect actual auto-s
 | File | Audience | Purpose |
 | --- | --- | --- |
 | `reports\html\index.html` | Product managers, schedule owners, reviewers | Landing page linking to the overall manager report and each resource-group report. |
-| `reports\html\Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Overall self-contained review report with summary sections and review guidance. |
-| `reports\html\resource-groups\<Resource_Group>.html` | Resource-group leads, schedule owners | Resource-group scoped report. The schedule cascade section shows branches that start with that resource group. |
+| `reports\html\Manager-Review-Report.html` | Product managers, schedule owners, reviewers | Three collapsed sections: Cascading Schedule Drivers, Rollup and Completion, and Items for Review. |
+| `reports\html\resource-groups\<Resource_Group>.html` | Resource-group leads, schedule owners | Resource-group scoped report. Cascading Schedule Drivers shows branches that start with that resource group. |
 | `reports\csv\audit-detail.csv` | Reviewers needing detail | Full audit register of changed, added, excluded, dependency, and review items. |
 | `reports\csv\planned-epics.csv` | Schedule owners | Final included Project epic rows after Jira parsing, logged-hours rollup, Story Point Ratio calculation, and rollup decisions. |
 | `reports\csv\summary-rollups.csv` | Product managers, schedule owners | Initiative/fixVersion rollup summaries, percent complete, logged hours, and Story Point Ratio. |
@@ -766,7 +755,7 @@ After running `validate`:
 After running `update`:
 
 - Open the sandbox `.mpp`, not the source-of-truth `.mpp`.
-- Review red cascade driver cards in the manager report first.
+- Review Cascading Schedule Drivers in the manager report first.
 - Review green changed cells.
 - Review amber unmatched/excluded items.
 - Review light-gray dependency review cells.

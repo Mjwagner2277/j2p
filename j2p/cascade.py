@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Iterator, List, Mapping, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Mapping, Optional, Set, Tuple
 
 
 CASCADE_MAX_ENTRIES = 500
@@ -14,9 +14,13 @@ CASCADE_MAX_DEPTH = 32
 class CascadeGraph:
     """Analyze a changed-issue graph once, preserving unique descendant counts."""
 
-    def __init__(self, successors: Mapping[str, Iterable[str]]) -> None:
+    def __init__(
+        self, successors: Mapping[str, Iterable[str]],
+        counted_keys: Optional[Iterable[str]] = None,
+    ) -> None:
         keys = sorted(successors)
         included = set(keys)
+        counted = included if counted_keys is None else included & set(counted_keys)
         self.successors = {
             key: sorted(set(successors[key]) & included) for key in keys
         }
@@ -36,20 +40,22 @@ class CascadeGraph:
                     queue.append(following)
         # Integer bitsets avoid retaining millions of Python set entries for
         # long chains, and count a shared descendant only once in joined DAGs.
-        positions = {key: index for index, key in enumerate(keys)}
+        positions = {key: index for index, key in enumerate(sorted(counted))}
         masks: Dict[str, int] = {}
         if len(ordered) == len(keys):
             for key in reversed(ordered):
                 mask = 0
                 for following in self.successors[key]:
-                    mask |= (1 << positions[following]) | masks[following]
+                    mask |= masks[following]
+                    if following in positions:
+                        mask |= 1 << positions[following]
                 masks[key] = mask
             self.downstream_counts = {key: bin(mask).count("1") for key, mask in masks.items()}
         else:
             # Accepted Jira dependencies are acyclic. Keep direct report calls
             # safe for malformed/cyclic plans without recursive traversal.
             self.downstream_counts = {
-                key: len(self.reachable([key]) - {key}) for key in keys
+                key: len((self.reachable([key]) - {key}) & counted) for key in keys
             }
         self.ordered_successors = {
             key: sorted(following, key=lambda child: (-self.downstream_counts[child], child))

@@ -113,7 +113,7 @@ completed child story points / (completed child logged hours / hours_per_story_p
 
 The default conversion is 8 hours per story point and is configurable in YAML. With the default, a value of `1.00` means one completed story point per eight completed logged hours.
 
-Manager report project-wide and resource-group Story Point Ratio views must use only active scheduled epic rows. For this purpose, active means the row drives the schedule and has `% Complete` from 1 to 99. Completed, not-started, in-planning, and reference-only rows are excluded from those aggregate views.
+Story Point Ratio remains available in Project fields and CSV outputs. The compact manager and resource-group HTML reports do not include point-efficiency tables.
 
 ## Dependencies
 
@@ -134,15 +134,23 @@ Jira `Target start` and `Target end` map into Project custom date fields and are
 The sandbox is auto-scheduled. During creation and updates, if Project auto-scheduling shifts dates:
 
 - every changed Project Start/Finish cell is colored green, including cascade branch drivers
-- the report diagram uses red cards for changed finishes with changed downstream successors and green cards for other changed finishes
-- `Start Changes` and `Finish Changes` count recorded native date movement from the input Project file for existing rows or initial schedule seeds for newly added rows and creation runs; `Project Date Changes` includes start-only and independent changes
-- `Jira Target Differences` separately lists scheduled Start/Finish dates that differ from Jira, indicating whether each changed this run or no new change was recorded; an amber mismatch alone does not establish schedule movement
-- the HTML reports include a `Schedule Cascade Review` section that visualizes linked finish changes by dependency branch, orders branches by downstream impact, collapses every branch by default, and includes collapsible detail tables
-- each resource-group HTML report includes its own native date changes and Jira target differences, plus schedule cascade branches whose starting issue belongs to that resource group and their downstream issues
+- the HTML has one `Cascading Schedule Drivers` section for upstream Finish changes linked to downstream Start/Finish movement affecting unfinished work with Jira target dates; isolated changes, mismatches alone, and completed-only branches do not qualify
+- branches sort by the number of unique affected unfinished dated issues and are collapsed by default; summaries show the driver key/name, previous/current Finish, and affected count, with linked Start/Finish changes inside
+- work missing both Jira target dates is not promoted as a driver, but can remain as context within a branch
+- red cards identify drivers and green cards identify affected changes; dependency links establish related movement, not causal proof or a calculated critical path
+- recorded movement compares native dates against the input Project file for existing rows or initial scheduling dates for new rows and creation runs
+- `audit-detail.csv` retains all date movement and Jira-target mismatches; an amber mismatch alone does not establish movement
+- resource-group reports show Cascading Schedule Drivers branches starting in that group, including downstream issues from other groups; scoped CSV audit outputs retain the detail
+
+## HTML Report Scope
+
+Manager and resource-group reports contain exactly three sections in this order: **Cascading Schedule Drivers**, **Rollup and Completion**, and **Items for Review**. All three start collapsed. The header contains only title, generation time, and scope. Full CSV outputs remain available through links inside the sections; HTML omits context tables, legends, point-efficiency views, raw audit tables, and full planned rows.
+
+Rollup and Completion keeps initiative/fixVersion completion, target-date sorting, and past-due markers while excluding In Planning rollups. Every fixVersion member receives completion credit, including reference rows. Items for Review shows compact grouped fixes and nested More Current Fixes, Later Work, Unscheduled Work, and Historical Cleanup lists.
 
 ## Review Priorities
 
-Focus Now and Highest Priority Fixes use Jira target dates when prioritizing issue work. Work with neither target date belongs in a collapsed Unscheduled Work section, even when it has dependency impact or errors; Decision Briefing includes an unscheduled grouped-action count. The complete audit and diagnostics remain available.
+Items for Review uses Jira target dates to prioritize grouped fixes. Work with neither target date belongs in its nested, collapsed Unscheduled Work list, even when it has dependency impact or errors. The complete audit and diagnostics remain in CSV outputs.
 
 A usable target start or end follows normal ranking. Grouped actions with dated affected work remain eligible, malformed supplied dates retain date-error review, and report-wide errors remain eligible. Project auto-scheduled dates do not make undated Jira work high priority. Setting `report_review.focus_days` to `0` widens the window for dated unfinished work without promoting undated work.
 
@@ -158,7 +166,7 @@ When `warning_suppression.before` is set:
 - teams can map an optional `warning_suppression_date` CSV column for Created, Resolved, or another governance date
 - items without a usable suppression date remain visible
 - included epics are still parsed and scheduled; suppression only reduces manager-report and audit CSV noise
-- the manager report shows the number of suppressed historical items
+- run statistics retain the number of suppressed historical items
 
 ## Review Colors
 

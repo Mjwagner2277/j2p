@@ -26,7 +26,7 @@ These are not configured in `project_fields`, but j2p depends on them.
 | --- | --- | --- | --- |
 | `Name` | Yes | Yes | Human-readable task name. Used for changed-name detection and green name-cell coloring. |
 | `% Complete` / `PercentComplete` | Driving epics only | Yes | Native duration-based progress. Incomplete driving rows are seeded after date/resource writes and may recalculate; differences are audited. Completed driving rows must retain 100%. Summary and reference native progress is not written. Story-point reporting uses custom completion fields. |
-| `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Native changes appear in `Project Date Changes` and use green cells; differences from `Date1` appear separately in `Jira Target Differences`. |
+| `Start` | Yes, from Jira target start when present | Yes | Scheduled start date. Native changes use green cells. Linked changes affecting unfinished dated work appear in `Cascading Schedule Drivers`; the complete date audit retains differences from `Date1`. |
 | `Finish` | Yes, from Jira target end when present | Yes | Scheduled finish date. Used for Project auto-schedule comparison and green changed finish-date cells; red cascade branch driver cards appear only in the report diagram. |
 | `Predecessors` | Yes | Yes | Finish-to-Start dependency links. Jira `blocked by` / `is blocked by` becomes Project predecessors. Project displays task IDs such as `12FS`, so reports keep Jira keys for reviewer clarity. |
 | `Successors` | No direct write | Snapshot/audit helper only | Project derives successors from predecessor links. j2p may map audit findings to the Successors column, but dependency writes should remain predecessor-based. |
@@ -84,7 +84,7 @@ Completion and metrics:
 - Story Point Completion % retains completed story points divided by total story points. Native `PercentComplete` is seeded only on driving rows and can diverge after duration recalculation; completed driving rows use native 100%.
 - `logged_hours` is separate from completion and includes all child logged hours.
 - `story_point_ratio` uses only completed child logged hours and completed child story points.
-- Manager-report aggregate Story Point Ratio uses only active scheduled epics: `drives_schedule == True` and `0 < percent_complete < 100`.
+- Story Point Ratio remains in Project fields and CSV outputs; compact HTML omits point-efficiency views.
 
 Dependencies:
 
@@ -99,10 +99,10 @@ Review coloring:
 
 - `project_column_for_audit_field()` maps audit fields to the Project column that should be colored.
 - `review_table_columns()` builds the `j2p Review` table so target columns are visible before coloring.
-- `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and reported in HTML/CSV, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
+- `review_table.exposed_columns` prunes the standard review table columns. Hidden fields are still written to Project and retained in CSV outputs, but j2p only colors visible review-table fields unless `include_audit_columns` is enabled for an admin/debug run.
 - Red `cascade_root` coloring identifies report diagram cards when a changed finish has changed downstream successors; it does not override green native Project date cells.
 - Green changed-cell coloring applies to the changed native/custom field, including all autoscheduled `Start` and `Finish` shifts.
-- Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields. A native date can be amber because it differs from the Jira target or a write was rejected, without any new date movement. `Project Date Changes` compares native dates against the input Project file (or initial scheduling dates for new rows); `Jira Target Differences` compares current native dates against Jira. Confirmed native date changes stay green even when they also differ from Jira.
+- Amber review coloring commonly applies to `unmatched_project_task` or excluded/review fields. A native date can be amber because it differs from the Jira target or a write was rejected, without any new date movement. The date audit compares native dates against the input Project file (or initial scheduling dates for new rows) and records differences from Jira separately. Only qualifying linked movement appears in `Cascading Schedule Drivers`. Confirmed native date changes stay green even when they also differ from Jira.
 - Light-gray dependency coloring commonly applies to `dependency_review`.
 - Gray/green-gray planning coloring applies to `in_planning`.
 - Coloring uses direct `ActiveCell.CellColorEx` first. If Project rejects exact RGB, j2p falls back to the direct `ActiveCell.CellColor` palette property and does not call Project font-formatting commands.

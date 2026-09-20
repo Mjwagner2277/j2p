@@ -1,6 +1,8 @@
-"""The focused report retains the full audit and source context."""
+"""The focused report links complete audit evidence without repeating it."""
+import csv
 import tempfile
 from copy import deepcopy
+from dataclasses import asdict
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -8,7 +10,7 @@ from unittest.mock import patch
 from j2p.config import ConfigError, load_config
 from j2p.core import build_run_plan
 from j2p.models import AuditItem
-from j2p.reports import render_review_focus, resource_group_run_plan, write_manager_html
+from j2p.reports import render_review_focus, resource_group_run_plan, write_reports
 from j2p.review_focus import build_review_focus
 
 
@@ -39,19 +41,27 @@ class ReviewFocusReportTests(unittest.TestCase):
         filtered = resource_group_run_plan(plan, config, 'Team')
         self.assertEqual(len(filtered.audit_items), len(plan.audit_items))
 
-    def test_full_audit_is_collapsed_but_retained(self):
+    def test_grouped_review_links_complete_audit_without_raw_html_rows(self):
         plan, config = self.plan()
         before = list(plan.audit_items)
         with tempfile.TemporaryDirectory() as tmp:
-            report = Path(tmp) / 'report.html'
-            write_manager_html(report, plan, config, None, None)
-            content = report.read_text()
+            paths = write_reports(plan, Path(tmp), config)
+            content = paths['manager_report'].read_text()
+            with paths['audit_detail'].open(newline='') as handle:
+                audit_rows = list(csv.DictReader(handle))
         self.assertIn('Highest Priority Fixes', content)
-        self.assertIn('Full Review Audit', content)
-        self.assertIn('StoryEpicExcluded', content)
-        self.assertIn('TEAM-2', content)
-        self.assertIn('TEAM-3', content)
-        self.assertLess(content.index('Highest Priority Fixes'), content.index('Rollup Status'))
+        self.assertIn('audit-detail.csv', content)
+        self.assertNotIn('Full Review Audit', content)
+        self.assertNotIn('StoryEpicExcluded', content)
+        self.assertIn('TEAM-999', content)
+        self.assertLess(content.index('Rollup and Completion'), content.index('Items for Review'))
+        self.assertEqual([(row['jira_key'], row['category']) for row in audit_rows],
+                         [(item.jira_key, item.category) for item in before])
+        for item, row in zip(before, audit_rows):
+            for field, value in asdict(item).items():
+                self.assertEqual(row[field], '' if value is None else str(value),
+                                 f'{item.jira_key} {field} lost detail in the audit CSV')
+        self.assertTrue({'TEAM-2', 'TEAM-3'} <= {row['jira_key'] for row in audit_rows})
         self.assertEqual(before, plan.audit_items)
 
     def test_focus_limit_keeps_remainder_available_and_escapes_source_text(self):
@@ -91,9 +101,10 @@ class ReviewFocusReportTests(unittest.TestCase):
         self.assertEqual(focus['unscheduled_count'], 2)
         self.assertEqual(focus['focus_count'], 1)
         with tempfile.TemporaryDirectory() as tmp:
-            report = Path(tmp) / 'report.html'
-            write_manager_html(report, plan, config, None, None)
-            content = report.read_text()
+            paths = write_reports(plan, Path(tmp), config)
+            content = paths['manager_report'].read_text()
+            with paths['audit_detail'].open(newline='') as handle:
+                audit_rows = list(csv.DictReader(handle))
         highest = content.split('<h2>Highest Priority Fixes</h2>', 1)[1].split('</section>', 1)[0]
         self.assertIn('TEAM-4', highest)
         self.assertNotIn('TEAM-1', highest)
@@ -102,12 +113,12 @@ class ReviewFocusReportTests(unittest.TestCase):
         self.assertTrue(unscheduled[0].endswith('<details class="detail-block">'))
         self.assertIn('TEAM-1', unscheduled[1].split('</details>', 1)[0])
         self.assertIn('TEAM-999', unscheduled[1].split('</details>', 1)[0])
-        self.assertIn('<span>Unscheduled Work</span><strong>2</strong>', content)
-        audit = content.split('<summary><span>Full Review Audit</span>', 1)[1].split('</details>', 1)[0]
-        self.assertIn('TEAM-2', audit)
-        self.assertIn('TEAM-3', audit)
-        self.assertIn('ProjectDependencyWriteFailed', audit)
-        self.assertIn('The supplied dependency was rejected.', audit)
+        self.assertIn('2 grouped actions without Jira target dates', content)
+        self.assertNotIn('Full Review Audit', content)
+        self.assertTrue({'TEAM-2', 'TEAM-3'} <= {row['jira_key'] for row in audit_rows})
+        rejected = next(row for row in audit_rows if row['category'] == 'ProjectDependencyWriteFailed')
+        self.assertEqual(rejected['message'], 'The supplied dependency was rejected.')
+        self.assertEqual(len(audit_rows), len(before.audit_items))
         self.assertEqual(plan, before)
 
     def test_unlimited_focus_window_still_keeps_undated_work_outside_priority_table(self):
@@ -122,8 +133,8 @@ class ReviewFocusReportTests(unittest.TestCase):
         self.assertNotIn('TEAM-999', highest)
         self.assertIn('Unscheduled Work', content)
         self.assertIn('all dated unfinished work', content)
-        self.assertIn('Project auto-scheduled dates do not promote it', content)
         self.assertNotIn('unknown dates', content)
+        self.assertNotIn('href="#review-audit"', content)
 
     def test_focus_configuration_is_validated(self):
         self.assertEqual(load_config(None, {'report_review': {'focus_days': 0}})['report_review']['focus_days'], 0)

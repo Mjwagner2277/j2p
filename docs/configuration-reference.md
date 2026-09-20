@@ -483,7 +483,7 @@ If a fixVersion is complete by status but one or more issues are missing `Resolv
 
 ## `report_review`
 
-Controls the report's grouped Focus Now review list without removing the detailed audit.
+Controls grouped priorities within Items for Review. Complete audit CSVs remain unchanged.
 
 ```yaml
 report_review:
@@ -494,9 +494,9 @@ report_review:
 | Field | Default | Purpose |
 | --- | --- | --- |
 | `focus_days` | `90` | Number of days from report generation included in the normal focus window. `0` includes all dated unfinished work; it does not promote undated work. |
-| `max_focus_items` | `25` | Maximum grouped actions shown in Highest Priority Fixes. Remaining current actions are collapsed under More Current Fixes. |
+| `max_focus_items` | `25` | Maximum highest-priority grouped actions shown inside Items for Review. Remaining current actions are collapsed under More Current Fixes. |
 
-Overdue unfinished work, serious errors on dated work, and report-wide errors remain eligible for Focus Now. Work with neither Jira target date is grouped in the collapsed Unscheduled Work section, even when it has dependency impact or errors. Decision Briefing shows its count, and the full review audit preserves every entry. A usable target start or end follows normal ranking, as does a grouped action containing dated affected work. Invalid supplied dates retain their date-error review. Project auto-scheduled dates are not Jira priority anchors.
+Overdue unfinished work, serious errors on dated work, and report-wide errors remain eligible for the highest-priority fixes in Items for Review. Work with neither Jira target date is grouped in its nested, collapsed Unscheduled Work list, even when it has dependency impact or errors. The audit CSV preserves every entry. A usable target start or end follows normal ranking, as does a grouped action containing dated affected work. Invalid supplied dates retain their date-error review. Project auto-scheduled dates are not Jira priority anchors.
 
 ## `planning_horizon`
 
@@ -523,7 +523,7 @@ How j2p assigns planning buckets:
 
 | Field | Default | Purpose |
 | --- | --- | --- |
-| `enabled` | `true` | Adds `planning_date` and `planning_bucket` to audit rows and groups manager-report review items by horizon. |
+| `enabled` | `true` | Adds `planning_date` and `planning_bucket` to audit CSV rows; Items for Review uses the separate `report_review` focus rules. |
 | `immediate_months` | `6` | Size of the near-term window. |
 | `bucket_months` | `6` | Size of each future planning bucket. |
 | `as_of_date` | `""` | Optional run date override for repeatable audits and examples. Blank means today's date. |
@@ -717,7 +717,7 @@ Before running with a new team's Jira export:
 4. Confirm `columns` matches the actual CSV headers.
 5. Confirm fixVersion teams use the intended `multi_fixversion_policy`.
 6. Run `validate`.
-7. Review `CSV Column Mapping Used` in `reports\html\Manager-Review-Report.html`.
+7. Review grouped input issues under `Items for Review` and compare the CSV headers with the YAML `columns` mappings.
 8. Review `FIELD_MAPPING.md`.
 9. Fix YAML or Jira data-quality issues before running `update`.
 

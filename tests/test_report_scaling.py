@@ -46,7 +46,7 @@ class ReportScalingTests(unittest.TestCase):
         html = render_schedule_cascade_review(graph_plan(graph), True)
         self.assertEqual(html.count('class="cascade-node '), 33)
         self.assertIn('class="cascade-reference"', html)
-        self.assertIn("32 downstream affected issues", html)
+        self.assertIn("32 affected tasks", html)
         self.assertLess(len(html), 100000)
 
     def test_long_chain_is_iterative_and_keeps_complete_audit_csv(self):
@@ -56,8 +56,8 @@ class ReportScalingTests(unittest.TestCase):
         html = render_schedule_cascade_review(plan, True)
         self.assertEqual(html.count('class="cascade-node '), CASCADE_MAX_DEPTH)
         self.assertIn("Visual tree shortened", html)
-        self.assertIn(f"{count} finish-date change(s)", html)
-        self.assertIn("TEAM-1499", html)
+        self.assertIn(f"{count - 1} affected tasks", html)
+        self.assertNotIn("TEAM-1499", html)  # Complete evidence remains in the CSV below.
         with tempfile.TemporaryDirectory() as tmp:
             paths = write_reports(plan, Path(tmp), deepcopy(DEFAULT_CONFIG))
             with paths["audit_detail"].open(newline="") as handle:
@@ -73,7 +73,7 @@ class ReportScalingTests(unittest.TestCase):
         html = render_schedule_cascade_review(graph_plan(graph), True)
         self.assertEqual(html.count('class="cascade-node '), CASCADE_MAX_ENTRIES)
         self.assertIn("Visual tree shortened", html)
-        self.assertIn("1200 finish-date change(s)", html)
+        self.assertIn("audit-detail.csv", html)
 
     def test_one_wide_branch_closes_its_html_when_budget_runs_out(self):
         graph = {"TEAM-ROOT": [f"TEAM-{n}" for n in range(800)]}
@@ -81,21 +81,23 @@ class ReportScalingTests(unittest.TestCase):
         html = render_schedule_cascade_review(graph_plan(graph), True)
         self.assertEqual(html.count('class="cascade-node '), CASCADE_MAX_ENTRIES)
         self.assertEqual(html.count("<div"), html.count("</div>"))
-        self.assertIn("801 finish-date change(s)", html)
+        self.assertIn("800 affected tasks", html)
 
     def test_cycle_analysis_is_safe_for_direct_report_callers(self):
         graph = CascadeGraph({"A": ["B"], "B": ["A", "C"], "C": []})
         self.assertEqual(graph.downstream_counts, {"A": 2, "B": 2, "C": 0})
 
-    def test_manifest_links_are_relative_and_optional(self):
+    def test_manifest_link_stays_in_index_without_cluttering_manager_reports(self):
         plan = graph_plan({"TEAM-1": ["TEAM-2"], "TEAM-2": []})
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             paths = write_reports(plan, root, deepcopy(DEFAULT_CONFIG))
             self.assertNotIn("run-manifest.json", paths["manager_report"].read_text())
+            self.assertNotIn("run-manifest.json", paths["html_report_index"].read_text())
             (root / "run-manifest.json").write_text("{}")
             paths = write_reports(plan, root, deepcopy(DEFAULT_CONFIG))
-            for path in (paths["manager_report"], paths["html_report_index"]):
-                self.assertIn('href="../../run-manifest.json"', path.read_text())
+            self.assertIn('href="../../run-manifest.json"', paths["html_report_index"].read_text())
+            self.assertEqual((root / "run-manifest.json").read_text(), "{}")
+            self.assertNotIn("run-manifest.json", paths["manager_report"].read_text())
             group = next(paths["resource_group_reports"].glob("*.html"))
-            self.assertIn('href="../../../run-manifest.json"', group.read_text())
+            self.assertNotIn("run-manifest.json", group.read_text())
