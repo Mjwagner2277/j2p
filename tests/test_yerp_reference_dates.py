@@ -81,6 +81,8 @@ class YerpReferenceDateTests(unittest.TestCase):
             if not epic.drives_schedule:
                 self.assertEqual((task.Start, task.Finish), (primary.Start, primary.Finish), key)
                 self.assertIs(task.Active, True, key)
+                self.assertTrue(task.IsStartValid, key)
+                self.assertTrue(task.IsFinishValid, key)
         for identity, task in self.summary_map.items():
             members = [self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
                        for epic in self.plan.epics.values()
@@ -115,12 +117,16 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual(primary.Start.strftime('%Y-%m-%d'), '2026-01-07')
         primary_dates = self.raw_dates()
         protected = self.protected_values()
-        # Newly created manual copies still have their default one-day dates;
-        # the primary has completed its scheduling pass. Never change the CSV.
+        # A blank manual Start can expose the primary's January start as its
+        # fallback. It must still be explicitly populated before Finish. This
+        # differs from a valid, visible endpoint that needs no rewrite.
         for epic in copies:
             row = self.epics[epic.key].task
-            row.Start = primary.Start.replace(month=9, day=18)
+            row.Start = primary.Start
             row.Finish = row.Start.replace(hour=17)
+            row.IsStartValid = row.IsFinishValid = False
+            self.assertEqual(row.StartText, '')
+            self.assertEqual(row.FinishText, '')
         self.synchronize()
         self.assertEqual(self.raw_dates(), primary_dates)
         self.assertEqual(self.protected_values(), protected)

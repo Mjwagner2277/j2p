@@ -79,8 +79,12 @@ class SummaryDateTask(SimpleNamespace):
 class ManualCopyTask(SimpleNamespace):
     """Expose manual-task setters separately, with native date readback."""
 
+    IsStartValid = IsFinishValid = True
+
     @property
     def StartText(self):
+        if not self.IsStartValid:
+            return ''
         return self.Start.strftime('%B %d, %Y %I:%M %p')
 
     @StartText.setter
@@ -88,9 +92,12 @@ class ManualCopyTask(SimpleNamespace):
         if not self.Manual or self.Summary:
             raise AssertionError('Only manual leaf copies use StartText')
         self.Start = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+        self.IsStartValid = True
 
     @property
     def FinishText(self):
+        if not self.IsFinishValid:
+            return ''
         return self.Finish.strftime('%B %d, %Y %I:%M %p')
 
     @FinishText.setter
@@ -98,6 +105,7 @@ class ManualCopyTask(SimpleNamespace):
         if not self.Manual or self.Summary:
             raise AssertionError('Only manual leaf copies use FinishText')
         self.Finish = datetime.strptime(value, '%B %d, %Y %I:%M %p')
+        self.IsFinishValid = True
 
 
 def project_date_format(value, format_code):

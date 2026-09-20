@@ -37,6 +37,7 @@ class DateTask:
         self._start, self._finish = start, finish
         self._custom_dates = {}
         self.Summary, self.Active, self.Manual = summary, active, False
+        self.IsStartValid = self.IsFinishValid = True
         self.Work = self.ActualWork = self.ActualDuration = 0
         self.Assignments = SimpleNamespace(Count=0)
         self.TaskDependencies = SimpleNamespace(Count=0)
@@ -196,7 +197,7 @@ class ReferenceDateTests(unittest.TestCase):
         self.assertFalse(any(task.writes for task in summaries.values()))
         self.assertEqual(plan.epics, before.epics)
         self.assertEqual(plan.summaries, before.summaries)
-        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 36)
+        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 42)
 
     def test_unchanged_rerun_writes_no_dates_and_does_not_consult_value_cache(self):
         session, plan, config, tasks, summaries = fixture()
@@ -332,7 +333,7 @@ class ReferenceDateTests(unittest.TestCase):
         for task in [*tasks.values(), *summaries.values()]:
             task.writes.clear()
             task.reads = {'Start': 0, 'Finish': 0}
-        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 36)
+        self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 42)
         for key in ('P1', 'P2', 'P3'):
             self.assertEqual(tasks[key].reads, {'Start': 1, 'Finish': 1})
         self.assertFalse(any(task.writes for task in [*tasks.values(), *summaries.values()]))
@@ -424,13 +425,13 @@ class ReferenceDateTests(unittest.TestCase):
         sync(session, plan, config, tasks, summaries)
         with patch.object(DateTask, 'RecalcFlags', new_callable=PropertyMock, create=True) as flags:
             flags.side_effect = AssertionError('Healthy verification needs no additional COM reads')
-            self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 36)
+            self.assertEqual(verify_reference_dates(session, plan, config, tasks, summaries), 42)
             flags.assert_not_called()
 
     def test_verification_without_sync_history_still_checks_live_relationships(self):
         session, plan, config, tasks, summaries = fixture()
         sync(session, plan, config, tasks, summaries)
-        self.assertEqual(verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries), 36)
+        self.assertEqual(verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries), 42)
         tasks['R1']._finish += timedelta(minutes=1)
         with self.assertRaisesRegex(ProjectAutomationError, 'reference=R1'):
             verify_reference_dates(SimpleNamespace(), plan, config, tasks, summaries)

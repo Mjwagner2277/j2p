@@ -131,3 +131,6 @@ schedule if Project moves it. StartText/FinishText writes must retain the native
 Start/Finish dates and times, including after calculation and reopening. A
 failure must report expected and actual values and distinguish immediate manual
 date writes from calculation or save/reopen verification.
+Include newly created copies with blank manual Start/Finish values: a matching
+underlying date must not cause j2p to skip an endpoint whose IsStartValid or
+IsFinishValid is false. Both flags must be true after synchronization and reopening.

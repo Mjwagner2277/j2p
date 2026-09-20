@@ -148,18 +148,28 @@ def _same_date(actual, expected) -> bool:
         return False
 
 
+def _manual_date_valid(task, field: str, context: str) -> bool:
+    from .project import project_values_equal
+    return project_values_equal(_read(task, f"Is{field}Valid", context), True)
+
+
 def _matches(task, field: str, expected, context: str) -> bool:
-    return _same_date(_read(task, field, context), expected)
+    # A manual placeholder can expose a native fallback date even though its
+    # visible endpoint is blank. Matching that fallback must not skip the write.
+    return (_manual_date_valid(task, field, context)
+            and _same_date(_read(task, field, context), expected))
 
 
-def _verify_window(task, expected, context: str, *, verification_stage="verification") -> None:
+def _verify_window(task, expected, context: str, *, manual=False, verification_stage="verification") -> None:
     from .project import ProjectAutomationError
     for field, value in zip(("Start", "Finish"), expected):
         actual = _read(task, field, context)
-        if not _same_date(actual, value):
+        valid = not manual or _manual_date_valid(task, field, context)
+        if not valid or not _same_date(actual, value):
             # Failure-only diagnostics: do not add COM reads to matching rows.
             details = []
-            for diagnostic in ("StartText", "FinishText", "Duration", "DurationText", "Manual", "Active"):
+            for diagnostic in ("StartText", "FinishText", "Duration", "DurationText",
+                               "IsStartValid", "IsFinishValid", "IsDurationValid", "Manual", "Active"):
                 try:
                     detail = repr(getattr(task, diagnostic))[:160]
                 except Exception:
@@ -214,7 +224,8 @@ def _sync_window(session, task, expected, context: str, stats, formatted_dates) 
         text = _manual_date_text(session, value, context, formatted_dates)
         _write(task, field + "Text", text, context, stats)
     if stats["written"] != written_before:
-        _verify_window(task, expected, context, verification_stage="after manual copy date writes")
+        _verify_window(task, expected, context, manual=True,
+                       verification_stage="after manual copy date writes")
 
 
 def verify_copy_isolation(task, context, *, assignments=True):
@@ -333,7 +344,7 @@ def verify_reference_dates(
         verify_project_value(task, "Active", True, context)
         verify_project_value(task, "Manual", True, context)
         verify_copy_isolation(task, context)
-        _verify_window(task, window, context, verification_stage=verification_stage)
+        _verify_window(task, window, context, manual=True, verification_stage=verification_stage)
         index += 1
         progress.update(index)
     for identity, window in rollups.items():
@@ -343,4 +354,4 @@ def verify_reference_dates(
         _verify_window(task, window, context, verification_stage=verification_stage)
         index += 1
         progress.update(index)
-    return len(references) * 9 + len(rollups) * 3
+    return len(references) * 11 + len(rollups) * 3

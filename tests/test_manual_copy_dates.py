@@ -10,7 +10,110 @@ from j2p.reference_dates import verify_reference_dates
 from test_reference_dates import DateTask, fixture, raw_dates, sync
 
 
+class PlaceholderCopy(DateTask):
+    """Manual blank dates can coexist with usable underlying date values.
+
+    Model a finish write moving the underlying start while the manual start
+    remains blank, as in the reported immediate SSWSW-10467 readback.
+    """
+
+    def __init__(self, start, finish):
+        super().__init__(start, finish)
+        self.Manual = True
+        self.IsStartValid = self.IsFinishValid = False
+        self.Duration = 480
+        self.DurationText = ''
+
+    @property
+    def StartText(self):
+        return super().StartText if self.IsStartValid else ''
+
+    @StartText.setter
+    def StartText(self, value):
+        DateTask.StartText.fset(self, value)
+        if self.ignore_field != 'StartText':
+            self.IsStartValid = True
+
+    @property
+    def FinishText(self):
+        return super().FinishText if self.IsFinishValid else ''
+
+    @FinishText.setter
+    def FinishText(self, value):
+        DateTask.FinishText.fset(self, value)
+        if self.ignore_field != 'FinishText':
+            self.IsFinishValid = True
+            if not self.IsStartValid:
+                self._start = self._finish - timedelta(minutes=self.Duration)
+
+
 class ManualCopyDateTests(unittest.TestCase):
+    def test_blank_start_matching_underlying_date_is_written_before_finish(self):
+        session, plan, config, tasks, summaries = fixture()
+        primary = tasks['P1']
+        tasks['R1'] = copy = PlaceholderCopy(primary.Start, primary.Start + timedelta(hours=8))
+        primary_dates = raw_dates(plan, tasks)
+        sync(session, plan, config, tasks, summaries)
+        self.assertEqual([field for field, _ in copy.writes], ['StartText', 'FinishText'])
+        self.assertTrue(copy.IsStartValid)
+        self.assertTrue(copy.IsFinishValid)
+        self.assertEqual((copy.Start, copy.Finish), (primary.Start, primary.Finish))
+        self.assertEqual(raw_dates(plan, tasks), primary_dates)
+        self.assertFalse(any(task.writes for task in summaries.values()))
+
+    def test_matching_underlying_dates_do_not_hide_blank_manual_endpoints(self):
+        for blank in ('Start', 'Finish', 'both'):
+            with self.subTest(blank=blank):
+                session, plan, config, tasks, summaries = fixture()
+                primary = tasks['P1']
+                tasks['R1'] = copy = PlaceholderCopy(primary.Start, primary.Finish)
+                copy.IsStartValid = blank == 'Finish'
+                copy.IsFinishValid = blank == 'Start'
+                sync(session, plan, config, tasks, summaries)
+                self.assertTrue(copy.IsStartValid)
+                self.assertTrue(copy.IsFinishValid)
+                self.assertEqual((copy.Start, copy.Finish), (primary.Start, primary.Finish))
+                copy.writes.clear()
+                sync(session, plan, config, tasks, summaries)
+                self.assertEqual(copy.writes, [])
+
+    def test_verification_rejects_blank_manual_dates_even_when_native_dates_match(self):
+        for field in ('Start', 'Finish'):
+            with self.subTest(field=field):
+                session, plan, config, tasks, summaries = fixture()
+                sync(session, plan, config, tasks, summaries)
+                for task in tasks.values():
+                    task.writes.clear()
+                setattr(tasks['R1'], f'Is{field}Valid', False)
+                with redirect_stdout(io.StringIO()), self.assertRaises(ProjectAutomationError) as error:
+                    verify_reference_dates(session, plan, config, tasks, summaries,
+                                           verification_stage='after reopen')
+                self.assertIn(f'field={field}', str(error.exception))
+                self.assertIn(f'Is{field}Valid=False', str(error.exception))
+                self.assertIn('stage=after reopen', str(error.exception))
+                self.assertFalse(any(task.writes for task in tasks.values()))
+
+    def test_ignored_blank_start_write_cannot_pass_with_matching_native_date(self):
+        session, plan, config, tasks, summaries = fixture()
+        primary = tasks['P1']
+        tasks['R1'] = copy = PlaceholderCopy(primary.Start, primary.Finish)
+        copy.IsFinishValid = True
+        copy.ignore_field = 'StartText'
+        with self.assertRaises(ProjectAutomationError) as error:
+            sync(session, plan, config, tasks, summaries)
+        self.assertIn('IsStartValid=False', str(error.exception))
+        self.assertIn("StartText=''", str(error.exception))
+        self.assertIn('stage=after manual copy date writes', str(error.exception))
+        self.assertFalse(session._reference_dates_synchronized)
+
+    def test_unreadable_validity_flag_does_not_fall_back_to_native_date(self):
+        session, plan, config, tasks, summaries = fixture()
+        del tasks['R1'].IsStartValid
+        with self.assertRaisesRegex(ProjectAutomationError, 'field=IsStartValid'):
+            sync(session, plan, config, tasks, summaries)
+        self.assertFalse(any(task.writes for task in tasks.values()))
+        self.assertFalse(session._reference_dates_synchronized)
+
     def test_sync_does_not_use_generic_native_date_setters_on_manual_copies(self):
         session, plan, config, tasks, summaries = fixture()
         primary_dates = raw_dates(plan, tasks)

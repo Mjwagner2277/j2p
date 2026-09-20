@@ -35,6 +35,11 @@ across versions for a project or portfolio total.
    by Project with a four-digit year and time. These update the ordinary native
    Start/Finish columns. Readback still compares native dates to the primary;
    a mismatch reports both expected and actual values plus the verification stage.
+   An endpoint counts as unchanged only when its manual-date validity flag is
+   also true. A blank manual Start or Finish can expose a matching underlying
+   fallback date; skipping its write can leave a placeholder and let the other
+   endpoint move that fallback. Verification checks these validity flags again
+   after calculation and save/reopen, without repairing values during verification.
 4. Recalculate native summaries when copy dates changed. Verify after restoring
    the original application calculation mode: all copies match their primaries,
    headers span all planned members, and every captured primary stays unchanged.
@@ -55,6 +60,9 @@ Microsoft documents [StartText](https://learn.microsoft.com/en-us/office/vba/api
 and [FinishText](https://learn.microsoft.com/en-us/office/vba/api/project.task.finishtext)
 as the properties for manually scheduled task dates; j2p uses them only on copies
 confirmed to be leaf tasks, never on summary headers.
+The [IsStartValid](https://learn.microsoft.com/en-us/office/vba/api/project.task.isstartvalid)
+and [IsFinishValid](https://learn.microsoft.com/en-us/office/vba/api/project.task.isfinishvalid)
+properties distinguish valid manual endpoints from empty placeholder fields.
 
 ## Updating an older baseline
 
