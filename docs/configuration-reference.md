@@ -6,6 +6,38 @@ For a complete working file, start with `examples/large-scenario/config.large-ex
 
 Developers changing Microsoft Project field behavior should also read `docs/project-fields.md`.
 
+## Load a configuration folder
+
+Keep the YAML configuration and current Jira exports together and pass their
+folder instead of listing each input:
+
+```powershell
+py -3.14 -m j2p validate `
+  --config-folder .\yerp `
+  --output-dir .\review-output `
+  --project-name "SSN-812"
+```
+
+The folder must contain exactly one immediate `.yaml` or `.yml` file unless you
+select a file explicitly with `--config`. All immediate `.csv` files are selected
+unless you supply `--jira-csv`. Suffix matching is case-insensitive; subfolders
+are not searched. Missing or ambiguous YAML selection produces an error with
+guidance to use `--config`; commands requiring exports also reject an empty CSV
+selection. Keep older exports outside the folder so one coherent snapshot is
+loaded. No YAML schema change is needed to use folder loading.
+
+The keys in `resource_groups` define configured Jira projects for the coverage
+check. j2p warns when a configured project has no issue rows in the selected CSVs
+or an uploaded project has no resource-group entry. It checks actual issue-key
+prefixes before schedule filtering, not filenames or summary rows. The warnings
+do not stop a run and are retained in the audit, manifest, and doctor JSON.
+Coverage of every project does not prove coverage of every issue; continue using
+`--expected-issues` when the Jira export count is known.
+
+Folder loading also works with `create`, `update`, `doctor`, and `init-profile`.
+See [folder commands and profile overrides](run-operations.md#use-a-configuration-and-export-folder)
+for an update example and saved settings.
+
 ## Minimal Example
 
 ```yaml

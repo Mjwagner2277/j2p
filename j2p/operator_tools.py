@@ -11,12 +11,14 @@ from pathlib import Path
 
 from .config import load_config
 from .core import build_run_plan
+from .input_folder import resolve_input_folder, verify_input_folder
+from .input_coverage import coverage_warnings
 from .models import J2PError
 from .run_lifecycle import environment_details, file_identity
 
-PROFILE_KEYS = {"project_name", "config", "output_dir", "state_path", "main_project",
+PROFILE_KEYS = {"project_name", "config", "config_folder", "output_dir", "state_path", "main_project",
                 "comparison_source", "dependency_write_mode", "jira_csv", "expected_issues"}
-PATH_KEYS = {"config", "output_dir", "state_path", "main_project"}
+PATH_KEYS = {"config", "config_folder", "output_dir", "state_path", "main_project"}
 
 
 def expand_profile_args(argv, identity_out=None):
@@ -51,6 +53,8 @@ def expand_profile_args(argv, identity_out=None):
         option = "--" + key.replace("_", "-")
         if option in present:
             continue
+        if "--config-folder" in present and key in {"config", "jira_csv"}:
+            continue
         if key in {"main_project", "comparison_source"} and command not in {"update", "doctor"}:
             continue
         if command == "doctor" and key in {"comparison_source", "dependency_write_mode"}:
@@ -75,14 +79,19 @@ def expand_profile_args(argv, identity_out=None):
 
 
 def run_init_profile(args):
+    resolve_input_folder(args, require_csv=False)
     data = {"version": 1, "project_name": args.project_name,
             "output_dir": str(args.output_dir.expanduser().resolve())}
-    for field in ("config", "main_project"):
-        value = getattr(args, field)
+    selection = getattr(args, "_input_folder_selection", None)
+    for field in ("config", "config_folder", "main_project"):
+        if field == "config" and selection and selection["config_discovered"]:
+            continue
+        value = getattr(args, field, None)
         if value:
             data[field] = str(value.expanduser().resolve())
     if args.config:
         load_config(args.config)
+    verify_input_folder(selection)
     args.path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with args.path.open("x", encoding="utf-8") as target:
@@ -102,7 +111,9 @@ def run_doctor(args):
         checks.append({"name": name, "status": status, "detail": detail})
     config = None
     try:
+        resolve_input_folder(args, require_csv=bool(getattr(args, "config_folder", None)))
         config = load_config(args.config)
+        verify_input_folder(getattr(args, "_input_folder_selection", None))
         check("configuration", "passed", "Configuration parsed and validated.")
     except (J2PError, ValueError, OSError, RuntimeError) as exc:
         check("configuration", "failed", str(exc))
@@ -152,6 +163,16 @@ def run_doctor(args):
             from .cli import check_expected_issues
             check_expected_issues(args, plan)
             report["input_stats"] = plan.stats
+            selection = getattr(args, "_input_folder_selection", None)
+            if selection:
+                verify_input_folder(selection)
+                report["input_folder"] = selection
+                source = selection["path"] if selection["csv_discovered"] else "the explicitly selected CSV exports"
+                warnings = coverage_warnings(plan.stats["project_coverage"], source)
+                for item in warnings:
+                    check("project coverage", "warning", f"{item.message} {item.reviewer_action}")
+                if not warnings:
+                    check("project coverage", "passed", "Every configured Jira project has issue rows in the selected exports.")
             check("CSV inputs", "passed", f"Read {plan.stats.get('unique_issues_read', 'unknown')} unique issues. No reports/state written.")
         except (J2PError, OSError, ValueError) as exc:
             check("CSV inputs", "failed", str(exc))

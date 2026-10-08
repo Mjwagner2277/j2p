@@ -16,6 +16,7 @@ from typing import Any, Dict
 
 from . import __version__
 from .models import J2PError
+from .input_folder import verify_input_folder
 from .state import write_json, write_bytes_atomic
 
 
@@ -208,6 +209,9 @@ class RunTransaction:
             raise
 
     def capture_inputs(self):
+        verify_input_folder(self.context.get("input_folder"))
+        if self.context.get("input_folder"):
+            self.manifest["input_folder"] = self.context["input_folder"]
         self.manifest["inputs"] = [file_identity(path) for path in self.args.jira_csv]
         # All later reads use these exact targets even if a supplied symlink rotates.
         self.args.jira_csv = [Path(source["path"]) for source in self.manifest["inputs"]]
@@ -235,6 +239,7 @@ class RunTransaction:
         write_json(self.manifest_path, self.manifest)
 
     def complete(self, state, publish_state, paths):
+        verify_input_folder(self.context.get("input_folder"))
         for source in self.manifest["inputs"]:
             if file_identity(Path(source["path"]))["sha256"] != source["sha256"]:
                 raise J2PError(f"Input changed during the run: {source['path']}. Retry with stable export files.")

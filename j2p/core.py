@@ -36,6 +36,7 @@ from .jira import (
 )
 from .metrics import calculate_percent, calculate_story_point_ratio, select_story_points
 from .initiative_estimates import add_initiative_estimates
+from .input_coverage import project_coverage
 from .models import (
     AuditItem,
     J2PError,
@@ -467,6 +468,7 @@ def build_run_plan(
             "resource_group": resource_groups.get(jira_key_prefix(key), ""),
         }
     stats = {
+        "project_coverage": project_coverage(issues, config),
         "review_issue_context": review_context,
         "csv_rows_read": sum(batch["rows_read"] for batch in csv_batches),
         "csv_files_read": len(csv_batches),

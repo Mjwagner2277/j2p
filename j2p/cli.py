@@ -16,6 +16,8 @@ from .run_lifecycle import RunTransaction, file_identity
 from .operator_tools import expand_profile_args, run_doctor, run_init_profile, run_support_bundle
 from .core import build_run_plan
 from .models import J2PError
+from .input_folder import resolve_input_folder, verify_input_folder
+from .input_coverage import coverage_warnings
 from .project import (
     ProjectAutomationError,
     apply_plan_to_sandbox,
@@ -68,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subparsers.add_parser("doctor", help="Read-only environment, configuration, and export checks.")
     doctor.add_argument("--profile", type=Path)
     doctor.add_argument("--config", type=Path)
+    doctor.add_argument("--config-folder", type=Path, help="Folder containing YAML configuration and Jira CSV exports.")
     doctor.add_argument("--jira-csv", type=Path, nargs="+", action="extend")
     doctor.add_argument("--main-project", type=Path)
     doctor.add_argument("--project-name")
@@ -79,6 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--path", required=True, type=Path)
     init.add_argument("--project-name", required=True)
     init.add_argument("--config", type=Path)
+    init.add_argument("--config-folder", type=Path, help="Save a folder containing configuration and Jira exports.")
     init.add_argument("--main-project", type=Path)
     init.add_argument("--output-dir", type=Path, default=Path("review-output"))
     support = subparsers.add_parser("support-bundle", help="Package one run's diagnostics for support.")
@@ -172,11 +176,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def add_common_args(parser: argparse.ArgumentParser, sprint_required: bool = False) -> None:
-    parser.add_argument("--jira-csv", required=True, type=Path, nargs="+", action="extend",
+    parser.add_argument("--jira-csv", type=Path, nargs="+", action="extend",
                         help="One or more Jira CSV export batches. May be repeated; combine only one snapshot.")
     parser.add_argument("--profile", type=Path, help="Saved JSON project settings; explicit CLI options override them.")
     parser.add_argument("--expected-issues", type=int, help="Expected unique issue count across all CSV batches.")
     parser.add_argument("--config", type=Path, help="YAML configuration file.")
+    parser.add_argument("--config-folder", type=Path,
+                        help="Read one YAML config and immediate CSV files from this folder; explicit file options override discovery.")
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -236,6 +242,7 @@ def run_command(args: argparse.Namespace) -> int:
             progress("Reading Jira CSV and checking input values")
             preflight = build_run_plan(args.jira_csv, context["config"])
             check_expected_issues(args, preflight)
+            annotate_input_coverage(preflight, args, print_warnings=True)
             progress("Copying source-of-truth MPP to a timestamped sandbox")
             sandbox_path = prepare_sandbox_copy(args.main_project, context["project_dir"], context["run_id"])
             if args.comparison_source == "main":
@@ -255,6 +262,7 @@ def run_command(args: argparse.Namespace) -> int:
             progress("Reading Jira CSV and building review plan")
             plan = build_run_plan(args.jira_csv, context["config"], baseline)
         check_expected_issues(args, plan)
+        annotate_input_coverage(plan, args, print_warnings=args.command != "update")
         progress(f"Read {plan.stats['csv_files_read']} CSV file(s); "
                  f"skipped {plan.stats['duplicate_csv_issues_skipped']} matching duplicate issue(s)")
         transaction.record_plan(plan)
@@ -267,6 +275,7 @@ def run_command(args: argparse.Namespace) -> int:
                     progress("Building full comparison from the existing Project task snapshot")
                     plan = build_run_plan(args.jira_csv, context["config"], baseline)
                     check_expected_issues(args, plan)
+                    annotate_input_coverage(plan, args)
                     transaction.record_plan(plan)
                     return plan
 
@@ -305,7 +314,22 @@ def check_expected_issues(args, plan):
             raise J2PError(f"Export coverage mismatch: expected {expected} unique issues, read {actual}. Check missing or overlapping batches.")
 
 
+def annotate_input_coverage(plan, args, *, print_warnings=False):
+    selection = getattr(args, "_input_folder_selection", None)
+    if not selection:
+        return
+    source = selection["path"] if selection["csv_discovered"] else "the explicitly selected CSV exports"
+    warnings = coverage_warnings(plan.stats.get("project_coverage", {}), source)
+    existing = {(item.category, item.old_value) for item in plan.audit_items}
+    plan.audit_items.extend(item for item in warnings if (item.category, item.old_value) not in existing)
+    plan.stats["audit_items"] = len(plan.audit_items)
+    if print_warnings:
+        for item in warnings:
+            print(f"WARNING: {item.message} {item.reviewer_action}", flush=True)
+
+
 def make_context(args: argparse.Namespace) -> Dict[str, Any]:
+    resolve_input_folder(args)
     validate_output_scope(args)
     overrides: Dict[str, Any] = {}
     if getattr(args, "suppress_warnings_before", None):
@@ -316,6 +340,7 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
     config = load_config(args.config, overrides or None)
     if config_identity and file_identity(args.config)["sha256"] != config_identity["sha256"]:
         raise J2PError(f"Configuration changed while being read: {args.config}. Retry with stable input files.")
+    verify_input_folder(getattr(args, "_input_folder_selection", None))
     run_id = args.run_id or datetime.now().strftime("%Y%m%d-%H%M%S-%f") + "-" + uuid4().hex[:6]
     output_dir = args.output_dir.expanduser().resolve()
     project_name = getattr(args, "project_name", None)
@@ -346,6 +371,7 @@ def make_context(args: argparse.Namespace) -> Dict[str, Any]:
     return {
         "config": config,
         "config_identity": config_identity,
+        "input_folder": getattr(args, "_input_folder_selection", None),
         "run_id": run_id,
         "output_dir": output_dir,
         "workspace_dir": workspace_dir,

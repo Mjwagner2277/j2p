@@ -52,6 +52,35 @@ py -3.14 -m pip install -e .
 
 ## Typical Usage
 
+To use the configuration and CSV exports together in the `yerp` folder, run:
+
+```powershell
+py -3.14 -m j2p validate `
+  --config-folder .\yerp `
+  --output-dir .\review-output `
+  --project-name "SSN-812"
+```
+
+The folder must contain one YAML configuration and its current CSV exports.
+j2p reads immediate files only, warns if a project configured in `resource_groups`
+has no issue rows in those exports, and warns about uploaded projects missing
+from that configuration. Warnings do not stop the run. Keep one coherent export
+snapshot in the folder; move older exports elsewhere before running again.
+
+To update an existing baseline, replace `Program.mpp` with its actual path:
+
+```powershell
+py -3.14 -m j2p update `
+  --config-folder .\yerp `
+  --main-project .\Program.mpp `
+  --output-dir .\review-output `
+  --project-name "SSN-812" `
+  --sprint "PI 20"
+```
+
+`PI 20` is an example run label; use your current sprint or planning period.
+See [folder selection, overrides, and saved profiles](docs/run-operations.md#use-a-configuration-and-export-folder).
+
 The supported end-user walkthrough uses the large project-wide example:
 
 ```powershell
