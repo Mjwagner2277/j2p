@@ -24,11 +24,11 @@ from j2p.models import J2PError
 
 YERP = Path(__file__).resolve().parents[1] / 'yerp'
 EXPECTED_FILE_COUNTS = {
-    'SSWCYBER': 908, 'SSWGUI': 197, 'SSWHW': 1323,
-    'SSWIF': 1700, 'SSWNET': 526, 'SSWSW': 1510,
-    'SSWSYS': 2874, 'SSWTEST': 2025, 'SSWUMS': 808,
+    'SSWCYBER': 937, 'SSWGUI': 199, 'SSWHW': 1256,
+    'SSWIF': 1737, 'SSWNET': 531, 'SSWSW': 1492,
+    'SSWSYS': 2665, 'SSWTEST': 1947, 'SSWUMS': 758,
 }
-CHANGED_CHILD = 'SSWSW-11845'
+CHANGED_CHILD = 'SSWSW-11866'
 CHANGED_EPIC = 'SSWSW-10804'
 
 
@@ -129,8 +129,11 @@ class YerpExportIntegrationTests(unittest.TestCase):
                     continue
                 rollups = [('initiative:' + issue['parent'], True)]
             else:
+                versions = issue['versions']
+                if cls.config['fixversion_scope']['enabled']:
+                    versions = [v for v in versions if v in cls.config['fixversion_scope']['accepted']]
                 rollups = [('fixVersion:' + version, index == 0)
-                           for index, version in enumerate(issue['versions'])]
+                           for index, version in enumerate(versions)]
             if rollups:
                 cls.eligible[key] = rollups
         cls.metrics = {key: [Decimal(0) for _ in range(4)] for key in cls.eligible}
@@ -159,39 +162,40 @@ class YerpExportIntegrationTests(unittest.TestCase):
             self.assertEqual(len(prefixes), 1)
             actual_counts[prefixes.pop()] = len(rows) - 1
         self.assertEqual(actual_counts, EXPECTED_FILE_COUNTS)
-        self.assertEqual(len(self.issues), 11871)
+        self.assertEqual(len(self.issues), 11522)
         self.assertEqual(set(self.config['resource_groups']), set(EXPECTED_FILE_COUNTS))
         self.assertEqual(set(self.config['rollup_modes']), set(EXPECTED_FILE_COUNTS))
         self.assertFalse(any(item.category == 'ExcludedUnknownPrefix' for item in self.plan.audit_items))
         self.assertEqual(Counter(epic.key_prefix for epic in self.plan.epics.values() if epic.drives_schedule), {
-            'SSWCYBER': 33, 'SSWGUI': 36, 'SSWHW': 19, 'SSWIF': 254, 'SSWNET': 72,
-            'SSWSW': 120, 'SSWSYS': 431, 'SSWTEST': 476, 'SSWUMS': 80,
+            'SSWCYBER': 77, 'SSWGUI': 49, 'SSWHW': 151, 'SSWIF': 265, 'SSWNET': 65,
+            'SSWSW': 132, 'SSWSYS': 311, 'SSWTEST': 509, 'SSWUMS': 149,
         })
         for prefix in ('SSWIF', 'SSWNET', 'SSWTEST'):
             self.assertEqual(self.config['rollup_modes'][prefix], 'fixVersion')
         expected_stats = {
-            'csv_files_read': 9, 'csv_rows_read': 11871,
-            'jira_issues_read': 11871, 'unique_issues_read': 11871,
-            'duplicate_csv_issues_skipped': 0, 'initiatives_read': 193,
-            'epics_read': 2237, 'story_rows_read': 9441,
-            'story_rows_used_for_completion': 3820,
-            'epics_included': 1521, 'planned_epic_rows': 2016,
-            'epics_excluded': 716, 'summary_rows': 164,
+            'csv_files_read': 9, 'csv_rows_read': 11522,
+            'jira_issues_read': 11522, 'unique_issues_read': 11522,
+            'duplicate_csv_issues_skipped': 0, 'initiatives_read': 401,
+            'epics_read': 2014, 'story_rows_read': 9107,
+            'story_rows_used_for_completion': 4187,
+            'epics_included': 1708, 'planned_epic_rows': 3114,
+            'epics_excluded': 306, 'summary_rows': 62,
+            'fixversion_scope_excluded_epics': 156,
         }
         for name, expected in expected_stats.items():
             with self.subTest(stat=name):
                 self.assertEqual(self.plan.stats[name], expected)
-        self.assertEqual(len(self.included_children), 3820)
+        self.assertEqual(len(self.included_children), 4187)
         self.assertEqual({epic.jira_key for epic in self.plan.epics.values()}, set(self.eligible))
         cross_file_parents = [key for key in self.eligible
                               if self.config['rollup_modes'][key.split('-')[0]] == 'initiative'
                               and self.issues[key]['parent'] in self.issues
                               and self.issues[key]['path'] != self.issues[self.issues[key]['parent']]['path']]
-        self.assertEqual(len(cross_file_parents), 2)
+        self.assertEqual(len(cross_file_parents), 0)
         for key in cross_file_parents:
             self.assertEqual(self.plan.epics[key].rollup_key, self.issues[key]['parent'])
 
-    def test_new_project_scope_adds_802_epics_and_preserves_existing_rows(self):
+    def test_expanded_project_scope_preserves_existing_rows_and_shared_list(self):
         prior_config = deepcopy(self.config)
         added_prefixes = {'SSWIF', 'SSWNET', 'SSWTEST'}
         for prefix in added_prefixes:
@@ -199,8 +203,8 @@ class YerpExportIntegrationTests(unittest.TestCase):
             prior_config['resource_groups'].pop(prefix)
         prior = build_run_plan(self.paths, prior_config)
         added = {key: epic for key, epic in self.plan.epics.items() if key not in prior.epics}
-        self.assertEqual(len(added), 983)
-        self.assertEqual(len({epic.jira_key for epic in added.values()}), 802)
+        self.assertEqual(len(added), 1384)
+        self.assertEqual(len({epic.jira_key for epic in added.values()}), 839)
         self.assertEqual({epic.key_prefix for epic in added.values()}, added_prefixes)
         for key, before in prior.epics.items():
             after = self.plan.epics[key]
@@ -212,7 +216,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
                              if issue['type'] == 'Epic'
                              and issue['key'].split('-')[0] in added_prefixes
                              and not issue['versions'])
-        self.assertEqual(unresolved, {'SSWIF': 64, 'SSWNET': 9, 'SSWTEST': 70})
+        self.assertEqual(unresolved, {'SSWIF': 45, 'SSWNET': 10, 'SSWTEST': 26})
         # Missing source memberships stay explicit; no invented release is assigned.
         for issue in self.issues.values():
             if issue['type'] == 'Epic' and issue['key'].split('-')[0] in added_prefixes and not issue['versions']:
@@ -235,12 +239,28 @@ class YerpExportIntegrationTests(unittest.TestCase):
                     self.assertLessEqual(abs(Decimal(str(actual)) - expected[index]),
                                          Decimal('0.005000000001'))
         driving = [epic for epic in self.plan.epics.values() if epic.drives_schedule]
-        self.assertEqual(len(driving), 1521)
-        self.assertAlmostEqual(sum(epic.total_story_points for epic in driving), 3616.7)
-        self.assertAlmostEqual(sum(epic.completed_story_points for epic in driving), 1827.8)
-        self.assertEqual(self.plan.stats['logged_hours'], 11705.17)
-        self.assertEqual(self.plan.stats['completed_logged_hours'], 11465.58)
+        self.assertEqual(len(driving), 1708)
+        self.assertAlmostEqual(sum(epic.total_story_points for epic in driving), 4081.5)
+        self.assertAlmostEqual(sum(epic.completed_story_points for epic in driving), 2021.9)
+        self.assertEqual(self.plan.stats['logged_hours'], 12171.51)
+        self.assertEqual(self.plan.stats['completed_logged_hours'], 11806.12)
         self.assertEqual(self.plan.column_map['story_points'], 'Custom field (Story Points)')
+
+    def test_static_list_equals_exact_cross_project_names_in_the_october_exports(self):
+        projects = defaultdict(set)
+        for issue in self.issues.values():
+            for version in issue['versions']:
+                projects[version].add(issue['key'].split('-')[0])
+        shared = {name for name, prefixes in projects.items() if len(prefixes) >= 2}
+        self.assertEqual(len(shared), 62)
+        self.assertEqual(len(projects) - len(shared), 206)
+        self.assertEqual(set(self.config['fixversion_scope']['accepted']), shared)
+        self.assertEqual(set(self.config['rollup_modes'].values()), {'fixVersion'})
+        self.assertEqual({summary.key for summary in self.plan.summaries.values()}, shared)
+        self.assertIn('PI17', shared)
+        self.assertIn('PI 17', shared)
+        self.assertEqual(self.plan.summaries['fixVersion:FST'].project_key, 'MULTIPLE')
+        self.assertFalse(any(summary.rollup_mode == 'initiative' for summary in self.plan.summaries.values()))
 
     def test_every_rollup_counts_references_for_completion_only(self):
         expected = defaultdict(lambda: [Decimal(0) for _ in range(4)])
@@ -258,18 +278,23 @@ class YerpExportIntegrationTests(unittest.TestCase):
                                            'completion_total_story_points', 'completion_completed_story_points')):
                 with self.subTest(rollup=key, field=field):
                     self.assertAlmostEqual(getattr(summary, field), float(expected[key][index]), places=2)
-        self.assertAlmostEqual(sum(item.total_story_points for item in self.plan.summaries.values()), 3616.7)
-        self.assertAlmostEqual(sum(item.completed_story_points for item in self.plan.summaries.values()), 1827.8)
-        self.assertEqual(sum(not epic.drives_schedule for epic in self.plan.epics.values()), 495)
-        self.assertGreater(sum(item.completion_total_story_points for item in self.plan.summaries.values()), 3616.7)
+        self.assertAlmostEqual(sum(item.total_story_points for item in self.plan.summaries.values()), 4081.5)
+        self.assertAlmostEqual(sum(item.completed_story_points for item in self.plan.summaries.values()), 2021.9)
+        self.assertEqual(sum(not epic.drives_schedule for epic in self.plan.epics.values()), 1406)
+        self.assertGreater(sum(item.completion_total_story_points for item in self.plan.summaries.values()), 4081.5)
 
     def test_actual_fractional_completion_and_completed_reference_inputs(self):
-        epic = self.plan.epics['SSWCYBER-3219']
+        # This historical regression epic has no accepted version. Keep its
+        # fractional-progress coverage using supported initiative mode in memory.
+        config = deepcopy(self.config)
+        config['rollup_modes']['SSWCYBER'] = 'initiative'
+        epic = build_run_plan(self.paths, config).epics['SSWCYBER-3219']
+        self.assertNotIn('SSWCYBER-3219', self.plan.epics)
         self.assertEqual((epic.total_story_points, epic.completed_story_points, epic.percent_complete), (3.2, 0.2, 6))
         self.assertFalse(epic.completed)
         completed_references = [epic for epic in self.plan.epics.values()
                                 if epic.completed and not epic.drives_schedule]
-        self.assertEqual(len(completed_references), 80)
+        self.assertEqual(len(completed_references), 129)
         for reference in completed_references:
             primary = self.plan.epics[reference.primary_schedule_key]
             self.assertTrue(primary.drives_schedule)
@@ -279,8 +304,8 @@ class YerpExportIntegrationTests(unittest.TestCase):
     def test_reversed_overlapping_actual_exports_do_not_change_plan_or_double_count(self):
         repeated = build_run_plan(list(reversed(self.paths)) + self.paths, self.config)
         self.assertEqual(repeated.stats['csv_files_read'], 18)
-        self.assertEqual(repeated.stats['duplicate_csv_issues_skipped'], 11871)
-        self.assertEqual(repeated.stats['unique_issues_read'], 11871)
+        self.assertEqual(repeated.stats['duplicate_csv_issues_skipped'], 11522)
+        self.assertEqual(repeated.stats['unique_issues_read'], 11522)
         self.assertEqual(repeated.epics, self.plan.epics)
         self.assertEqual(repeated.summaries, self.plan.summaries)
         # The only additional audit content describes intentionally repeated rows.
@@ -309,7 +334,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
         self.assertIn('story_points', error)
         self.assertFalse(extra.exists())
 
-    def test_real_child_update_recomputes_all_six_versions_and_only_affected_rollups(self):
+    def test_real_child_update_recomputes_all_four_accepted_versions_and_only_affected_rollups(self):
         issue = self.issues[CHANGED_CHILD]
         self.assertEqual(issue['epic'], CHANGED_EPIC)
         self.assertEqual(issue['points'], Decimal(3))
@@ -325,7 +350,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
         with patch('j2p.jira.read_csv_rows', side_effect=load):
             updated = build_run_plan(self.paths, self.config)
         affected_rollups = dict(self.eligible[CHANGED_EPIC])
-        self.assertEqual(len(affected_rollups), 6)
+        self.assertEqual(len(affected_rollups), 4)
         changed_epics = []
         for key, before in self.plan.epics.items():
             after = updated.epics[key]
@@ -340,7 +365,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
             self.assertAlmostEqual(after.completed_logged_hours,
                                    round(before.completed_logged_hours + float(issue['hours']), 2), places=2)
             self.assertEqual(after.predecessors, before.predecessors)
-        self.assertEqual(len(changed_epics), 6)
+        self.assertEqual(len(changed_epics), 4)
         for key, before in self.plan.summaries.items():
             after = updated.summaries[key]
             if key not in affected_rollups:
@@ -351,5 +376,5 @@ class YerpExportIntegrationTests(unittest.TestCase):
             driving = affected_rollups[key]
             self.assertAlmostEqual(after.total_story_points, before.total_story_points + (2 if driving else 0))
             self.assertAlmostEqual(after.completed_story_points, before.completed_story_points + (5 if driving else 0))
-        self.assertAlmostEqual(sum(item.total_story_points for item in updated.summaries.values()), 3618.7)
-        self.assertAlmostEqual(sum(item.completed_story_points for item in updated.summaries.values()), 1832.8)
+        self.assertAlmostEqual(sum(item.total_story_points for item in updated.summaries.values()), 4083.5)
+        self.assertAlmostEqual(sum(item.completed_story_points for item in updated.summaries.values()), 2026.9)

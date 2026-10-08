@@ -16,7 +16,7 @@ class ExportConfigTests(unittest.TestCase):
                    'Custom field (Story Points)', 'Custom field (Original story points)',
                    'Status', 'Custom field (Time Spent Total (hrs))', 'Time Spent']
         rows = [headers,
-                ['SSWSW-1', 'Epic', 'Example', '', '', 'R1', '', '', 'Open', '', ''],
+                ['SSWSW-1', 'Epic', 'Example', '', '', 'FST', '', '', 'Open', '', ''],
                 ['SSWSW-2', 'Task', 'Done child', 'SSWSW-1', '', '', '3', '30', 'Done', '', '7200'],
                 ['SSWSW-3', 'Task', 'Open child', 'SSWSW-1', '', '', '2', '20', 'Open', '1.5', '3600'],
                 ['SSWSW-4', 'Task', 'Explicit zero', 'SSWSW-1', '', '', '0', '40', 'Open', '', ''],

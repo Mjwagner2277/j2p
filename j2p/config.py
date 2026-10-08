@@ -66,6 +66,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "multi_fixversion_policy": {
         "default": "reference",
     },
+    "fixversion_scope": {
+        "enabled": False,
+        "accepted": [],
+    },
     "metrics": {
         "hours_per_story_point": 8.0,
         "logged_hours_unit": "hours",
@@ -236,6 +240,7 @@ def validate_config_shape(config: Dict[str, Any]) -> None:
         "fixversion_completion_suppression": {"enabled", "keep_audit_summary"},
         "planning_horizon": {"enabled"},
         "review_table": {"include_audit_columns"},
+        "fixversion_scope": {"enabled"},
     }
     integer_keys = {
         "input": {"csv_max_field_chars"},
@@ -289,8 +294,18 @@ def validate_config_shape(config: Dict[str, Any]) -> None:
                 strings(item, path)
             elif section == "review_table" and key == "exposed_columns":
                 strings(item, path, allow_empty=True)
+            elif section == "fixversion_scope" and key == "accepted":
+                if not isinstance(item, list):
+                    raise ConfigError(f"{path} must be a list of exact fixVersion names.")
+                strings(item, path, allow_empty=True)
+                if any(name != name.strip() for name in item):
+                    raise ConfigError(f"{path} names must not have leading or trailing whitespace.")
+                if len(set(item)) != len(item):
+                    raise ConfigError(f"{path} contains duplicate fixVersion names.")
             elif not isinstance(item, str):
                 raise ConfigError(f"{path} must be a string.")
+    if config["fixversion_scope"]["enabled"] and not config["fixversion_scope"]["accepted"]:
+        raise ConfigError("fixversion_scope.accepted must be nonempty when fixversion_scope.enabled is true.")
     if config["behavior"]["unknown_prefix"] != "exclude":
         raise ConfigError("behavior.unknown_prefix only supports 'exclude'.")
     metrics = config["metrics"]

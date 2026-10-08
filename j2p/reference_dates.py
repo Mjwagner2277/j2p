@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Dict, Tuple
 
-from .rollups import summary_id
+from .rollups import summary_id, summary_identity
 
 
 def _key(value: Any) -> str:
@@ -110,7 +110,7 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
 
     for epic in plan.epics.values():
         rollup = summary_id(epic.rollup_mode, epic.rollup_key)
-        membership = (epic.rollup_mode, _key(epic.rollup_key), _key(epic.jira_key or epic.key))
+        membership = (*summary_identity(epic.rollup_mode, epic.rollup_key), _key(epic.jira_key or epic.key))
         if membership in memberships:
             raise ProjectAutomationError(f"Duplicate Jira membership in planned rollup={rollup}: issue={membership[2]}.")
         memberships.add(membership)
@@ -131,7 +131,7 @@ def _targets(plan, task_by_key, summary_tasks, raw_dates):
         summary = plan.summaries.get(rollup)
         if summary is None:
             raise ProjectAutomationError(f"Cannot synchronize reference dates: missing planned rollup={rollup}.")
-        identity = (summary.rollup_mode, _key(summary.key))
+        identity = summary_identity(summary.rollup_mode, summary.key)
         if identity not in summary_tasks:
             raise ProjectAutomationError(f"Cannot synchronize reference dates: missing Project rollup={rollup}.")
         rollups[identity] = (

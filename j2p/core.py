@@ -46,6 +46,7 @@ from .models import (
     RunPlan,
 )
 from .rollups import (
+    accepted_fix_versions,
     add_multi_fixversion_audit,
     build_summaries,
     describe_rollup_modes,
@@ -208,6 +209,8 @@ def build_run_plan(
 
     planned_epics: Dict[str, PlanEpic] = {}
     excluded_count = 0
+    scope_excluded_keys = set()
+    ignored_fixversion_memberships = 0
     resource_groups = config.get("resource_groups", {})
     hours_per_story_point = float(config.get("metrics", {}).get("hours_per_story_point", 8.0))
     if not resource_groups:
@@ -243,6 +246,29 @@ def build_run_plan(
             continue
 
         rollup_mode = rollup_mode_for_prefix(config, prefix)
+        if rollup_mode == "fixVersion" and config.get("fixversion_scope", {}).get("enabled", False):
+            accepted_versions = accepted_fix_versions(epic, config)
+            ignored_versions = [name for name in epic.fix_versions if name not in accepted_versions]
+            ignored_fixversion_memberships += len(ignored_versions)
+            if epic.fix_versions and not accepted_versions:
+                excluded_count += 1
+                scope_excluded_keys.add(epic.key)
+                audit.append(AuditItem(
+                    "Info", "ExcludedFixVersionScope", jira_key=epic.key,
+                    issue_type=epic.issue_type, summary=epic.summary, field="Fix versions",
+                    old_value=", ".join(epic.fix_versions),
+                    message="Epic is outside the accepted fixVersion list and is excluded from the schedule.",
+                    source_row=epic.source_row, source_file=epic.source_file,
+                ))
+                continue
+            if ignored_versions:
+                audit.append(AuditItem(
+                    "Info", "IgnoredFixVersionMembership", jira_key=epic.key,
+                    issue_type=epic.issue_type, summary=epic.summary, field="Fix versions",
+                    old_value=", ".join(ignored_versions), new_value=", ".join(accepted_versions),
+                    message="Only accepted fixVersions receive rows; other version memberships are ignored.",
+                    source_row=epic.source_row, source_file=epic.source_file,
+                ))
         assignments, rollup_error = resolve_rollup_assignments(epic, rollup_mode, initiatives, config, prefix)
         if rollup_error:
             excluded_count += 1
@@ -353,6 +379,15 @@ def build_run_plan(
             used_story_count += len(children)
             continue
         for story in children:
+            if parent_key in scope_excluded_keys:
+                audit.append(AuditItem(
+                    "Info", "StoryEpicOutsideFixVersionScope", jira_key=story.key,
+                    issue_type=story.issue_type, summary=story.summary, field="Epic Link",
+                    old_value=parent_key,
+                    message=f"Parent epic {parent_key} is outside the accepted fixVersion list; child metrics are excluded.",
+                    source_row=story.source_row, source_file=story.source_file,
+                ))
+                continue
             audit.append(AuditItem(
                 "Warning", "StoryEpicExcluded", jira_key=story.key,
                 issue_type=story.issue_type, summary=story.summary, field="Epic Link",
@@ -433,6 +468,8 @@ def build_run_plan(
         "epics_included": len({epic.jira_key or epic.key for epic in planned_epics.values()}),
         "planned_epic_rows": len(planned_epics),
         "epics_excluded": excluded_count,
+        "fixversion_scope_excluded_epics": len(scope_excluded_keys),
+        "ignored_fixversion_memberships": ignored_fixversion_memberships,
         "summary_rows": len(summaries),
         "audit_items": len(audit),
         "suppressed_audit_items": suppressed_audit_count,

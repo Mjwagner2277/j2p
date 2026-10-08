@@ -11,6 +11,7 @@ from datetime import timedelta
 from j2p.config import load_config
 from j2p.core import build_run_plan
 from j2p.project import ProjectAutomationError
+from j2p.rollups import summary_identity
 from j2p.reference_dates import (
     reference_rollup_ids, synchronize_reference_dates, verify_reference_dates,
 )
@@ -19,7 +20,7 @@ from yerp_project_support import FILES, YERP, project_from_yerp_plan
 
 def reference_rollup_keys(plan):
     ids = reference_rollup_ids(plan)
-    return {(summary.rollup_mode, summary.key.upper()) for summary in plan.summaries.values()
+    return {summary_identity(summary.rollup_mode, summary.key) for summary in plan.summaries.values()
             if summary.summary_id in ids}
 
 
@@ -41,7 +42,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.plan = copy.deepcopy(self.source_plan)
         self.session, self.epics, self.summaries = project_from_yerp_plan(self.plan, self.config, scheduled_dates=True)
         self.summary_map = {
-            (summary.rollup_mode, summary.key.upper()): self.summaries[summary.summary_id]
+            summary_identity(summary.rollup_mode, summary.key): self.summaries[summary.summary_id]
             for summary in self.plan.summaries.values()
         }
 
@@ -86,7 +87,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         for identity, task in self.summary_map.items():
             members = [self.epics[epic.key if epic.drives_schedule else epic.primary_schedule_key]
                        for epic in self.plan.epics.values()
-                       if (epic.rollup_mode, epic.rollup_key.upper()) == identity]
+                       if summary_identity(epic.rollup_mode, epic.rollup_key) == identity]
             self.assertEqual(task.Start, min(member.Start for member in members), identity)
             self.assertEqual(task.Finish, max(member.Finish for member in members), identity)
             self.assertIs(task.Manual, False, identity)
@@ -103,8 +104,8 @@ class YerpReferenceDateTests(unittest.TestCase):
         self.assertEqual(self.plan.summaries, original.summaries)
         references = [epic for epic in self.plan.epics.values() if not epic.drives_schedule]
         reference_summaries = [summary for summary in self.plan.summaries.values()
-                               if (summary.rollup_mode, summary.key.upper()) in reference_rollup_keys(self.plan)]
-        self.assertEqual(len(references), 495)
+                               if summary_identity(summary.rollup_mode, summary.key) in reference_rollup_keys(self.plan)]
+        self.assertEqual(len(references), 1406)
         self.assertTrue(any(summary.driving_epic_count == 0 for summary in reference_summaries))
         self.assertTrue(any(summary.driving_epic_count > 0 for summary in reference_summaries))
 
@@ -112,7 +113,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         primary = self.epics['SSWSW-10467']
         copies = [epic for epic in self.plan.epics.values()
                   if not epic.drives_schedule and epic.primary_schedule_key == 'SSWSW-10467']
-        self.assertEqual(len(copies), 4)
+        self.assertEqual(len(copies), 2)
         self.assertIn('SSWSW-10467::FV::PI-17::1C682DC7', {epic.key for epic in copies})
         self.assertEqual(primary.Start.strftime('%Y-%m-%d'), '2026-01-07')
         primary_dates = self.raw_dates()
@@ -147,7 +148,7 @@ class YerpReferenceDateTests(unittest.TestCase):
                 refs_by_primary.setdefault(epic.primary_schedule_key, []).append(epic)
         reference_rollups = reference_rollup_keys(self.plan)
         candidates = [key for key in refs_by_primary
-                      if (self.plan.epics[key].rollup_mode, self.plan.epics[key].rollup_key.upper()) in reference_rollups]
+                      if summary_identity(self.plan.epics[key].rollup_mode, self.plan.epics[key].rollup_key) in reference_rollups]
         primary_key = max(candidates, key=lambda key: len(refs_by_primary[key]))
         reference_rows = refs_by_primary[primary_key]
         self.assertGreater(len(reference_rows), 1)
@@ -165,7 +166,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         for epic in memberships:
             row = self.epics[epic.key]
             self.assertEqual((row.Start, row.Finish), (start, finish), epic.key)
-            rollup = self.summary_map[(epic.rollup_mode, epic.rollup_key.upper())]
+            rollup = self.summary_map[summary_identity(epic.rollup_mode, epic.rollup_key)]
             self.assertEqual((rollup.Start, rollup.Finish),
                              (start, finish), epic.rollup_key)
         self.assert_reference_geometry()

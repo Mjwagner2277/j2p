@@ -257,7 +257,7 @@ class YerpFormattingFidelityTests(unittest.TestCase):
         before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
         config = load_config(config_path)
         plan = build_run_plan(paths, config)
-        self.assertEqual(len(plan.epics), 2016)
+        self.assertEqual(len(plan.epics), 3114)
         tasks = []
         for summary in plan.summaries.values():
             tasks.append(SimpleNamespace(ID=len(tasks) + 1, **dict(summary_assignments(summary, config))))

@@ -10,6 +10,15 @@ from .metrics import calculate_percent, calculate_story_point_ratio
 from .models import AuditItem, J2PError, JiraIssue, PlanEpic, PlanSummary, RollupAssignment
 
 
+def accepted_fix_versions(epic: JiraIssue, config: Dict[str, Any]) -> List[str]:
+    """Filter membership before choosing a primary, preserving Jira order."""
+    scope = config.get("fixversion_scope", {})
+    if not scope.get("enabled", False):
+        return list(epic.fix_versions)
+    accepted = set(scope.get("accepted", []))
+    return [name for name in epic.fix_versions if name in accepted]
+
+
 def resolve_rollup_assignments(
     epic: JiraIssue,
     rollup_mode: str,
@@ -35,9 +44,9 @@ def resolve_rollup_assignments(
             )
         ], ""
 
-    fix_versions = epic.fix_versions
+    fix_versions = accepted_fix_versions(epic, config)
     if not fix_versions:
-        return [], "Epic has no fixVersion."
+        return [], ("Epic has no accepted fixVersion." if epic.fix_versions else "Epic has no fixVersion.")
     if len(fix_versions) > 1:
         policy = multi_fixversion_policy_for_prefix(config, prefix)
         primary_schedule_key = epic.key
@@ -91,10 +100,10 @@ def add_multi_fixversion_audit(
             reviewer_action = "This copy contributes dates and completion to this fixVersion; its primary owns dependencies and resource demand."
         elif policy == "reference":
             message = (
-                f"Primary scheduled row selected from the first Jira fixVersion '{assignment.fix_version}'. "
+                f"Primary scheduled row selected from the first included Jira fixVersion '{assignment.fix_version}'. "
                 "Secondary fixVersions receive active copies of its final schedule, without duplicate resource demand."
             )
-            reviewer_action = "Confirm the first Jira fixVersion should drive the schedule."
+            reviewer_action = "Confirm the first included Jira fixVersion should drive the schedule."
         else:
             message = (
                 f"Split scheduled row created under fixVersion '{assignment.fix_version}'. "
@@ -202,6 +211,11 @@ def fix_version_schedule_key(jira_key: str, fix_version: str) -> str:
 
 def summary_id(rollup_mode: str, rollup_key: str) -> str:
     return f"{rollup_mode}:{rollup_key}"
+
+
+def summary_identity(rollup_mode: str, rollup_key: str) -> Tuple[str, str]:
+    """Version names are exact labels; initiative identities are Jira keys."""
+    return rollup_mode, rollup_key if rollup_mode == "fixVersion" else rollup_key.upper()
 
 
 def describe_rollup_modes(epics: Dict[str, PlanEpic], config: Dict[str, Any]) -> str:

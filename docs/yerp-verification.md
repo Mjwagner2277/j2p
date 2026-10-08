@@ -1,4 +1,46 @@
-# Project-specific export verification — September 19, 2026
+# Project-specific export verification — October 8, 2026
+
+The current configuration reads all nine October 7 exports and uses fixVersion
+rollups for every project. Its static accepted list contains the 62 exact names
+observed in at least two Jira projects, across all source issue types. The other
+206 version names are project-specific and do not create summary memberships.
+`PI17` and `PI 17` remain separate. Only epics' accepted versions determine the
+outline; initiative and child links in the exports remain intact.
+
+| Item | Current count/value |
+| --- | ---: |
+| CSV files / unique Jira issues | 9 / 11,522 |
+| Epics read / included | 2,014 / 1,708 |
+| Planned epic rows / active reference copies | 3,114 / 1,406 |
+| Shared fixVersion summaries | 62 |
+| Included epic dependency links | 169 |
+| Included child work items | 4,187 |
+| Counted total / completed points | 4,081.5 / 2,021.9 |
+| Included logged hours | 12,171.51 |
+| Epics excluded solely by the accepted list | 156 |
+
+The independent CSV/Decimal oracle verifies every included epic and all 62
+summaries. It also verifies the accepted list against cross-project source
+membership, shared summaries across teams, duplicate input handling, and the
+source CSV hashes. Changing `SSWSW-11866` under `SSWSW-10804` from three open
+points to five done points in memory changes four accepted memberships and
+their summaries. Valid unchanged updates still perform zero task-field writes.
+Creation checkpoints are at rows 779, 1,557, 2,336, and 3,114.
+
+The old `SSWCYBER-3219` fractional-completion case has no accepted version; its
+six-percent regression is retained using an in-memory initiative configuration.
+`SSWSW-10467` retains its FST primary and PI 17/PI 18 copies. The former TCAP GUI
+memberships are not in the accepted program list. Both manual-date validity and
+final primary-date protection remain covered.
+
+Use a fresh Project baseline when changing to this outline. Ordinary updates
+preserve unmatched legacy rows and do not remove old headers or deactivate
+unmatched primary tasks. Portable Project fakes do not certify native Microsoft
+Project scheduling or real MPP persistence; Windows acceptance is still needed.
+
+## Historical September 19 verification
+
+The following records the previous data and configuration, not current totals.
 
 These checks read all nine September 18 CSV exports in `yerp/` with
 `yerp/ssn-812-config.yaml`. They extend the earlier synthetic configuration and

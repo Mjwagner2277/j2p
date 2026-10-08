@@ -124,8 +124,8 @@ while moving its outline placement and retiring obsolete copy identities.
 Portable fakes test these contracts but cannot certify Microsoft Project's native
 calendar calculations, manual-child rollup rendering, or persistence behavior.
 
-For the SSWSW-10467 creation regression, check its FST primary and the PI 17,
-PI 18, TCAP GUI 1.0.0-rc, and TCAP GUI FST copies. The supplied yerp targets are
+For the SSWSW-10467 creation regression with the current shared-version list,
+check its FST primary and PI 17/PI 18 copies. The supplied yerp targets are
 January 7, 2026 through January 5, 2027; copies must follow the final primary
 schedule if Project moves it. StartText/FinishText writes must retain the native
 Start/Finish dates and times, including after calculation and reopening. A

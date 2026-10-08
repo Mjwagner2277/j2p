@@ -25,7 +25,7 @@ def changed_child_plan(config, baseline=None):
         headers = rows[0]
         key_index = headers.index('Issue key')
         for row in rows[1:]:
-            if row[key_index] == 'SSWSW-11845':
+            if row[key_index] == 'SSWSW-11866':
                 row[headers.index('Custom field (Story Points)')] = '5'
                 row[headers.index('Status')] = 'Done'
                 changed.append(row[key_index])
@@ -33,8 +33,8 @@ def changed_child_plan(config, baseline=None):
 
     with patch('j2p.jira.read_csv_rows', side_effect=read_changed):
         plan = build_run_plan(FILES, config, baseline)
-    if changed != ['SSWSW-11845']:
-        raise AssertionError('Expected the actual child SSWSW-11845 exactly once')
+    if changed != ['SSWSW-11866']:
+        raise AssertionError('Expected the actual child SSWSW-11866 exactly once')
     return plan
 
 

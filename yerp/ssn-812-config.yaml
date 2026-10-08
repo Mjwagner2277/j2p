@@ -1,9 +1,9 @@
 rollup_modes:
-  SSWUMS: initiative
-  SSWSYS: initiative
-  SSWCYBER: initiative
+  SSWUMS: fixVersion
+  SSWSYS: fixVersion
+  SSWCYBER: fixVersion
   SSWSW: fixVersion
-  SSWHW: initiative
+  SSWHW: fixVersion
   SSWGUI: fixVersion
   SSWIF: fixVersion
   SSWNET: fixVersion
@@ -27,7 +27,76 @@ resource_groups:
 
 multi_fixversion_policy:
   default: reference
-  OPS: split
+
+# Exact names used by at least two Jira projects in the 2026-10-07 exports.
+# This fixed list defines program scope across future uploads. Add new shared
+# versions here deliberately; case and internal spaces are significant.
+# Epic fixVersions choose membership; initiative links and child work stay intact.
+fixversion_scope:
+  enabled: true
+  accepted:
+    - "CAB EQT Plan"
+    - "CAB EQT TRR"
+    - "CAB FQT Plan"
+    - "CAB FQT TRR"
+    - "FST"
+    - "FST-RTR"
+    - "FST-Tray"
+    - "FST-Tube"
+    - "Fast-Cruise"
+    - "Future"
+    - "GUI (HMI) FQT TRR"
+    - "Layout Manager"
+    - "Miscellaneous Component EQT TRR"
+    - "NIO X.X.X-rc.X LBTF DROP 2"
+    - "NIOU EQT TRR"
+    - "NIOU EST & AUX FQT Plan"
+    - "NIOU EST TRR"
+    - "NIOU TUBE & AUX FQT Plan"
+    - "NIOU Tubes 9 & 10 FQT TRR"
+    - "NIOU UMS FQT Plan"
+    - "NIOU UMS FQT TRR"
+    - "Off-hull Testing Complete"
+    - "PI 14"
+    - "PI 17"
+    - "PI 18"
+    - "PI 19"
+    - "PI 20"
+    - "PI 21"
+    - "PI 22"
+    - "PI 23"
+    - "PI 24"
+    - "PI 25"
+    - "PI 26"
+    - "PI 27"
+    - "PI 28"
+    - "PI 29"
+    - "PI 30"
+    - "PI 31"
+    - "PI 32"
+    - "PI 33"
+    - "PI13"
+    - "PI14"
+    - "PI17"
+    - "PI18"
+    - "PI19"
+    - "PI20"
+    - "PI21"
+    - "PI22"
+    - "PI23"
+    - "PI24"
+    - "PI25"
+    - "PI26"
+    - "PI27"
+    - "PI28"
+    - "PI29"
+    - "PI30"
+    - "RTR FQT TRR (Groton ITF)"
+    - "RTR IRS Network Section Rev 1"
+    - "Ready for MEDUSA ITF"
+    - "SQT TRR (Groton ITF)"
+    - "SSW CDR Entrance Criteria"
+    - "UMS NIOU FQT TRR (Groton TI-28)"
 
 metrics:
   hours_per_story_point: 8

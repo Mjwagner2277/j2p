@@ -27,7 +27,55 @@ multi_fixversion_policy:
   PLAT: split
 ```
 
-## Full Example
+## Shared fixVersion scope
+
+For a common release schedule, set every participating prefix in `rollup_modes`
+to `fixVersion` and maintain one accepted list:
+
+```yaml
+fixversion_scope:
+  enabled: true
+  accepted:
+    - "FST"
+    - "PI 20"
+```
+
+Identical names across projects share one summary. Matching is case-sensitive
+and preserves internal spaces: `PI20`, `PI 20`, and `pi20` are separate names.
+CSV cell boundary whitespace is trimmed by the existing importer. Config names
+must have no leading/trailing whitespace or duplicates. An enabled list must
+be nonempty. The default is disabled, preserving existing unfiltered behavior.
+
+The list is fixed across uploads; a release remains accepted even when only one
+team appears in a later export. J2P does not recalculate shared membership from
+each upload. Add new program versions to the list deliberately. Only accepted
+versions that have included epics produce summaries; unused names do not create
+empty headers.
+
+Epic fixVersions select the summaries. Initiative links remain in source data,
+and Epic Links still attach child tasks for points and completion. Child tags
+alone do not create epic membership. An included epic retains all its child
+metrics. Versions outside the list are removed before selecting the first
+included version as primary; subsequent included versions use the configured
+reference/split policy. Each reference receives full completion credit for that
+version, while global totals still count only driving rows.
+
+Epics with only unaccepted versions and their children are informational scope
+exclusions, not missing-rollup warnings. Epics with no version still receive a
+missing-rollup warning. Dependencies from included work to excluded work remain
+reviewable. Initiative-mode prefixes in mixed configurations ignore this filter.
+
+The `yerp` configuration uses a list seeded from exact names appearing in at
+least two Jira project keys in the October 7, 2026 exports, considering all
+issue types when discovering the list.
+
+When switching an existing Project from initiative or unrestricted release
+tracking, create a fresh baseline for the clean shared-summary outline. The
+update command preserves unmatched legacy Project rows; it does not delete old
+summary headers or automatically deactivate unmatched primary tasks. Source
+CSV files do not need editing for this configuration change.
+
+## Full configuration example
 
 ```yaml
 rollup_modes:

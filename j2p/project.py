@@ -24,7 +24,7 @@ from .project_values import (
     epic_assignments, epic_context, missing_target_date_note,
     project_dependency_review, value_metadata,
 )
-from .rollups import summary_id
+from .rollups import summary_id, summary_identity
 from .reference_dates import synchronize_reference_dates, verify_reference_dates, verify_copy_isolation
 from .reference_formatting import format_reference_rows
 from .schedule_display import configure_schedule_display
@@ -655,7 +655,7 @@ class MicrosoftProjectSession:
                     count += 1
             verify_project_value(task, "Manual", not epic.drives_schedule, context)
             verify_project_value(task, "Active", True, context)
-            parent = summaries.get((epic.rollup_mode, epic.rollup_key.upper()))
+            parent = summaries.get(summary_identity(epic.rollup_mode, epic.rollup_key))
             self.verify_outline_parent(task, parent, context)
             if epic.drives_schedule:
                 self.verify_managed_resource_assignment(task, epic.resource_group, resources)
@@ -674,7 +674,7 @@ class MicrosoftProjectSession:
         for index, summary in enumerate(plan.summaries.values(), start=1):
             if index == 1 or index % 50 == 0 or index == total_summaries:
                 project_progress(f"Summary verification progress: {index}/{total_summaries} row(s)")
-            task = summaries.get((summary.rollup_mode, summary.key.upper()))
+            task = summaries.get(summary_identity(summary.rollup_mode, summary.key))
             if task is None:
                 raise ProjectAutomationError(f"Saved sandbox is missing rollup {summary.key}.")
             for field, value in summary_assignments(summary, config):
@@ -985,7 +985,7 @@ class MicrosoftProjectSession:
         # Reuse known summary objects after scheduling; row IDs may change but
         # their COM identities remain stable. Avoid another metadata scan.
         self._reference_summary_tasks = (id(plan), {
-            (plan.summaries[key].rollup_mode, plan.summaries[key].key.upper()): task
+            summary_identity(plan.summaries[key].rollup_mode, plan.summaries[key].key): task
             for key, task in summary_tasks.items()
         })
         timings = plan.stats["project_row_seconds"]
@@ -1094,13 +1094,13 @@ class MicrosoftProjectSession:
             if issue_type not in {"Initiative", "FixVersion"} and not safe_bool(safe_get(task, "Summary")):
                 continue
             mode = str(safe_get(task, fields.get("rollup_mode", "Text4")))
-            key = str(safe_get(task, fields.get("rollup_key", "Text5"))).upper()
+            key = str(safe_get(task, fields.get("rollup_key", "Text5")))
             if not mode or not key:
                 continue
-            identity = (mode, key)
+            identity = summary_identity(mode, key)
             if identity in result:
                 raise ProjectAutomationError(
-                    f"Duplicate Project rollup {mode}:{key}: "
+                    f"Duplicate Project rollup {identity[0]}:{identity[1]}: "
                     f"{project_task_context(result[identity])}; {project_task_context(task)}. "
                     "Resolve duplicate rollup rows in the source schedule."
                 )
@@ -1119,7 +1119,7 @@ class MicrosoftProjectSession:
             task = task_by_key.get(summary.key) if summary.rollup_mode == "initiative" else None
             if task is None:
                 task = (self.find_rollup_summary(summary.rollup_mode, summary.key, config)
-                        if rollup_tasks is None else rollup_tasks.get((summary.rollup_mode, summary.key.upper())))
+                        if rollup_tasks is None else rollup_tasks.get(summary_identity(summary.rollup_mode, summary.key)))
             if task is None:
                 try:
                     task = self.project.Tasks.Add(summary.name)
@@ -1154,7 +1154,7 @@ class MicrosoftProjectSession:
         rollup_field = config.get("project_fields", {}).get("rollup_key", "Text5")
         for task in self.iter_tasks():
             same_mode = str(safe_get(task, mode_field)) == rollup_mode
-            same_key = str(safe_get(task, rollup_field)).upper() == rollup_key.upper()
+            same_key = summary_identity(rollup_mode, str(safe_get(task, rollup_field))) == summary_identity(rollup_mode, rollup_key)
             issue_type = str(safe_get(task, config.get("project_fields", {}).get("jira_issue_type", "Text3")))
             if same_mode and same_key and (safe_bool(safe_get(task, "Summary")) or issue_type in {"Initiative", "FixVersion"}):
                 return task
@@ -1190,9 +1190,11 @@ class MicrosoftProjectSession:
         current_parent = safe_get(task, "OutlineParent")
         rollup_field = config.get("project_fields", {}).get("rollup_key", "Text5")
         current_rollup = ""
+        current_mode = ""
         if current_parent:
             current_rollup = str(safe_get(current_parent, rollup_field))
-        if current_rollup.upper() == epic.rollup_key.upper():
+            current_mode = str(safe_get(current_parent, config.get("project_fields", {}).get("rollup_mode", "Text4")))
+        if summary_identity(current_mode, current_rollup) == summary_identity(epic.rollup_mode, epic.rollup_key):
             self.verify_outline_parent(task, summary_task, epic_context(epic))
             return task
 

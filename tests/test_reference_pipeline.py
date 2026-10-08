@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from j2p.project import ProjectAutomationError
-from j2p.rollups import build_summaries
+from j2p.rollups import build_summaries, summary_identity
 from test_project_schedule_colors import schedule_plan
 from yerp_project_support import project_from_yerp_plan
 
@@ -53,7 +53,7 @@ class ReferencePipelineTests(unittest.TestCase):
         primary.task.Finish = datetime(2026, 10, 8, 18, 43)
         original = copy.deepcopy(plan.epics)
         session._reference_summary_tasks = (id(plan), {
-            (summary.rollup_mode, summary.key.upper()): summaries[key]
+            summary_identity(summary.rollup_mode, summary.key): summaries[key]
             for key, summary in plan.summaries.items()
         })
         session.index_rollup_summaries = Mock(side_effect=AssertionError('Extra rollup scan'))
