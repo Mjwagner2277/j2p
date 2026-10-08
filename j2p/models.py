@@ -51,6 +51,8 @@ class JiraIssue:
     successors: Set[str]
     source_row: int
     source_file: str = ""
+    original_story_points: Optional[float] = None
+    status_category: str = ""
 
 
 @dataclass
@@ -84,6 +86,11 @@ class PlanEpic:
     drives_schedule: bool = True
     primary_schedule_key: str = ""
     source_file: str = ""
+    original_story_points: Optional[float] = None
+    child_story_points: float = 0.0
+    story_point_basis: str = "Child issues"
+    issue_type: str = "Epic"
+    estimate_only: bool = False
 
 
 @dataclass

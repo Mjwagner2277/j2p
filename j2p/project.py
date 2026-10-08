@@ -605,9 +605,15 @@ class MicrosoftProjectSession:
         # rollup after save/reopen, even if their dates fit inside its span.
         fields = config["project_fields"]
         for key, task in tasks.items():
-            if key not in plan.epics and str(safe_get(task, fields["row_role"])) == "Reference":
-                verify_project_value(task, "Active", False, f"retired reference={key}")
-                verify_project_value(task, fields["unmatched_project_task"], True, f"retired reference={key}")
+            retired_role = str(safe_get(task, fields["row_role"]))
+            if key not in plan.epics and (retired_role == "Reference" or
+                                         (retired_role == "Estimate" and "::ESTIMATE" in key)):
+                context = f"retired {retired_role.lower()}={key}"
+                verify_project_value(task, "Active", False, context)
+                verify_project_value(task, fields["unmatched_project_task"], True, context)
+        for task in self.retired_estimate_summaries(plan, config, tasks, task_list, summaries):
+            for field in summary_metric_fields(config):
+                verify_project_value(task, field, 0, "retired estimate rollup")
         project_progress("Indexing Project resources for verification")
         resources = {int(resource.ID): resource for resource in self.iter_resources()} if plan.epics else {}
         count = 0
@@ -635,7 +641,7 @@ class MicrosoftProjectSession:
                             item = AuditItem(
                                 "Warning", "ProjectNativeCompletionRecalculated",
                                 jira_key=epic.jira_key or epic.key, schedule_key=epic.key,
-                                issue_type="Epic", summary=epic.summary, field="% Complete",
+                                issue_type=epic.issue_type, summary=epic.summary, field="% Complete",
                                 old_value=str(value), new_value=format_number(actual),
                                 message="Project's duration-based completion differs from Jira story-point completion after scheduling.",
                                 reviewer_action="Use Story Point Completion % for Jira progress; review native duration/actuals if needed.",
@@ -911,7 +917,7 @@ class MicrosoftProjectSession:
         self._reference_dates_synchronized = False
         project_progress("Setting Project scheduling modes")
         self.set_auto_scheduled(task_list, config, plan)
-        self.mark_unmatched_tasks(plan, config, task_by_key)
+        self.mark_unmatched_tasks(plan, config, task_by_key, task_list, rollup_tasks)
         project_progress("Ensuring rollup summary rows")
         # A new file is built in final outline order. Inserting every epic right
         # after its summary repeatedly shifts rows already written to Project.
@@ -1091,6 +1097,8 @@ class MicrosoftProjectSession:
         result: Dict[Tuple[str, str], Any] = {}
         for task in task_list:
             issue_type = str(safe_get(task, fields.get("jira_issue_type", "Text3")))
+            if safe_get(task, fields.get("j2p_key", "Text10")) and not safe_bool(safe_get(task, "Summary")):
+                continue  # Managed leaf rows can also represent initiative estimates.
             if issue_type not in {"Initiative", "FixVersion"} and not safe_bool(safe_get(task, "Summary")):
                 continue
             mode = str(safe_get(task, fields.get("rollup_mode", "Text4")))
@@ -1156,7 +1164,9 @@ class MicrosoftProjectSession:
             same_mode = str(safe_get(task, mode_field)) == rollup_mode
             same_key = summary_identity(rollup_mode, str(safe_get(task, rollup_field))) == summary_identity(rollup_mode, rollup_key)
             issue_type = str(safe_get(task, config.get("project_fields", {}).get("jira_issue_type", "Text3")))
-            if same_mode and same_key and (safe_bool(safe_get(task, "Summary")) or issue_type in {"Initiative", "FixVersion"}):
+            is_leaf = (bool(safe_get(task, config.get("project_fields", {}).get("j2p_key", "Text10")))
+                       and not safe_bool(safe_get(task, "Summary")))
+            if not is_leaf and same_mode and same_key and (safe_bool(safe_get(task, "Summary")) or issue_type in {"Initiative", "FixVersion"}):
                 return task
         return None
 
@@ -1266,7 +1276,7 @@ class MicrosoftProjectSession:
         for warning in getattr(self, "resource_assignment_warnings", []):
             plan.audit_items.append(
                 AuditItem("Warning", "ProjectUnmanagedResourcePreserved", jira_key=epic.jira_key or epic.key,
-                          schedule_key=epic.key, issue_type="Epic", summary=epic.summary,
+                          schedule_key=epic.key, issue_type=epic.issue_type, summary=epic.summary,
                           field="Resource Group", color="review_needed", message=warning,
                           reviewer_action="Review legacy resource assignments manually; j2p only replaces resources bearing its ownership marker.")
             )
@@ -1308,7 +1318,7 @@ class MicrosoftProjectSession:
                     "ProjectDateRejected",
                     jira_key=epic.jira_key or epic.key,
                     schedule_key=epic.key,
-                    issue_type="Epic",
+                    issue_type=epic.issue_type,
                     summary=epic.summary,
                     field=audit_field,
                     new_value=date_text,
@@ -1336,7 +1346,7 @@ class MicrosoftProjectSession:
                     "ProjectDateWriteFailed",
                     jira_key=epic.jira_key or epic.key,
                     schedule_key=epic.key,
-                    issue_type="Epic",
+                    issue_type=epic.issue_type,
                     summary=epic.summary,
                     field=audit_field,
                     new_value=date_text,
@@ -1357,7 +1367,7 @@ class MicrosoftProjectSession:
                 "ProjectScheduleDateWriteFailed",
                 jira_key=epic.jira_key or epic.key,
                 schedule_key=epic.key,
-                issue_type="Epic",
+                issue_type=epic.issue_type,
                 summary=epic.summary,
                 field="Start" if schedule_attribute == "Start" else "Finish",
                 new_value=date_text,
@@ -1618,7 +1628,7 @@ class MicrosoftProjectSession:
                         "ProjectDependencyTaskMissing",
                         jira_key=epic.jira_key or epic.key,
                         schedule_key=epic.key,
-                        issue_type="Epic",
+                        issue_type=epic.issue_type,
                         summary=epic.summary,
                         field="Predecessors",
                         new_value=predecessor_key,
@@ -1647,7 +1657,7 @@ class MicrosoftProjectSession:
                         "ProjectDependencyWriteFailed",
                         jira_key=epic.jira_key or epic.key,
                         schedule_key=epic.key,
-                        issue_type="Epic",
+                        issue_type=epic.issue_type,
                         summary=epic.summary,
                         field="Predecessors",
                         new_value=desired,
@@ -1956,6 +1966,8 @@ class MicrosoftProjectSession:
         plan: RunPlan,
         config: Dict[str, Any],
         task_by_key: Dict[str, Any],
+        task_list: Optional[List[Any]] = None,
+        rollup_tasks: Optional[Dict[Tuple[str, str], Any]] = None,
     ) -> None:
         flag_field = config.get("project_fields", {}).get("unmatched_project_task", "Flag2")
         planned_keys = (
@@ -1972,6 +1984,56 @@ class MicrosoftProjectSession:
                 if role == "Reference" and primary and primary != key:
                     verify_copy_isolation(task, f"retired reference={key}", assignments=False)
                     self.write_task_value(task, "Active", False, f"retired reference={key}")
+                elif role == "Estimate" and "::ESTIMATE" in key:
+                    self.write_task_value(task, "Active", False, f"retired estimate={key}")
+        if task_list is not None and rollup_tasks is not None:
+            for task in self.retired_estimate_summaries(plan, config, task_by_key, task_list, rollup_tasks):
+                for field in summary_metric_fields(config):
+                    self.write_task_value(task, field, 0, "retired estimate rollup")
+
+    def retired_estimate_summaries(
+        self, plan: RunPlan, config: Dict[str, Any], task_by_key: Dict[str, Any],
+        task_list: List[Any], rollup_tasks: Dict[Tuple[str, str], Any],
+    ) -> List[Any]:
+        """Find obsolete estimate headers only when no active descendants remain.
+
+        Reuse the existing scan; ordinary updates never need another collection
+        traversal. An unrelated managed or human child protects its header.
+        """
+        fields = config["project_fields"]
+        planned = {summary_identity(summary.rollup_mode, summary.key)
+                   for summary in plan.summaries.values()}
+        candidates = {}
+        for key, task in task_by_key.items():
+            if key in plan.epics or "::ESTIMATE" not in key:
+                continue
+            if str(safe_get(task, fields["row_role"])) not in {"Estimate", "Reference"}:
+                continue
+            identity = summary_identity(str(safe_get(task, fields["rollup_mode"])),
+                                        str(safe_get(task, fields["rollup_key"])))
+            header = rollup_tasks.get(identity)
+            if identity in planned or header is None:
+                continue
+            parent = safe_get(task, "OutlineParent")
+            if parent and project_task_identity(parent) == project_task_identity(header):
+                candidates[project_task_identity(header)] = header
+        if not candidates:
+            return []
+        for task in task_list:
+            if safe_get(task, "Active") in (False, 0):
+                continue
+            parent = safe_get(task, "OutlineParent")
+            visited = set()
+            while parent:
+                identity = project_task_identity(parent)
+                if identity in visited:
+                    break
+                visited.add(identity)
+                candidates.pop(identity, None)
+                parent = safe_get(parent, "OutlineParent")
+            if not candidates:
+                break
+        return list(candidates.values())
 
     def read_schedule_dates(
         self, plan: RunPlan, task_by_key: Dict[str, Any],
@@ -2024,7 +2086,7 @@ class MicrosoftProjectSession:
                     plan.audit_items.append(AuditItem(
                         "Review", "ScheduledDateMismatch",
                         jira_key=epic.jira_key or key, schedule_key=key,
-                        issue_type="Epic", summary=epic.summary, field=field,
+                        issue_type=epic.issue_type, summary=epic.summary, field=field,
                         old_value=target, new_value=new_date, color="review_needed",
                         message=f"Current Project {field.lower()} differs from Jira Target {'start' if field == 'Start' else 'end'}; this is not necessarily a new date change.",
                         reviewer_action="Review schedule drivers and decide whether Project or Jira should be adjusted.",
@@ -2035,7 +2097,7 @@ class MicrosoftProjectSession:
             plan.audit_items.append(AuditItem(
                 "Info", "ScheduledStartChange",
                 jira_key=epic.jira_key or key, schedule_key=key,
-                issue_type="Epic", summary=epic.summary, field="Start",
+                issue_type=epic.issue_type, summary=epic.summary, field="Start",
                 old_value=old_start, new_value=new_start, color="changed_cell",
                 message="Start date changed after auto-scheduling.",
                 reviewer_action="Review the calculated start date and its schedule drivers.",
@@ -2062,7 +2124,7 @@ class MicrosoftProjectSession:
                 "Review" if is_driver else "Info",
                 "CascadeBranchDriver" if is_driver else "CascadingDateChange",
                 jira_key=epic.jira_key or key, schedule_key=key,
-                issue_type="Epic", summary=epic.summary, field="Finish",
+                issue_type=epic.issue_type, summary=epic.summary, field="Finish",
                 old_value=old_finish, new_value=new_finish, color="changed_cell",
                 message=(
                     "Finish date changed and at least one downstream successor also shifted after auto-scheduling."
@@ -2113,7 +2175,7 @@ class MicrosoftProjectSession:
             if audit is None:
                 audit = AuditItem(
                     "Info", "MissingJiraTargetDates", jira_key=epic.jira_key or epic.key,
-                    schedule_key=epic.key, issue_type="Epic", summary=epic.summary,
+                    schedule_key=epic.key, issue_type=epic.issue_type, summary=epic.summary,
                     field="Dependency Review", color="dependency_review",
                     source_row=epic.source_row, source_file=epic.source_file,
                 )
@@ -3526,6 +3588,16 @@ def write_required_project_value(task: Any, field: str, value: Any, context: str
             + (f"{guidance} Original Project error: {exc}" if field == "Active" else guidance)
         ) from None
     verify_project_value(task, field, value, context)
+
+
+def summary_metric_fields(config: Dict[str, Any]) -> List[str]:
+    fields = config.get("project_fields", {})
+    return [fields.get(logical, default) for logical, default in (
+        ("total_story_points", "Number1"), ("completed_story_points", "Number2"),
+        ("logged_hours", "Number3"), ("story_point_ratio", "Number4"),
+        ("completion_total_story_points", "Number5"),
+        ("completion_completed_story_points", "Number6"), ("completion_percent", "Number7"),
+    )]
 
 
 def summary_assignments(summary: Any, config: Dict[str, Any]) -> List[Tuple[str, Any]]:

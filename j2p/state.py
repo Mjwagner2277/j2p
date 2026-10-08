@@ -45,7 +45,7 @@ def snapshots_from_state(path: Path) -> Dict[str, ProjectTaskSnapshot]:
             jira_key=epic.get("jira_key", key),
             name=epic.get("summary", ""),
             issue_id=epic.get("issue_id", ""),
-            issue_type="Epic",
+            issue_type=epic.get("issue_type", "Epic"),
             rollup_mode=epic.get("rollup_mode", ""),
             rollup_key=epic.get("rollup_key", ""),
             resource_group=epic.get("resource_group", ""),
@@ -85,7 +85,7 @@ def validate_state_epic(path: Path, key: str, epic: Any) -> None:
         if not isinstance(values, list) or any(not isinstance(item, str) for item in values):
             invalid(f"{field} must be a list of strings")
     for field in ("jira_key", "summary", "issue_id", "rollup_mode", "rollup_key", "resource_group", "key_prefix", "status",
-                  "target_start", "target_end", "row_role", "fix_version", "primary_schedule_key"):
+                  "target_start", "target_end", "row_role", "fix_version", "primary_schedule_key", "issue_type"):
         if field in epic and not isinstance(epic[field], str):
             invalid(f"{field} must be a string")
     if "drives_schedule" in epic and type(epic["drives_schedule"]) is not bool:

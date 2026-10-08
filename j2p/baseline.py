@@ -97,7 +97,7 @@ def compare_with_baseline(
                     "CompletedSinceLastUpdate",
                     jira_key=epic.jira_key or epic.key,
                     schedule_key=epic.key,
-                    issue_type="Epic",
+                    issue_type=epic.issue_type,
                     summary=epic.summary,
                     field="Status",
                     old_value=existing.status,
@@ -115,6 +115,13 @@ def compare_with_baseline(
         if key in planned_keys or key in summary_keys:
             continue
         if existing.is_summary:
+            continue
+        if "::ESTIMATE" in key and existing.row_role in {"Estimate", "Reference"}:
+            audit.append(AuditItem(
+                "Info", "RetiredInitiativeEstimate", jira_key=existing.jira_key or key,
+                schedule_key=key, issue_type=existing.issue_type, summary=existing.name,
+                message="This remaining initiative estimate is no longer in the plan; its Project row is retired.",
+            ))
             continue
         audit.append(
             AuditItem(
@@ -167,7 +174,7 @@ def add_added_epic_audit(
                 "AddedEpic",
                 jira_key=epic.jira_key or epic.key,
                 schedule_key=epic.key,
-                issue_type="Epic",
+                issue_type=epic.issue_type,
                 summary=epic.summary,
                 field=field_name,
                 new_value=value,
@@ -199,7 +206,7 @@ def compare_field(
             category,
             jira_key=epic.jira_key or epic.key,
             schedule_key=epic.key,
-            issue_type="Epic",
+            issue_type=epic.issue_type,
             summary=epic.summary,
             field=field_name,
             old_value=old_value,

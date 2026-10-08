@@ -91,19 +91,65 @@ def independent_issues(batches):
                             decimal_value(first_cell(headers, row, 'Worklog Hours')))
             if key in issues:
                 raise AssertionError('The supplied baseline unexpectedly contains duplicate keys')
+            status = first_cell(headers, row, 'Status')
             issues[key] = {
                 'key': key, 'type': first_cell(headers, row, 'Issue Type'),
                 'epic': first_cell(headers, row, 'Custom field (Epic Link)').upper(),
                 'parent': first_cell(headers, row, 'Custom field (Parent Link)').upper(),
                 'versions': versions,
-                'points': decimal_value(first_cell(
-                    headers, row, 'Custom field (Story Points)',
-                    'Custom field (Original story points)')),
+                'current_points': decimal_value(first_cell(headers, row, 'Custom field (Story Points)')),
+                'original_points': decimal_value(first_cell(headers, row, 'Custom field (Original story points)')),
                 'hours': logged_hours,
-                'done': first_cell(headers, row, 'Status').lower() in {'done', 'closed', 'resolved'},
+                'status': status,
+                'status_category': first_cell(headers, row, 'Status Category'),
+                'done': status.lower() in {'done', 'closed', 'resolved'},
                 'path': path, 'row': row_number,
             }
     return issues
+
+
+def independent_selected_points(parent, child_points, child_count):
+    if not child_count:
+        return parent['original_points']
+    if parent['status'].casefold() in {'to do', 'open', 'backlog', 'new', 'selected for development'}:
+        return max(child_points, parent['original_points'])
+    return child_points
+
+
+def independent_epic_metrics(issues, epic_keys):
+    """Apply the requested estimate rule to independently read Decimal values."""
+    totals = {key: [Decimal(0) for _ in range(4)] for key in epic_keys}
+    children = defaultdict(list)
+    for issue in issues.values():
+        if issue['type'] not in {'Story', 'Task', 'Sub-task', 'Bug'} or issue['epic'] not in totals:
+            continue
+        children[issue['epic']].append(issue)
+        bucket = totals[issue['epic']]
+        bucket[0] += issue['current_points']
+        bucket[2] += issue['hours']
+        if issue['done']:
+            bucket[1] += issue['current_points']
+            bucket[3] += issue['hours']
+    for key, bucket in totals.items():
+        bucket[0] = independent_selected_points(issues[key], bucket[0], len(children[key]))
+    return totals, children
+
+
+def independent_initiative_metrics(issues, all_epic_metrics):
+    """Only the estimate beyond all exported child epics adds new work."""
+    children = defaultdict(list)
+    for key in all_epic_metrics:
+        children[issues[key]['parent']].append(key)
+    remaining = {}
+    for key, issue in issues.items():
+        if issue['type'] != 'Initiative':
+            continue
+        child_points = sum((all_epic_metrics[child][0] for child in children[key]), Decimal(0))
+        selected = independent_selected_points(issue, child_points, len(children[key]))
+        remainder = selected - child_points
+        if remainder > 0:
+            remaining[key] = [remainder, Decimal(0), Decimal(0), Decimal(0)]
+    return remaining, children
 
 
 class YerpExportIntegrationTests(unittest.TestCase):
@@ -117,7 +163,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
         cls.batches = raw_batches(cls.paths)
         cls.issues = independent_issues(cls.batches)
         cls.plan = build_run_plan(cls.paths, cls.config)
-        cls.eligible = {}
+        cls.epic_eligible = {}
         for key, issue in cls.issues.items():
             prefix = key.split('-')[0]
             if issue['type'] != 'Epic' or prefix not in cls.config['resource_groups']:
@@ -135,19 +181,32 @@ class YerpExportIntegrationTests(unittest.TestCase):
                 rollups = [('fixVersion:' + version, index == 0)
                            for index, version in enumerate(versions)]
             if rollups:
-                cls.eligible[key] = rollups
-        cls.metrics = {key: [Decimal(0) for _ in range(4)] for key in cls.eligible}
-        cls.included_children = []
-        for issue in cls.issues.values():
-            if issue['type'] not in {'Story', 'Task', 'Sub-task', 'Bug'} or issue['epic'] not in cls.metrics:
+                cls.epic_eligible[key] = rollups
+        cls.all_epic_metrics, cls.all_children = independent_epic_metrics(
+            cls.issues, [key for key, issue in cls.issues.items() if issue['type'] == 'Epic'])
+        cls.initiative_metrics, cls.initiative_children = independent_initiative_metrics(
+            cls.issues, cls.all_epic_metrics)
+        cls.initiative_eligible = {}
+        for key in cls.initiative_metrics:
+            issue = cls.issues[key]
+            prefix = key.split('-')[0]
+            if prefix not in cls.config['resource_groups']:
                 continue
-            cls.included_children.append(issue)
-            totals = cls.metrics[issue['epic']]
-            totals[0] += issue['points']
-            totals[2] += issue['hours']
-            if issue['done']:
-                totals[1] += issue['points']
-                totals[3] += issue['hours']
+            if cls.config['rollup_modes'][prefix] == 'initiative':
+                rollups = [('initiative:' + key, True)]
+            else:
+                versions = issue['versions']
+                if cls.config['fixversion_scope']['enabled']:
+                    versions = [v for v in versions if v in cls.config['fixversion_scope']['accepted']]
+                rollups = [('fixVersion:' + version, index == 0)
+                           for index, version in enumerate(versions)]
+            if rollups:
+                cls.initiative_eligible[key] = rollups
+        cls.eligible = {**cls.epic_eligible, **cls.initiative_eligible}
+        cls.metrics = {key: cls.all_epic_metrics[key] for key in cls.epic_eligible}
+        cls.metrics.update({key: cls.initiative_metrics[key] for key in cls.initiative_eligible})
+        cls.children = {key: cls.all_children[key] for key in cls.epic_eligible}
+        cls.included_children = [child for children in cls.children.values() for child in children]
 
     @classmethod
     def tearDownClass(cls):
@@ -166,7 +225,8 @@ class YerpExportIntegrationTests(unittest.TestCase):
         self.assertEqual(set(self.config['resource_groups']), set(EXPECTED_FILE_COUNTS))
         self.assertEqual(set(self.config['rollup_modes']), set(EXPECTED_FILE_COUNTS))
         self.assertFalse(any(item.category == 'ExcludedUnknownPrefix' for item in self.plan.audit_items))
-        self.assertEqual(Counter(epic.key_prefix for epic in self.plan.epics.values() if epic.drives_schedule), {
+        self.assertEqual(Counter(epic.key_prefix for epic in self.plan.epics.values()
+                                 if epic.drives_schedule and self.issues[epic.jira_key]['type'] == 'Epic'), {
             'SSWCYBER': 77, 'SSWGUI': 49, 'SSWHW': 151, 'SSWIF': 265, 'SSWNET': 65,
             'SSWSW': 132, 'SSWSYS': 311, 'SSWTEST': 509, 'SSWUMS': 149,
         })
@@ -178,7 +238,8 @@ class YerpExportIntegrationTests(unittest.TestCase):
             'duplicate_csv_issues_skipped': 0, 'initiatives_read': 401,
             'epics_read': 2014, 'story_rows_read': 9107,
             'story_rows_used_for_completion': 4187,
-            'epics_included': 1708, 'planned_epic_rows': 3114,
+            'epics_included': 1708, 'planned_epic_rows': 3334,
+            'initiative_estimates_included': 96,
             'epics_excluded': 306, 'summary_rows': 62,
             'fixversion_scope_excluded_epics': 156,
         }
@@ -187,7 +248,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
                 self.assertEqual(self.plan.stats[name], expected)
         self.assertEqual(len(self.included_children), 4187)
         self.assertEqual({epic.jira_key for epic in self.plan.epics.values()}, set(self.eligible))
-        cross_file_parents = [key for key in self.eligible
+        cross_file_parents = [key for key in self.epic_eligible
                               if self.config['rollup_modes'][key.split('-')[0]] == 'initiative'
                               and self.issues[key]['parent'] in self.issues
                               and self.issues[key]['path'] != self.issues[self.issues[key]['parent']]['path']]
@@ -203,8 +264,9 @@ class YerpExportIntegrationTests(unittest.TestCase):
             prior_config['resource_groups'].pop(prefix)
         prior = build_run_plan(self.paths, prior_config)
         added = {key: epic for key, epic in self.plan.epics.items() if key not in prior.epics}
-        self.assertEqual(len(added), 1384)
-        self.assertEqual(len({epic.jira_key for epic in added.values()}), 839)
+        added_epics = {key: epic for key, epic in added.items() if self.issues[epic.jira_key]['type'] == 'Epic'}
+        self.assertEqual(len(added_epics), 1384)
+        self.assertEqual(len({epic.jira_key for epic in added_epics.values()}), 839)
         self.assertEqual({epic.key_prefix for epic in added.values()}, added_prefixes)
         for key, before in prior.epics.items():
             after = self.plan.epics[key]
@@ -222,7 +284,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
             if issue['type'] == 'Epic' and issue['key'].split('-')[0] in added_prefixes and not issue['versions']:
                 self.assertNotIn(issue['key'], self.plan.epics)
 
-    def test_every_actual_epic_matches_independent_child_points_and_time(self):
+    def test_every_actual_row_matches_independent_estimate_selection_and_child_time(self):
         for epic in self.plan.epics.values():
             expected = self.metrics[epic.jira_key]
             for index, field in enumerate(('total_story_points', 'completed_story_points',
@@ -239,12 +301,82 @@ class YerpExportIntegrationTests(unittest.TestCase):
                     self.assertLessEqual(abs(Decimal(str(actual)) - expected[index]),
                                          Decimal('0.005000000001'))
         driving = [epic for epic in self.plan.epics.values() if epic.drives_schedule]
-        self.assertEqual(len(driving), 1708)
-        self.assertAlmostEqual(sum(epic.total_story_points for epic in driving), 4081.5)
+        self.assertEqual(len(driving), len(self.eligible))
+        self.assertEqual(len(driving), 1804)
+        self.assertEqual(sum(self.metrics[key][0] for key in self.epic_eligible), Decimal('15452.2'))
+        self.assertEqual(sum(self.metrics[key][0] for key in self.initiative_eligible), Decimal('5069.8'))
+        self.assertAlmostEqual(sum(epic.total_story_points for epic in driving),
+                               float(sum(values[0] for values in self.metrics.values())))
         self.assertAlmostEqual(sum(epic.completed_story_points for epic in driving), 2021.9)
         self.assertEqual(self.plan.stats['logged_hours'], 12171.51)
         self.assertEqual(self.plan.stats['completed_logged_hours'], 11806.12)
         self.assertEqual(self.plan.column_map['story_points'], 'Custom field (Story Points)')
+        self.assertEqual(self.plan.column_map['original_story_points'], 'Custom field (Original story points)')
+
+    def test_actual_parent_status_and_child_presence_select_original_or_current_points(self):
+        cases = {
+            'SSWCYBER-3666': ('To Do', Decimal(10), 1, Decimal('0.5'), Decimal(10)),
+            'SSWCYBER-3606': ('In Progress', Decimal(10), 1, Decimal('0.5'), Decimal('0.5')),
+            'SSWCYBER-3698': ('To Do', Decimal(2), 0, Decimal(0), Decimal(2)),
+            'SSWIF-4752': ('In Progress', Decimal(4), 0, Decimal(0), Decimal(4)),
+        }
+        for key, (status, original, count, current, selected) in cases.items():
+            with self.subTest(key=key):
+                issue = self.issues[key]
+                children = self.children[key]
+                self.assertEqual(issue['status'], status)
+                self.assertEqual(issue['original_points'], original)
+                self.assertEqual(len(children), count)
+                self.assertEqual(sum((child['current_points'] for child in children), Decimal(0)), current)
+                for epic in self.plan.epics.values():
+                    if epic.jira_key == key:
+                        self.assertEqual(Decimal(str(epic.total_story_points)), selected)
+                        self.assertEqual(Decimal(str(epic.completed_story_points)),
+                                         sum((child['current_points'] for child in children if child['done']), Decimal(0)))
+        # A completed parent alone supplies no completed child points.
+        completed_childless = self.plan.epics['SSWTEST-4863']
+        self.assertEqual(self.issues['SSWTEST-4863']['status'], 'Done')
+        self.assertEqual(self.children['SSWTEST-4863'], [])
+        self.assertEqual((completed_childless.total_story_points,
+                          completed_childless.completed_story_points,
+                          completed_childless.percent_complete), (5, 0, 0))
+
+    def test_actual_initiative_rows_add_only_unallocated_estimates(self):
+        self.assertEqual(len(self.initiative_eligible), 96)
+        estimate_rows = [epic for epic in self.plan.epics.values()
+                         if self.issues[epic.jira_key]['type'] == 'Initiative']
+        self.assertEqual(len(estimate_rows), 220)
+        for epic in estimate_rows:
+            with self.subTest(key=epic.key):
+                self.assertTrue(epic.estimate_only)
+                self.assertEqual(epic.issue_type, 'Initiative')
+                self.assertEqual(epic.primary_schedule_key, epic.jira_key + '::ESTIMATE')
+                self.assertEqual(epic.completed_story_points, 0)
+                self.assertEqual(epic.percent_complete, 0)
+                self.assertEqual(epic.logged_hours, 0)
+                self.assertEqual(epic.completed_logged_hours, 0)
+                self.assertIn(epic.fix_version, self.issues[epic.jira_key]['versions'])
+        cases = {
+            'SSWSYS-5153': (Decimal(875), Decimal(0), Decimal(875)),
+            'SSWCYBER-3597': (Decimal(150), Decimal('64.2'), Decimal('85.8')),
+            'SSWSYS-5065': (Decimal(188), Decimal(11), Decimal(177)),
+        }
+        for key, (original, accumulated, remaining) in cases.items():
+            with self.subTest(initiative=key):
+                self.assertEqual(self.issues[key]['original_points'], original)
+                self.assertEqual(sum((self.all_epic_metrics[child][0]
+                                      for child in self.initiative_children[key]), Decimal(0)), accumulated)
+                primary = self.plan.epics[key + '::ESTIMATE']
+                self.assertEqual(Decimal(str(primary.total_story_points)), remaining)
+                self.assertEqual(Decimal(str(primary.child_story_points)), accumulated)
+        # All exported epics count in the deduction even when a version filter
+        # excludes a child. Started parents never add an estimate on top of them.
+        self.assertEqual(len(self.initiative_children['SSWIF-3910']), 34)
+        self.assertTrue(any(child not in self.epic_eligible
+                            for child in self.initiative_children['SSWIF-3910']))
+        for key in ('SSWSYS-5010', 'SSWIF-3910'):
+            self.assertNotIn(key, self.initiative_metrics)
+            self.assertNotIn(key + '::ESTIMATE', self.plan.epics)
 
     def test_static_list_equals_exact_cross_project_names_in_the_october_exports(self):
         projects = defaultdict(set)
@@ -278,10 +410,12 @@ class YerpExportIntegrationTests(unittest.TestCase):
                                            'completion_total_story_points', 'completion_completed_story_points')):
                 with self.subTest(rollup=key, field=field):
                     self.assertAlmostEqual(getattr(summary, field), float(expected[key][index]), places=2)
-        self.assertAlmostEqual(sum(item.total_story_points for item in self.plan.summaries.values()), 4081.5)
+        expected_total = float(sum(values[0] for values in self.metrics.values()))
+        self.assertAlmostEqual(sum(item.total_story_points for item in self.plan.summaries.values()), expected_total)
         self.assertAlmostEqual(sum(item.completed_story_points for item in self.plan.summaries.values()), 2021.9)
-        self.assertEqual(sum(not epic.drives_schedule for epic in self.plan.epics.values()), 1406)
-        self.assertGreater(sum(item.completion_total_story_points for item in self.plan.summaries.values()), 4081.5)
+        self.assertEqual(sum(not epic.drives_schedule for epic in self.plan.epics.values()),
+                         sum(len(rollups) - 1 for rollups in self.eligible.values()))
+        self.assertGreater(sum(item.completion_total_story_points for item in self.plan.summaries.values()), expected_total)
 
     def test_actual_fractional_completion_and_completed_reference_inputs(self):
         # This historical regression epic has no accepted version. Keep its
@@ -337,7 +471,7 @@ class YerpExportIntegrationTests(unittest.TestCase):
     def test_real_child_update_recomputes_all_four_accepted_versions_and_only_affected_rollups(self):
         issue = self.issues[CHANGED_CHILD]
         self.assertEqual(issue['epic'], CHANGED_EPIC)
-        self.assertEqual(issue['points'], Decimal(3))
+        self.assertEqual(issue['current_points'], Decimal(3))
         self.assertFalse(issue['done'])
         rows, encoding = self.batches[issue['path']]
         changed_rows = list(rows)
@@ -349,6 +483,15 @@ class YerpExportIntegrationTests(unittest.TestCase):
             return (changed_rows, encoding) if path == issue['path'] else self.batches[path]
         with patch('j2p.jira.read_csv_rows', side_effect=load):
             updated = build_run_plan(self.paths, self.config)
+        changed_batches = {**self.batches, issue['path']: (changed_rows, encoding)}
+        updated_issues = independent_issues(changed_batches)
+        updated_all_epic_metrics, _ = independent_epic_metrics(updated_issues, self.all_epic_metrics)
+        updated_initiative_metrics, _ = independent_initiative_metrics(updated_issues, updated_all_epic_metrics)
+        updated_metrics = {key: updated_all_epic_metrics[key] for key in self.epic_eligible}
+        updated_metrics.update({key: updated_initiative_metrics[key] for key in self.initiative_eligible})
+        total_delta = updated_metrics[CHANGED_EPIC][0] - self.metrics[CHANGED_EPIC][0]
+        done_delta = updated_metrics[CHANGED_EPIC][1] - self.metrics[CHANGED_EPIC][1]
+        self.assertEqual(done_delta, Decimal(5))
         affected_rollups = dict(self.eligible[CHANGED_EPIC])
         self.assertEqual(len(affected_rollups), 4)
         changed_epics = []
@@ -358,8 +501,8 @@ class YerpExportIntegrationTests(unittest.TestCase):
                 self.assertEqual(after, before)
                 continue
             changed_epics.append(key)
-            self.assertEqual(after.total_story_points, before.total_story_points + 2)
-            self.assertEqual(after.completed_story_points, before.completed_story_points + 5)
+            self.assertEqual(after.total_story_points, float(updated_metrics[CHANGED_EPIC][0]))
+            self.assertEqual(after.completed_story_points, float(updated_metrics[CHANGED_EPIC][1]))
             self.assertEqual(after.percent_complete, round(after.completed_story_points / after.total_story_points * 100))
             self.assertEqual(after.logged_hours, before.logged_hours)
             self.assertAlmostEqual(after.completed_logged_hours,
@@ -371,10 +514,12 @@ class YerpExportIntegrationTests(unittest.TestCase):
             if key not in affected_rollups:
                 self.assertEqual(after, before)
                 continue
-            self.assertAlmostEqual(after.completion_total_story_points, before.completion_total_story_points + 2)
-            self.assertAlmostEqual(after.completion_completed_story_points, before.completion_completed_story_points + 5)
+            self.assertAlmostEqual(after.completion_total_story_points, before.completion_total_story_points + float(total_delta))
+            self.assertAlmostEqual(after.completion_completed_story_points, before.completion_completed_story_points + float(done_delta))
             driving = affected_rollups[key]
-            self.assertAlmostEqual(after.total_story_points, before.total_story_points + (2 if driving else 0))
-            self.assertAlmostEqual(after.completed_story_points, before.completed_story_points + (5 if driving else 0))
-        self.assertAlmostEqual(sum(item.total_story_points for item in updated.summaries.values()), 4083.5)
-        self.assertAlmostEqual(sum(item.completed_story_points for item in updated.summaries.values()), 2026.9)
+            self.assertAlmostEqual(after.total_story_points, before.total_story_points + (float(total_delta) if driving else 0))
+            self.assertAlmostEqual(after.completed_story_points, before.completed_story_points + (float(done_delta) if driving else 0))
+        self.assertAlmostEqual(sum(item.total_story_points for item in updated.summaries.values()),
+                               float(sum(metric[0] for metric in updated_metrics.values())))
+        self.assertAlmostEqual(sum(item.completed_story_points for item in updated.summaries.values()),
+                               float(sum(metric[1] for metric in updated_metrics.values())))

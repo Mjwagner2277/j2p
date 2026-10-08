@@ -65,7 +65,7 @@ def epic_assignments(epic, config):
     values = {
         "jira_key": epic.jira_key or epic.key,
         "jira_issue_id": epic.issue_id,
-        "jira_issue_type": "Epic",
+        "jira_issue_type": epic.issue_type,
         "rollup_mode": epic.rollup_mode,
         "rollup_key": epic.rollup_key,
         "jira_key_prefix": epic.key_prefix,

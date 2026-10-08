@@ -31,7 +31,7 @@ multi_fixversion_policy:
 # Exact names used by at least two Jira projects in the 2026-10-07 exports.
 # This fixed list defines program scope across future uploads. Add new shared
 # versions here deliberately; case and internal spaces are significant.
-# Epic fixVersions choose membership; initiative links and child work stay intact.
+# Each epic or initiative estimate uses its own accepted version memberships.
 fixversion_scope:
   enabled: true
   accepted:
@@ -126,7 +126,7 @@ columns:
     - Fix Version/s
   story_points:
     - Custom field (Story Points)
-    # Preserve the original-estimate fallback only when current points are blank.
+  original_story_points:
     - Custom field (Original story points)
   logged_hours:
     - Custom field (Time Spent Total (hrs))

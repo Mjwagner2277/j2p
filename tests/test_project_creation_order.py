@@ -225,20 +225,20 @@ class ProjectCreationOrderTests(unittest.TestCase):
 
     @unittest.skipUnless(bool(FILES) and (YERP / 'ssn-812-config.yaml').exists(),
                          'Requires the nine project-specific yerp exports and configuration')
-    def test_real_yerp_creation_appends_all_3114_epics_and_62_rollups(self):
+    def test_real_yerp_creation_appends_all_3334_rows_and_62_rollups(self):
         self.assertEqual(len(FILES), 9)
         before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in FILES}
         try:
             config = load_config(YERP / 'ssn-812-config.yaml')
             plan = build_run_plan(FILES, config)
-            self.assertEqual((len(plan.epics), len(plan.summaries)), (3114, 62))
+            self.assertEqual((len(plan.epics), len(plan.summaries)), (3334, 62))
             session = creation_session()
             checkpoints = []
             session.recalculate.side_effect = lambda: checkpoints.append(session.update_epic_task.call_count)
             with redirect_stdout(io.StringIO()):
                 session.apply_plan(plan, config, write_dependencies=False, append_only=True)
             self.assert_complete_outline(session, plan)
-            self.assertEqual(checkpoints, [779, 1557, 2336, 3114])
+            self.assertEqual(checkpoints, [834, 1667, 2501, 3334])
             self.assertEqual(plan.stats['project_row_calculation_checkpoints'], checkpoints)
         finally:
             self.assertEqual(before, {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in FILES})

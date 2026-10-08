@@ -55,8 +55,8 @@ class YerpMissingDateNotesTests(unittest.TestCase):
             raise AssertionError('An original yerp CSV changed during missing-date checks')
 
     def test_exact_scope_and_complete_real_project_population(self):
-        self.assertEqual(len(self.plan.epics), 3114)
-        self.assertEqual(len({epic.jira_key for epic in self.plan.epics.values()}), 1708)
+        self.assertEqual(len(self.plan.epics), 3334)
+        self.assertEqual(len({epic.jira_key for epic in self.plan.epics.values()}), 1804)
         self.assertTrue(self.missing)
         self.assertLess(len(self.missing), len(self.plan.epics))
         annotated = {key for key, epic in self.plan.epics.items()

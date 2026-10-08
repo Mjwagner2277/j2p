@@ -18,6 +18,7 @@ from .yaml_subset import YamlSubsetError, parse_yaml
 DEFAULT_CONFIG: Dict[str, Any] = {
     "rollup_modes": {},
     "done_statuses": ["Done"],
+    "not_started_statuses": ["To Do", "Open", "Backlog", "New", "Selected for Development"],
     "issue_types": {
         "initiative": ["Initiative"],
         "epic": ["Epic"],
@@ -36,6 +37,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "Story point estimate",
             "Custom field (Story point estimate)",
         ],
+        "original_story_points": [
+            "Original Story Points", "Original Story Point", "Custom field (Original story points)",
+        ],
         "logged_hours": [
             "Logged Hours",
             "Hours Logged",
@@ -47,6 +51,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "Custom field (Logged Hours)",
         ],
         "status": ["Status"],
+        "status_category": ["Status Category", "Status category"],
         "resolution": ["Resolution"],
         "resolved": ["Resolved", "Resolution date", "Resolution Date"],
         "target_start": ["Target start", "Target Start"],
@@ -249,7 +254,7 @@ def validate_config_shape(config: Dict[str, Any]) -> None:
         "planning_horizon": {"immediate_months", "bucket_months"},
     }
     for section, value in config.items():
-        if section == "done_statuses":
+        if section in {"done_statuses", "not_started_statuses"}:
             strings(value, section)
             continue
         if section == "multi_fixversion_policy" and isinstance(value, str):
@@ -371,6 +376,7 @@ def normalize_config(config: Dict[str, Any]) -> None:
             config[section_name][key] = [str(v) for v in ensure_list(value)]
 
     config["done_statuses"] = [str(v) for v in ensure_list(config.get("done_statuses", []))]
+    config["not_started_statuses"] = [str(v) for v in ensure_list(config["not_started_statuses"])]
     config["resource_groups"] = {
         str(k).strip().upper(): str(v).strip() for k, v in config.get("resource_groups", {}).items()
     }

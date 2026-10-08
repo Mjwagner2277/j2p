@@ -4,18 +4,20 @@ The current configuration reads all nine October 7 exports and uses fixVersion
 rollups for every project. Its static accepted list contains the 62 exact names
 observed in at least two Jira projects, across all source issue types. The other
 206 version names are project-specific and do not create summary memberships.
-`PI17` and `PI 17` remain separate. Only epics' accepted versions determine the
-outline; initiative and child links in the exports remain intact.
+`PI17` and `PI 17` remain separate. Each epic or remaining initiative estimate
+uses its own accepted versions; parent and child links remain intact.
 
 | Item | Current count/value |
 | --- | ---: |
 | CSV files / unique Jira issues | 9 / 11,522 |
 | Epics read / included | 2,014 / 1,708 |
-| Planned epic rows / active reference copies | 3,114 / 1,406 |
+| Planned rows / active reference copies | 3,334 / 1,530 |
+| Initiative remainder estimates / rows including copies | 96 / 220 |
 | Shared fixVersion summaries | 62 |
 | Included epic dependency links | 169 |
 | Included child work items | 4,187 |
-| Counted total / completed points | 4,081.5 / 2,021.9 |
+| Counted total / completed points | 20,522.0 / 2,021.9 |
+| Epic estimates / initiative remainder points | 15,452.2 / 5,069.8 |
 | Included logged hours | 12,171.51 |
 | Epics excluded solely by the accepted list | 156 |
 
@@ -25,7 +27,16 @@ membership, shared summaries across teams, duplicate input handling, and the
 source CSV hashes. Changing `SSWSW-11866` under `SSWSW-10804` from three open
 points to five done points in memory changes four accepted memberships and
 their summaries. Valid unchanged updates still perform zero task-field writes.
-Creation checkpoints are at rows 779, 1,557, 2,336, and 3,114.
+Creation checkpoints are at rows 834, 1,667, 2,501, and 3,334.
+
+Original Story Points are read separately from current child points. The oracle
+checks every parent's selected estimate and every initiative remainder against
+independent Decimal calculations over the raw CSVs. Example epic selections are
+`SSWCYBER-3666` (To Do: max of 10 original and 0.5 child points = 10),
+`SSWCYBER-3606` (In Progress: 0.5 child points), and `SSWIF-4752` (no children:
+4 original points). `SSWCYBER-3597` contributes only 85.8 remaining initiative
+points after deducting 64.2 child-epic points from its original 150. Estimates
+never increase delivered/completed points. CSV source files remain unchanged.
 
 The old `SSWCYBER-3219` fractional-completion case has no accepted version; its
 six-percent regression is retained using an in-memory initiative configuration.

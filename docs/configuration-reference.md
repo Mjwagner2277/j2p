@@ -49,10 +49,11 @@ be nonempty. The default is disabled, preserving existing unfiltered behavior.
 The list is fixed across uploads; a release remains accepted even when only one
 team appears in a later export. J2P does not recalculate shared membership from
 each upload. Add new program versions to the list deliberately. Only accepted
-versions that have included epics produce summaries; unused names do not create
+versions that have included epics or initiative estimates produce summaries; unused names do not create
 empty headers.
 
-Epic fixVersions select the summaries. Initiative links remain in source data,
+Epic fixVersions select their summaries; initiative estimate rows use their own
+accepted versions. Initiative links remain in source data,
 and Epic Links still attach child tasks for points and completion. Child tags
 alone do not create epic membership. An included epic retains all its child
 metrics. Versions outside the list are removed before selecting the first
@@ -74,6 +75,58 @@ tracking, create a fresh baseline for the clean shared-summary outline. The
 update command preserves unmatched legacy Project rows; it does not delete old
 summary headers or automatically deactivate unmatched primary tasks. Source
 CSV files do not need editing for this configuration change.
+
+## Original Story Points and child estimates
+
+Map `columns.original_story_points` separately from `columns.story_points`.
+The original field is a parent planning estimate, not a fallback for a child's
+current points. Both are retained in the plan/state and planned-rows CSV along
+with `child_story_points` and `story_point_basis` for traceability.
+
+For an epic, J2P uses the following total:
+
+| Parent/child state | Total Story Points |
+| --- | --- |
+| No child issues in the supplied exports | Original Story Points, or zero when blank |
+| Not started, with children | Higher of Original Story Points and current child points |
+| Started or done, with children | Current child points |
+
+An explicit zero-point child still counts as a child. A parent's own current
+Story Points field does not replace its child breakdown. Completed points and
+logged hours always come from the child work; an original estimate does not
+invent completed work, including on a done parent with no exported children.
+An epic with a positive selected estimate is no longer marked In Planning.
+
+`not_started_statuses` defaults to `To Do`, `Open`, `Backlog`, `New`, and
+`Selected for Development`, matched without case sensitivity. All other statuses
+(including In Progress, In Review, and Blocked) use the child total when children
+exist. If mapped `columns.status_category` is present and populated, `To Do`/`New`
+selects the unstarted rule; other categories select the child rule. Configured
+done statuses always select the child rule. The no-children fallback applies
+regardless of status; this change does not add status-based scope exclusions.
+
+For an initiative, each child epic first gets its effective estimate using the
+same rules. The initiative then applies the table to their total. Only a positive
+remainder above those child epics becomes an additional **Remaining estimate**
+row. An unstarted initiative with 100 original points and 60 child-epic points
+therefore contributes 40 extra points, while an in-progress initiative with
+children contributes no extra original estimate.
+
+In fixVersion mode, the remainder uses only the initiative's own accepted
+fixVersions; it does not inherit its child epics' version tags. In initiative
+mode it appears beneath its own initiative summary. All exported child epics
+are deducted, including children excluded by the schedule's scope filter, so
+excluded work is not repackaged as new initiative scope. Each accepted version
+gets the remainder in its completion denominator; the normal reference policy
+counts the remainder once in overall totals.
+
+Estimate rows retain stable keys while their remainder changes. When the
+remainder disappears, updates deactivate the obsolete estimate and its copies;
+if it returns, the same rows are reused. These rows use the initiative's target
+dates and have no inferred blocker links: a remaining estimate cannot stand in
+for the entire initiative's dependency graph. Ordinary epic dependencies remain
+unchanged. As with other totals, the calculation uses children present in the
+supplied exports; an omitted child cannot be distinguished from absent work.
 
 ## Full configuration example
 
@@ -203,6 +256,7 @@ project_fields:
 | --- | --- | --- | --- | --- |
 | `rollup_modes` | Yes for included epics | `{}` | Mapping of Jira key prefix to `initiative` or `fixVersion` | Defines the rollup model for each allowed Jira key prefix. Every `resource_groups` prefix must appear here. |
 | `done_statuses` | Recommended | `Done` | List of Jira statuses | Statuses that count child story/task points as completed. |
+| `not_started_statuses` | No | `To Do`, `Open`, `Backlog`, `New`, `Selected for Development` | List of Jira statuses | Parent statuses that retain the higher original estimate before work starts. |
 | `resource_groups` | Yes for included epics | `{}` | Mapping of Jira key prefix to Project resource group name | Controls which Jira prefixes are included and what resource group each epic receives. |
 | `multi_fixversion_policy` | No | `reference` | `reference`, `split` | Controls how fixVersion-mode epics with multiple fixVersions are represented. |
 | `columns` | Recommended | Built-in defaults | Mapping of logical j2p fields to one or more CSV headers | Lets j2p read different Jira export header names. |
@@ -350,6 +404,8 @@ columns:
 | `issue_type` | Yes | All rows | Distinguishes initiatives, epics, and child work. |
 | `summary` | Recommended | Initiative and epic rows | Project task and summary names. |
 | `epic_link` | Required for child completion math | Story/task/bug/sub-task rows | Links child work to the parent epic. |
+| `original_story_points` | No | Epic and initiative rows | Separate original planning estimate used by the parent estimate rules above. |
+| `status_category` | No | Epic and initiative rows | Jira category used to distinguish not-started work when populated. |
 | `parent` | Required for initiative-mode epics | Epic rows | Initiative parent key. |
 | `fix_versions` | Required for fixVersion-mode epics | Epic rows | fixVersion rollup value or values. |
 | `story_points` | Required for percent complete | Story/task/bug/sub-task rows | Points used in completion math. |
@@ -696,17 +752,17 @@ Supported fields:
 | `dependency_review` | `Text8` | Human-readable dependency review note. |
 | `jira_status` | `Text9` | Jira status. |
 | `j2p_key` | `Text10` | Stable schedule row key. |
-| `row_role` | `Text11` | `Scheduled`, `Primary`, `Reference`, or `Split`. |
+| `row_role` | `Text11` | `Scheduled`, `Primary`, `Reference`, `Split`, or `Estimate` for a remaining initiative estimate. |
 | `fix_version` | `Text12` | FixVersion represented by this Project row. |
 | `primary_schedule_key` | `Text13` | Primary row for a reference/split group. |
-| `total_story_points` | `Number1` | Total child story/task points. |
+| `total_story_points` | `Number1` | Selected epic points or remaining initiative estimate. |
 | `completed_story_points` | `Number2` | Completed child story/task points. |
 | `logged_hours` | `Number3` | Logged hours summed from child story/task rows. |
 | `story_point_ratio` | `Number4` | Completed story points delivered per configured 8-hour logged-time block. |
 | `completion_total_story_points` | `Number5` | Rollup completion denominator including reference rows. |
 | `completion_completed_story_points` | `Number6` | Rollup completion numerator including reference rows. |
 | `completion_percent` | `Number7` | Story-point completion including references, preserved independently of native Project summary `% Complete`. Also available as a review-table column. |
-| `in_planning` | `Flag1` | Marks included epics with no pointed child work. |
+| `in_planning` | `Flag1` | Marks included epics with no usable selected point estimate. |
 | `unmatched_project_task` | `Flag2` | Marks Project tasks not matched to the current Jira plan. |
 | `dependency_review_needed` | `Flag3` | Marks rows needing dependency review. |
 | `drives_schedule` | `Flag4` | Indicates whether the row drives Project schedule logic. |

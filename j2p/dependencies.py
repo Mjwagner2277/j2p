@@ -15,6 +15,8 @@ def apply_dependencies(
     row_keys_by_jira: Dict[str, List[str]] = {}
     driving_keys_by_jira: Dict[str, List[str]] = {}
     for schedule_key, planned_epic in planned_epics.items():
+        if planned_epic.estimate_only:
+            continue  # A remaining estimate cannot stand in for the whole initiative.
         jira_key = planned_epic.jira_key or planned_epic.key
         row_keys_by_jira.setdefault(jira_key, []).append(schedule_key)
         if planned_epic.drives_schedule:

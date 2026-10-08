@@ -109,8 +109,7 @@ class YerpReviewFocusTests(unittest.TestCase):
     def test_undated_dependency_drivers_do_not_enter_high_priority(self):
         all_unfinished = {group['key']: group for group in
                           build_review_focus(self.display_plan, days=0)['groups']}
-        for key, downstream, audits in [('SSWHW-3239', 2, 3), ('SSWCYBER-3659', 1, 1),
-                                        ('SSWCYBER-3664', 1, 1)]:
+        for key, downstream, audits in [('SSWHW-3239', 2, 3)]:
             with self.subTest(epic=key):
                 context = self.contexts[key]
                 self.assertFalse(context['completed'])
@@ -123,6 +122,16 @@ class YerpReviewFocusTests(unittest.TestCase):
                 self.assertTrue(any(f'Impacts {downstream} unfinished downstream' in reason
                                     for reason in group['reasons']))
                 self.assertEqual(group['audit_count'], audits)
+
+    def test_original_estimates_resolve_former_unestimated_parent_reviews(self):
+        for key in ('SSWCYBER-3659', 'SSWCYBER-3664'):
+            with self.subTest(epic=key):
+                epic = self.plan.epics[key]
+                self.assertEqual(epic.total_story_points, 10)
+                self.assertFalse(epic.in_planning)
+                self.assertFalse(epic.target_start or epic.target_end)
+                self.assertNotIn(key, self.groups)
+                self.assertFalse(any(item.jira_key == key for item in review_items(self.display_plan)))
 
     def test_undated_parent_with_dated_unfinished_children_still_has_priority(self):
         key = 'SSWIF-4622'
@@ -140,7 +149,7 @@ class YerpReviewFocusTests(unittest.TestCase):
     def test_every_actionable_entry_survives_grouping(self):
         self.assert_conserved(self.display_plan, self.focus)
         self.assertLess(self.focus['grouped_count'], self.focus['total_audit_count'])
-        self.assertTrue(any(item.category == 'FutureInPlanning'
+        self.assertTrue(any(item.category == 'InPlanning'
                             for item in review_items(self.display_plan)))
 
     def test_shared_fixversion_scope_does_not_require_initiative_parents(self):

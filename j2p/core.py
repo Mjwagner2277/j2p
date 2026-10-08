@@ -34,7 +34,8 @@ from .jira import (
     parse_number,
     split_multi_values,
 )
-from .metrics import calculate_percent, calculate_story_point_ratio
+from .metrics import calculate_percent, calculate_story_point_ratio, select_story_points
+from .initiative_estimates import add_initiative_estimates
 from .models import (
     AuditItem,
     J2PError,
@@ -292,8 +293,10 @@ def build_run_plan(
             epic.key,
             {"total": 0.0, "completed": 0.0, "logged_hours": 0.0, "completed_logged_hours": 0.0},
         )
-        total_points = round(point_bucket["total"], 2)
+        child_count = len(stories_by_epic.get(epic.key, []))
+        total_points, point_basis = select_story_points(epic, point_bucket["total"], child_count, config)
         completed_points = round(point_bucket["completed"], 2)
+        completed = epic.status.strip().lower() in done_statuses
         logged_hours = round(point_bucket["logged_hours"], 2)
         completed_logged_hours = round(point_bucket["completed_logged_hours"], 2)
         in_planning = total_points <= 0
@@ -303,7 +306,15 @@ def build_run_plan(
             completed_points,
             hours_per_story_point,
         )
-        completed = epic.status.strip().lower() in done_statuses
+        if epic.original_story_points is not None:
+            audit.append(AuditItem(
+                "Info", "StoryPointEstimateBasis", jira_key=epic.key,
+                issue_type=epic.issue_type, summary=epic.summary, field="Total Story Points",
+                old_value=format_number(point_bucket["total"]), new_value=format_number(total_points),
+                message=(f"{point_basis}: original={format_number(epic.original_story_points)}, "
+                         f"child points={format_number(point_bucket['total'])}, child count={child_count}."),
+                source_row=epic.source_row, source_file=epic.source_file,
+            ))
 
         if in_planning:
             planning_date = epic_planning_date(
@@ -326,7 +337,7 @@ def build_run_plan(
                     new_value="Yes",
                     color="in_planning",
                     message=(
-                        "Epic has no pointed child stories/tasks and is marked In Planning. "
+                        "Epic has no usable story point estimate and is marked In Planning. "
                         f"Planning horizon: {planning_bucket}."
                     ),
                     reviewer_action=(
@@ -368,6 +379,9 @@ def build_run_plan(
                 fix_version=assignment.fix_version,
                 drives_schedule=assignment.drives_schedule,
                 primary_schedule_key=assignment.primary_schedule_key,
+                original_story_points=epic.original_story_points,
+                child_story_points=round(point_bucket["total"], 2),
+                story_point_basis=point_basis,
             )
         add_multi_fixversion_audit(audit, epic, assignments, rollup_mode)
 
@@ -397,6 +411,7 @@ def build_run_plan(
                 source_row=story.source_row, source_file=story.source_file,
             ))
 
+    add_initiative_estimates(planned_epics, initiatives, epics, stories_by_epic, config, audit)
     add_missing_target_date_reviews(planned_epics, audit)
     apply_dependencies(planned_epics, epics, audit)
     summaries = build_summaries(
@@ -465,7 +480,8 @@ def build_run_plan(
         "story_rows_attached_to_epic": attached_story_count,
         "story_rows_used_for_completion": used_story_count,
         "story_rows_omitted_from_completion": len(stories) - used_story_count,
-        "epics_included": len({epic.jira_key or epic.key for epic in planned_epics.values()}),
+        "epics_included": len({epic.jira_key or epic.key for epic in planned_epics.values() if not epic.estimate_only}),
+        "initiative_estimates_included": len({epic.jira_key for epic in planned_epics.values() if epic.estimate_only}),
         "planned_epic_rows": len(planned_epics),
         "epics_excluded": excluded_count,
         "fixversion_scope_excluded_epics": len(scope_excluded_keys),
@@ -488,7 +504,7 @@ def build_run_plan(
             {
                 epic.jira_key or epic.key
                 for epic in planned_epics.values()
-                if epic.row_role in {"Primary", "Reference", "Split"}
+                if not epic.estimate_only and epic.row_role in {"Primary", "Reference", "Split"}
             }
         ),
     }
@@ -527,7 +543,7 @@ def add_missing_target_date_reviews(epics: Dict[str, PlanEpic], audit: List[Audi
         audit.append(AuditItem(
             "Info", "MissingJiraTargetDates",
             jira_key=epic.jira_key or epic.key, schedule_key=epic.key,
-            issue_type="Epic", summary=epic.summary, field="Dependency Review",
+            issue_type=epic.issue_type, summary=epic.summary, field="Dependency Review",
             new_value=note, color="dependency_review", message=note,
             reviewer_action="Confirm the Project schedule or supply the missing target dates in Jira.",
             source_row=epic.source_row, source_file=epic.source_file,

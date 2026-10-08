@@ -57,11 +57,11 @@ class YerpProjectUpdateTests(unittest.TestCase):
         plan = build_run_plan(FILES, self.config, before)
         original_audit = [asdict(item) for item in plan.audit_items]
         verified = self.apply(plan)
-        self.assertEqual((len(self.epics), len(self.summaries)), (3114, 62))
+        self.assertEqual((len(self.epics), len(self.summaries)), (3334, 62))
         self.assertEqual(sum(len(e.predecessors) for e in plan.epics.values()), 169)
         self.assertEqual([write for task in self.session.project.Tasks.items for write in task.writes], [])
         self.assertEqual(plan.stats['project_update_writes']['task_fields']['written'], 0)
-        self.assertEqual(plan.stats['project_row_calculation_checkpoints'], [779, 1557, 2336, 3114])
+        self.assertEqual(plan.stats['project_row_calculation_checkpoints'], [834, 1667, 2501, 3334])
         self.assertEqual(plan.stats['project_update_writes']['resource_fields']['written'], 0)
         self.assertEqual(plan.stats['project_update_writes']['dependency_sets']['written'], 0)
         self.assertGreater(verified, 50000)
@@ -99,7 +99,7 @@ class YerpProjectUpdateTests(unittest.TestCase):
             paths = write_reports(plan, Path(tmp), self.config)
             with paths['planned_epics'].open(newline='') as handle:
                 rows = list(csv.DictReader(handle))
-            self.assertEqual(len(rows), 3114)
+            self.assertEqual(len(rows), 3334)
             self.assertEqual({row['schedule_key'] for row in rows}, set(plan.epics))
             with paths['summary_rollups'].open(newline='') as handle:
                 self.assertEqual(len(list(csv.DictReader(handle))), 62)

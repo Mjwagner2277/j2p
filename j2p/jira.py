@@ -158,6 +158,7 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 )
             )
         point_header, point_value = table.get_first_with_header(row, columns["story_points"])
+        original_header, original_value = table.get_first_with_header(row, columns.get("original_story_points", []))
         hours_header, hours_value = table.get_first_with_header(row, columns.get("logged_hours", []))
         metrics = config.get("metrics", {})
         if hours_value and normalize_header(hours_header) in AGGREGATE_HOURS_HEADERS and metrics.get("logged_hours_source", "direct") != "aggregate":
@@ -179,6 +180,7 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                 parent=table.get_first(row, columns.get("parent", [])).upper(),
                 fix_versions=split_multi_values(table.get_all(row, columns.get("fix_versions", []))),
                 story_points=parse_number(point_value, context=context, field=point_header or "Story Points"),
+                original_story_points=parse_number(original_value, context=context, field=original_header or "Original Story Points"),
                 logged_hours=parse_logged_hours(
                     hours_value,
                     audit,
@@ -189,6 +191,7 @@ def parse_issues(table: CsvTable, config: Dict[str, Any], audit: List[AuditItem]
                     field=hours_header or "Logged Hours",
                 ),
                 status=table.get_first(row, columns["status"]),
+                status_category=table.get_first(row, columns.get("status_category", [])),
                 resolution=table.get_first(row, columns.get("resolution", [])),
                 resolved=parse_date(table.get_first(row, columns.get("resolved", [])), audit, key, row_index),
                 target_start=parse_date(table.get_first(row, columns.get("target_start", [])), audit, key, row_index),

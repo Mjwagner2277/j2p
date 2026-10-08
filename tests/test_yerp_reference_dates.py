@@ -105,7 +105,7 @@ class YerpReferenceDateTests(unittest.TestCase):
         references = [epic for epic in self.plan.epics.values() if not epic.drives_schedule]
         reference_summaries = [summary for summary in self.plan.summaries.values()
                                if summary_identity(summary.rollup_mode, summary.key) in reference_rollup_keys(self.plan)]
-        self.assertEqual(len(references), 1406)
+        self.assertEqual(len(references), 1530)
         self.assertTrue(any(summary.driving_epic_count == 0 for summary in reference_summaries))
         self.assertTrue(any(summary.driving_epic_count > 0 for summary in reference_summaries))
 

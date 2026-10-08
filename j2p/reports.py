@@ -44,6 +44,8 @@ PLANNED_EPIC_COLUMNS = [
     "project_key",
     "summary",
     "status",
+    "issue_type",
+    "estimate_only",
     "rollup_mode",
     "rollup_key",
     "rollup_name",
@@ -55,6 +57,9 @@ PLANNED_EPIC_COLUMNS = [
     "key_prefix",
     "total_story_points",
     "completed_story_points",
+    "original_story_points",
+    "child_story_points",
+    "story_point_basis",
     "logged_hours",
     "completed_logged_hours",
     "story_point_ratio",
@@ -367,7 +372,8 @@ def resource_group_run_plan(plan: RunPlan, config: Dict[str, Any], resource_grou
     stats = dict(plan.stats)
     stats.update(
         {
-            "epics_included": len({epic.jira_key or epic.key for epic in epics.values()}),
+            "epics_included": len({epic.jira_key or epic.key for epic in epics.values() if not epic.estimate_only}),
+            "initiative_estimates_included": len({epic.jira_key for epic in epics.values() if epic.estimate_only}),
             "planned_epic_rows": len(epics),
             "summary_rows": len(summaries),
             "audit_items": len(audit_items),
@@ -423,7 +429,8 @@ def completed_fixversion_report_plan(plan: RunPlan) -> RunPlan:
     stats = dict(plan.stats)
     stats.update(
         {
-            "epics_included": len({epic.jira_key or epic.key for epic in epics.values()}),
+            "epics_included": len({epic.jira_key or epic.key for epic in epics.values() if not epic.estimate_only}),
+            "initiative_estimates_included": len({epic.jira_key for epic in epics.values() if epic.estimate_only}),
             "planned_epic_rows": len(epics),
             "summary_rows": len(summaries),
             "audit_items": len(audit_items),
@@ -442,7 +449,7 @@ def completed_fixversion_report_plan(plan: RunPlan) -> RunPlan:
                 {
                     epic.jira_key or epic.key
                     for epic in epics.values()
-                    if epic.row_role in {"Primary", "Reference", "Split"}
+                    if not epic.estimate_only and epic.row_role in {"Primary", "Reference", "Split"}
                 }
             ),
         }
@@ -1114,7 +1121,8 @@ def render_report_context(
         ["Jira Issues Read", plan.stats.get("jira_issues_read", 0)],
         ["Epics Included", plan.stats.get("epics_included", 0)],
         ["Epics Excluded", plan.stats.get("epics_excluded", 0)],
-        ["Planned Epic Rows", plan.stats.get("planned_epic_rows", plan.stats.get("epics_included", 0))],
+        ["Planned Rows", plan.stats.get("planned_epic_rows", plan.stats.get("epics_included", 0))],
+        ["Initiative Estimates", plan.stats.get("initiative_estimates_included", 0)],
         ["Summary Rollup Rows", plan.stats.get("summary_rows", 0)],
         ["Project Keys", ", ".join(plan.stats.get("project_keys", []))],
         ["Multi-FixVersion Epics", plan.stats.get("multi_fixversion_epics", 0)],

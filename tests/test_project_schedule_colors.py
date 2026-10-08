@@ -271,7 +271,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
         try:
             config = load_config(YERP / 'ssn-812-config.yaml')
             plan = build_run_plan(FILES, config)
-            self.assertEqual((len(plan.epics), len(plan.summaries)), (3114, 62))
+            self.assertEqual((len(plan.epics), len(plan.summaries)), (3334, 62))
             original = {key: asdict(epic) for key, epic in plan.epics.items()}
             before = {key: dates(key, epic.target_start or '2026-09-19',
                                  epic.target_end or '2026-09-19') for key, epic in plan.epics.items()}
@@ -279,7 +279,7 @@ class ProjectScheduleColorTests(unittest.TestCase):
             review(review_session(), plan, before, config, after)
             changes = date_changes(plan)
             primary_keys = {key for key, epic in plan.epics.items() if epic.drives_schedule}
-            self.assertEqual(len(primary_keys), 1708)
+            self.assertEqual(len(primary_keys), 1804)
             self.assertEqual({(a.schedule_key, a.field) for a in changes},
                              {(key, field) for key in primary_keys for field in ('Start', 'Finish')})
             self.assertTrue(all(a.color == 'changed_cell' for a in changes))
